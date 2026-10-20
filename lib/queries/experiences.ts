@@ -1,4 +1,5 @@
 import 'server-only';
+import { observeOperation } from '@/lib/observability/operation';
 import { requireAdminPage } from '@/lib/admin';
 import { cacheLife, cacheTag } from 'next/cache';
 import { db } from '@/db';
@@ -7,24 +8,26 @@ import { type ExperienceData } from '@/lib/types';
 import { entityIdSchema } from '@/lib/schemas/common';
 
 async function findExperiences(): Promise<ExperienceData[]> {
-	return await db.query.experiences.findMany({
-		with: {
-			experienceSkills: {
-				columns: {},
-				with: {
-					skill: {
-						columns: {
-							id: true,
-							name: true,
-							icon: true,
-							customIconUrl: true,
+	return await observeOperation('db.experiences.read', () =>
+		db.query.experiences.findMany({
+			with: {
+				experienceSkills: {
+					columns: {},
+					with: {
+						skill: {
+							columns: {
+								id: true,
+								name: true,
+								icon: true,
+								customIconUrl: true,
+							},
 						},
 					},
 				},
 			},
-		},
-		orderBy: (experiences, { asc }) => [asc(experiences.order), asc(experiences.id)],
-	});
+			orderBy: (experiences, { asc }) => [asc(experiences.order), asc(experiences.id)],
+		}),
+	);
 }
 
 export async function getExperiences(): Promise<ExperienceData[]> {

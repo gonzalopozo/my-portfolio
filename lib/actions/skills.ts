@@ -1,6 +1,7 @@
 'use server';
 
 import { db } from '@/db';
+import { observeOperation } from '@/lib/observability/operation';
 import { skills } from '@/db/schema/portfolio';
 import { PUBLIC_EXPERIENCES_CACHE_TAG, PUBLIC_PROJECTS_CACHE_TAG } from '@/lib/cache-tags';
 import { skillSchema } from '@/lib/schemas/skills';
@@ -135,10 +136,12 @@ export async function deleteSkill(id: number) {
 	await requireAdmin();
 	if (!Number.isSafeInteger(id) || id <= 0) return;
 
-	const deleted = await db
-		.delete(skills)
-		.where(eq(skills.id, id))
-		.returning({ customIconUrl: skills.customIconUrl });
+	const deleted = await observeOperation('cms.skills.delete', () =>
+		db
+			.delete(skills)
+			.where(eq(skills.id, id))
+			.returning({ customIconUrl: skills.customIconUrl }),
+	);
 	if (deleted[0]) await deleteSkillIcon(deleted[0].customIconUrl);
 
 	updatePublicSkillTags();

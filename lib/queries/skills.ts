@@ -8,11 +8,6 @@ import { experienceSkills, projectSkills, skills } from '@/db/schema/portfolio';
 import { PUBLIC_EXPERIENCES_CACHE_TAG, PUBLIC_PROJECTS_CACHE_TAG } from '@/lib/cache-tags';
 import { entityIdSchema } from '@/lib/schemas/common';
 
-const usedSkillIds = unionAll(
-	db.select({ skillId: projectSkills.skillId }).from(projectSkills),
-	db.select({ skillId: experienceSkills.skillId }).from(experienceSkills),
-).as('used_skill_ids');
-
 export async function getAllSkills() {
 	await requireAdminPage();
 	return await db.select().from(skills);
@@ -34,6 +29,11 @@ export async function getPublicUsedSkills() {
 	'use cache';
 	cacheLife('hours');
 	cacheTag(PUBLIC_PROJECTS_CACHE_TAG, PUBLIC_EXPERIENCES_CACHE_TAG);
+
+	const usedSkillIds = unionAll(
+		db.select({ skillId: projectSkills.skillId }).from(projectSkills),
+		db.select({ skillId: experienceSkills.skillId }).from(experienceSkills),
+	).as('used_skill_ids');
 
 	return db
 		.select({

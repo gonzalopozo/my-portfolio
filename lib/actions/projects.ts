@@ -1,8 +1,9 @@
 'use server';
 
 import { db } from '@/db';
+import { observeOperation } from '@/lib/observability/operation';
 import { projects, projectSkills } from '@/db/schema/portfolio';
-import { and, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { projectSchema } from '@/lib/schemas/projects';
 import { entityIdSchema } from '@/lib/schemas/common';
@@ -84,32 +85,39 @@ export async function createProject(formData: FormData) {
 
 	const { title, description, url, repoUrl, status, skillIds } = parseProject(formData);
 
-	const result = await db
-		.select({ maxOrder: sql<number>`COALESCE(MAX(${projects.order}), 0)` })
-		.from(projects);
-	const newOrder = result[0].maxOrder + 1;
+	const newProjectId = await observeOperation('cms.projects.mutate', () =>
+		db.transaction(async (tx) => {
+			const result = await tx
+				.select({ maxOrder: sql<number>`COALESCE(MAX(${projects.order}), 0)` })
+				.from(projects);
+			const newOrder = result[0].maxOrder + 1;
 
-	const projectSkillsData = skillIds;
+			const projectSkillsData = skillIds;
 
-	const projectIdData = await db
-		.insert(projects)
-		.values({
-			title,
-			description,
-			url: url || null,
-			repoUrl: repoUrl || null,
-			status,
-			order: newOrder,
-		})
-		.returning({ insertedId: projects.id });
+			const projectIdData = await tx
+				.insert(projects)
+				.values({
+					title,
+					description,
+					url: url || null,
+					repoUrl: repoUrl || null,
+					status,
+					order: newOrder,
+				})
+				.returning({ insertedId: projects.id });
 
-	const newProjectId = projectIdData[0].insertedId;
+			const newProjectId = projectIdData[0].insertedId;
 
-	const projectSkillsInsert: ProjectSkill[] = projectSkillsData.map((skill) => {
-		return { projectId: newProjectId, skillId: skill };
-	});
+			const projectSkillsInsert: ProjectSkill[] = projectSkillsData.map((skill) => {
+				return { projectId: newProjectId, skillId: skill };
+			});
 
-	if (projectSkillsInsert.length) await db.insert(projectSkills).values(projectSkillsInsert);
+			if (projectSkillsInsert.length)
+				await tx.insert(projectSkills).values(projectSkillsInsert);
+
+			return newProjectId;
+		}),
+	);
 
 	const imageIssue = url
 		? getImageIssue(await replaceProjectImage(newProjectId, url, null))
@@ -139,62 +147,70 @@ export async function updateProject(id: number, formData: FormData) {
 	if (!oldUrls[0]) throw new Error('Project not found.');
 	const oldOpenGraphImageUrl = oldUrls[0].ogImageUrl;
 
-	await db
-		.update(projects)
-		.set({
-			title,
-			description,
-			url: url || null,
-			repoUrl: repoUrl || null,
-			status,
-		})
-		.where(eq(projects.id, id));
+	await observeOperation('cms.projects.mutate', () =>
+		db.transaction(async (tx) => {
+			await tx
+				.update(projects)
+				.set({
+					title,
+					description,
+					url: url || null,
+					repoUrl: repoUrl || null,
+					status,
+				})
+				.where(eq(projects.id, id));
 
-	const projectSkillsData = skillIds;
+			const projectSkillsData = skillIds;
 
-	const projectSkillsToReview: ProjectSkill[] = projectSkillsData.map((skill) => {
-		return { projectId: id, skillId: skill };
-	});
+			const projectSkillsToReview: ProjectSkill[] = projectSkillsData.map((skill) => {
+				return { projectId: id, skillId: skill };
+			});
 
-	const formerProjectSkills: ProjectSkill[] = await db.query.projectSkills.findMany({
-		where: eq(projectSkills.projectId, id),
-		columns: {
-			projectId: true,
-			skillId: true,
-		},
-	});
+			const formerProjectSkills: ProjectSkill[] = await tx.query.projectSkills.findMany({
+				where: eq(projectSkills.projectId, id),
+				columns: {
+					projectId: true,
+					skillId: true,
+				},
+			});
 
-	const formerProjectSkillIds = new Set(formerProjectSkills.map((skill) => skill.skillId));
-	const projectSkillsToInsert = projectSkillsToReview.filter(
-		(skillToReview) => !formerProjectSkillIds.has(skillToReview.skillId),
-	);
+			const formerProjectSkillIds = new Set(
+				formerProjectSkills.map((skill) => skill.skillId),
+			);
+			const projectSkillsToInsert = projectSkillsToReview.filter(
+				(skillToReview) => !formerProjectSkillIds.has(skillToReview.skillId),
+			);
 
-	if (projectSkillsToInsert.length > 0) {
-		await db.insert(projectSkills).values(projectSkillsToInsert);
-	}
-
-	const nextProjectSkillIds = new Set(projectSkillsToReview.map((skill) => skill.skillId));
-	const projectSkillIdsToDelete = formerProjectSkills.reduce<number[]>(
-		(skillIds, formerSkill) => {
-			if (!nextProjectSkillIds.has(formerSkill.skillId)) {
-				skillIds.push(formerSkill.skillId);
+			if (projectSkillsToInsert.length > 0) {
+				await tx.insert(projectSkills).values(projectSkillsToInsert);
 			}
 
-			return skillIds;
-		},
-		[],
-	);
-
-	if (projectSkillIdsToDelete.length > 0) {
-		await db
-			.delete(projectSkills)
-			.where(
-				and(
-					eq(projectSkills.projectId, id),
-					inArray(projectSkills.skillId, projectSkillIdsToDelete),
-				),
+			const nextProjectSkillIds = new Set(
+				projectSkillsToReview.map((skill) => skill.skillId),
 			);
-	}
+			const projectSkillIdsToDelete = formerProjectSkills.reduce<number[]>(
+				(skillIds, formerSkill) => {
+					if (!nextProjectSkillIds.has(formerSkill.skillId)) {
+						skillIds.push(formerSkill.skillId);
+					}
+
+					return skillIds;
+				},
+				[],
+			);
+
+			if (projectSkillIdsToDelete.length > 0) {
+				await tx
+					.delete(projectSkills)
+					.where(
+						and(
+							eq(projectSkills.projectId, id),
+							inArray(projectSkills.skillId, projectSkillIdsToDelete),
+						),
+					);
+			}
+		}),
+	);
 
 	let imageIssue: OgImageError | undefined;
 	if (url && url !== oldUrls[0].url) {
@@ -259,37 +275,38 @@ export async function updateProjectOrder(projectId: number, newOrder: number): P
 	await requireAdmin();
 	validateProjectId(projectId);
 	if (!entityIdSchema.safeParse(newOrder).success) throw new Error('Invalid project position.');
-	const [{ total }] = await db.select({ total: sql<number>`COUNT(*)` }).from(projects);
-	if (newOrder > total) throw new Error('Invalid project position.');
-
-	const [project] = await db
-		.select({ order: projects.order, title: projects.title })
-		.from(projects)
-		.where(eq(projects.id, projectId));
-
-	if (!project) throw new Error('Project not found.');
-	const oldOrder = project.order;
-	if (oldOrder === newOrder) return '';
-
-	const isBigger = newOrder > oldOrder;
-
-	await db.update(projects).set({ order: newOrder }).where(eq(projects.id, projectId));
-
-	await db
-		.update(projects)
-		.set({ order: isBigger ? sql`${projects.order} - 1` : sql`${projects.order} + 1` })
-		.where(
-			and(
-				isBigger ? lte(projects.order, newOrder) : gte(projects.order, newOrder),
-				ne(projects.id, projectId),
-				isBigger ? gte(projects.order, oldOrder) : lte(projects.order, oldOrder),
-			),
-		);
+	const title = await observeOperation('cms.projects.mutate', () =>
+		db.transaction(async (tx) => {
+			const rows = await tx
+				.select({ id: projects.id, title: projects.title, order: projects.order })
+				.from(projects)
+				.orderBy(asc(projects.order), asc(projects.id));
+			if (newOrder > rows.length) throw new Error('Invalid project position.');
+			const previous = rows.findIndex((row) => row.id === projectId);
+			if (previous < 0) throw new Error('Project not found.');
+			if (previous === newOrder - 1 && rows.every((row, index) => row.order === index + 1))
+				return '';
+			const [moved] = rows.splice(previous, 1);
+			rows.splice(newOrder - 1, 0, moved);
+			const positions = rows.map((row, index) => sql`WHEN ${row.id} THEN ${index + 1}`);
+			await tx
+				.update(projects)
+				.set({ order: sql`CASE ${projects.id} ${sql.join(positions, sql` `)} END` })
+				.where(
+					inArray(
+						projects.id,
+						rows.map((row) => row.id),
+					),
+				);
+			return moved.title;
+		}),
+	);
+	if (!title) return '';
 
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
 	revalidatePath('/dashboard/projects');
 
-	return project.title;
+	return title;
 }
 
 export async function refreshProjectOgImage(projectId: number): Promise<ProjectImageActionResult> {

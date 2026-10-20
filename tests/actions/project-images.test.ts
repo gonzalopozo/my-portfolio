@@ -22,6 +22,8 @@ vi.mock('server-only', () => ({}));
 vi.mock('@/lib/admin', () => ({ requireAdmin: mocks.admin }));
 vi.mock('@/db', () => ({
 	db: {
+		transaction: async (callback: (transaction: unknown) => unknown) =>
+			callback((await import('@/db')).db),
 		select: mocks.select,
 		insert: mocks.insert,
 		update: mocks.update,

@@ -1,6 +1,7 @@
 'use server';
 
 import { db } from '@/db';
+import { observeOperation } from '@/lib/observability/operation';
 import { employmentHistory, siteSettings } from '@/db/schema/portfolio';
 import { PUBLIC_SETTINGS_CACHE_TAG } from '@/lib/cache-tags';
 import { requireAdmin } from '@/lib/admin';
@@ -19,23 +20,27 @@ export async function updateSiteSettings(formData: FormData) {
 	if (!result.success) throw new Error('Invalid settings data.');
 	const { isEmployed, resumeUrl, statusMessage } = result.data;
 
-	const [existingSettings] = await db.select().from(siteSettings).limit(1);
+	await observeOperation('cms.settings.mutate', () =>
+		db.transaction(async (tx) => {
+			const [existingSettings] = await tx.select().from(siteSettings).limit(1);
 
-	if (!existingSettings) throw new Error('Settings not found.');
-	if (existingSettings.isEmployed !== Boolean(isEmployed)) {
-		await db.insert(employmentHistory).values({
-			isEmployed: Boolean(isEmployed),
-		});
-	}
+			if (!existingSettings) throw new Error('Settings not found.');
+			if (existingSettings.isEmployed !== Boolean(isEmployed)) {
+				await tx.insert(employmentHistory).values({
+					isEmployed: Boolean(isEmployed),
+				});
+			}
 
-	await db
-		.update(siteSettings)
-		.set({
-			isEmployed: Boolean(isEmployed),
-			resumeUrl,
-			statusMessage,
-		})
-		.where(eq(siteSettings.id, existingSettings.id));
+			await tx
+				.update(siteSettings)
+				.set({
+					isEmployed: Boolean(isEmployed),
+					resumeUrl,
+					statusMessage,
+				})
+				.where(eq(siteSettings.id, existingSettings.id));
+		}),
+	);
 
 	updateTag(PUBLIC_SETTINGS_CACHE_TAG);
 	revalidatePath('/dashboard/settings');

@@ -1,6 +1,7 @@
 'use server';
 
 import { db } from '@/db';
+import { observeOperation } from '@/lib/observability/operation';
 import { experiences, experienceSkills } from '@/db/schema/portfolio';
 import { requireAdmin } from '@/lib/admin';
 import { experienceSchema } from '@/lib/schemas/experiences';
@@ -50,35 +51,39 @@ export async function createExperience(formData: FormData) {
 		skillIds,
 	} = parseExperience(formData);
 
-	const result = await db
-		.select({ maxOrder: sql<number>`COALESCE(MAX(${experiences.order}), 0)` })
-		.from(experiences);
-	const newOrder = result[0].maxOrder + 1;
+	await observeOperation('cms.experiences.mutate', () =>
+		db.transaction(async (tx) => {
+			const result = await tx
+				.select({ maxOrder: sql<number>`COALESCE(MAX(${experiences.order}), 0)` })
+				.from(experiences);
+			const newOrder = result[0].maxOrder + 1;
 
-	const experienceSkillsData = skillIds;
+			const experienceSkillsData = skillIds;
 
-	const experienceIdData = await db
-		.insert(experiences)
-		.values({
-			role,
-			company,
-			companyUrl: companyUrl || null,
-			companyLogo: companyLogo || null,
-			description,
-			startDate,
-			endDate,
-			location,
-			order: newOrder,
-		})
-		.returning({ insertedId: experiences.id });
+			const experienceIdData = await tx
+				.insert(experiences)
+				.values({
+					role,
+					company,
+					companyUrl: companyUrl || null,
+					companyLogo: companyLogo || null,
+					description,
+					startDate,
+					endDate,
+					location,
+					order: newOrder,
+				})
+				.returning({ insertedId: experiences.id });
 
-	const experienceSkillsInsert: ExperienceSkill[] = experienceSkillsData.map((skill) => {
-		return { experienceId: experienceIdData[0].insertedId, skillId: skill };
-	});
+			const experienceSkillsInsert: ExperienceSkill[] = experienceSkillsData.map((skill) => {
+				return { experienceId: experienceIdData[0].insertedId, skillId: skill };
+			});
 
-	if (experienceSkillsInsert.length) {
-		await db.insert(experienceSkills).values(experienceSkillsInsert);
-	}
+			if (experienceSkillsInsert.length) {
+				await tx.insert(experienceSkills).values(experienceSkillsInsert);
+			}
+		}),
+	);
 
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
 	redirect('/dashboard/experiences');
@@ -100,67 +105,78 @@ export async function updateExperience(id: number, formData: FormData) {
 		skillIds,
 	} = parseExperience(formData);
 
-	const experienceIdData = await db
-		.update(experiences)
-		.set({
-			role,
-			company,
-			companyUrl: companyUrl || null,
-			companyLogo: companyLogo || null,
-			description,
-			startDate,
-			endDate,
-			location,
-		})
-		.where(eq(experiences.id, id))
-		.returning({ insertedId: experiences.id });
+	await observeOperation('cms.experiences.mutate', () =>
+		db.transaction(async (tx) => {
+			const experienceIdData = await tx
+				.update(experiences)
+				.set({
+					role,
+					company,
+					companyUrl: companyUrl || null,
+					companyLogo: companyLogo || null,
+					description,
+					startDate,
+					endDate,
+					location,
+				})
+				.where(eq(experiences.id, id))
+				.returning({ insertedId: experiences.id });
 
-	if (!experienceIdData[0]) throw new Error('Experience not found.');
-	const experienceSkillsData = skillIds;
+			if (!experienceIdData[0]) throw new Error('Experience not found.');
+			const experienceSkillsData = skillIds;
 
-	const experienceSkillsToReview: ExperienceSkill[] = experienceSkillsData.map((skill) => {
-		return { experienceId: experienceIdData[0].insertedId, skillId: skill };
-	});
+			const experienceSkillsToReview: ExperienceSkill[] = experienceSkillsData.map(
+				(skill) => {
+					return { experienceId: experienceIdData[0].insertedId, skillId: skill };
+				},
+			);
 
-	const formerExperienceSkills: ExperienceSkill[] = await db.query.experienceSkills.findMany({
-		where: eq(experienceSkills.experienceId, id),
-		columns: {
-			experienceId: true,
-			skillId: true,
-		},
-	});
+			const formerExperienceSkills: ExperienceSkill[] =
+				await tx.query.experienceSkills.findMany({
+					where: eq(experienceSkills.experienceId, id),
+					columns: {
+						experienceId: true,
+						skillId: true,
+					},
+				});
 
-	const formerExperienceSkillIds = new Set(formerExperienceSkills.map((skill) => skill.skillId));
-	const experienceSkillsToInsert = experienceSkillsToReview.filter(
-		(skillToReview) => !formerExperienceSkillIds.has(skillToReview.skillId),
-	);
+			const formerExperienceSkillIds = new Set(
+				formerExperienceSkills.map((skill) => skill.skillId),
+			);
+			const experienceSkillsToInsert = experienceSkillsToReview.filter(
+				(skillToReview) => !formerExperienceSkillIds.has(skillToReview.skillId),
+			);
 
-	if (experienceSkillsToInsert.length > 0) {
-		await db.insert(experienceSkills).values(experienceSkillsToInsert);
-	}
-
-	const nextExperienceSkillIds = new Set(experienceSkillsToReview.map((skill) => skill.skillId));
-	const experienceSkillIdsToDelete = formerExperienceSkills.reduce<number[]>(
-		(skillIds, formerSkill) => {
-			if (!nextExperienceSkillIds.has(formerSkill.skillId)) {
-				skillIds.push(formerSkill.skillId);
+			if (experienceSkillsToInsert.length > 0) {
+				await tx.insert(experienceSkills).values(experienceSkillsToInsert);
 			}
 
-			return skillIds;
-		},
-		[],
-	);
-
-	if (experienceSkillIdsToDelete.length > 0) {
-		await db
-			.delete(experienceSkills)
-			.where(
-				and(
-					eq(experienceSkills.experienceId, id),
-					inArray(experienceSkills.skillId, experienceSkillIdsToDelete),
-				),
+			const nextExperienceSkillIds = new Set(
+				experienceSkillsToReview.map((skill) => skill.skillId),
 			);
-	}
+			const experienceSkillIdsToDelete = formerExperienceSkills.reduce<number[]>(
+				(skillIds, formerSkill) => {
+					if (!nextExperienceSkillIds.has(formerSkill.skillId)) {
+						skillIds.push(formerSkill.skillId);
+					}
+
+					return skillIds;
+				},
+				[],
+			);
+
+			if (experienceSkillIdsToDelete.length > 0) {
+				await tx
+					.delete(experienceSkills)
+					.where(
+						and(
+							eq(experienceSkills.experienceId, id),
+							inArray(experienceSkills.skillId, experienceSkillIdsToDelete),
+						),
+					);
+			}
+		}),
+	);
 
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
 	redirect('/dashboard/experiences');
@@ -170,7 +186,9 @@ export async function deleteExperience(id: number) {
 	await requireAdmin();
 	validateExperienceId(id);
 
-	await db.delete(experiences).where(eq(experiences.id, id));
+	await observeOperation('cms.experiences.delete', () =>
+		db.delete(experiences).where(eq(experiences.id, id)),
+	);
 
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
 	revalidatePath('/dashboard/experiences');

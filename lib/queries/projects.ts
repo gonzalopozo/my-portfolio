@@ -1,4 +1,5 @@
 import 'server-only';
+import { observeOperation } from '@/lib/observability/operation';
 import { requireAdminPage } from '@/lib/admin';
 import { cacheLife, cacheTag } from 'next/cache';
 import { db } from '@/db';
@@ -7,24 +8,26 @@ import { type ProjectInfo } from '@/lib/types';
 import { entityIdSchema } from '@/lib/schemas/common';
 
 async function findProjects(): Promise<ProjectInfo[]> {
-	return await db.query.projects.findMany({
-		with: {
-			projectSkills: {
-				columns: {},
-				with: {
-					skill: {
-						columns: {
-							id: true,
-							name: true,
-							icon: true,
-							customIconUrl: true,
+	return await observeOperation('db.projects.read', () =>
+		db.query.projects.findMany({
+			with: {
+				projectSkills: {
+					columns: {},
+					with: {
+						skill: {
+							columns: {
+								id: true,
+								name: true,
+								icon: true,
+								customIconUrl: true,
+							},
 						},
 					},
 				},
 			},
-		},
-		orderBy: (projects, { asc }) => [asc(projects.order), asc(projects.id)],
-	});
+			orderBy: (projects, { asc }) => [asc(projects.order), asc(projects.id)],
+		}),
+	);
 }
 
 export async function getProjects(): Promise<ProjectInfo[]> {

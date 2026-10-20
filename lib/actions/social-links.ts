@@ -1,6 +1,7 @@
 'use server';
 
 import { db } from '@/db';
+import { observeOperation } from '@/lib/observability/operation';
 import { socialLinks } from '@/db/schema/portfolio';
 import { requireAdmin } from '@/lib/admin';
 import { asc, eq, sql } from 'drizzle-orm';
@@ -79,7 +80,9 @@ export async function deleteSocialLink(id: number) {
 	await requireAdmin();
 	if (!entityIdSchema.safeParse(id).success) throw new Error('Invalid social link.');
 
-	await db.delete(socialLinks).where(eq(socialLinks.id, id));
+	await observeOperation('cms.social_links.delete', () =>
+		db.delete(socialLinks).where(eq(socialLinks.id, id)),
+	);
 
 	updateTag(PUBLIC_SOCIAL_LINKS_CACHE_TAG);
 	revalidatePath('/dashboard/social-links');
@@ -106,27 +109,29 @@ export async function updateSocialLinkOrder(
 	)
 		throw new Error('El enlace y la posición deben ser enteros positivos.');
 
-	const name = await db.transaction(async (tx) => {
-		const links = await tx
-			.select({ id: socialLinks.id, name: socialLinks.name, order: socialLinks.order })
-			.from(socialLinks)
-			.orderBy(asc(socialLinks.order), asc(socialLinks.id));
-		const oldIndex = links.findIndex((link) => link.id === socialLinkId);
-		if (oldIndex === -1) throw new Error('No se encontró el enlace.');
-		if (newOrder > links.length) throw new Error('La posición está fuera de la lista.');
-		if (oldIndex === newOrder - 1) return '';
+	const name = await observeOperation('cms.social-links.mutate', () =>
+		db.transaction(async (tx) => {
+			const links = await tx
+				.select({ id: socialLinks.id, name: socialLinks.name, order: socialLinks.order })
+				.from(socialLinks)
+				.orderBy(asc(socialLinks.order), asc(socialLinks.id));
+			const oldIndex = links.findIndex((link) => link.id === socialLinkId);
+			if (oldIndex === -1) throw new Error('No se encontró el enlace.');
+			if (newOrder > links.length) throw new Error('La posición está fuera de la lista.');
+			if (oldIndex === newOrder - 1) return '';
 
-		const [moved] = links.splice(oldIndex, 1);
-		links.splice(newOrder - 1, 0, moved);
+			const [moved] = links.splice(oldIndex, 1);
+			links.splice(newOrder - 1, 0, moved);
 
-		for (const [index, link] of links.entries()) {
-			const order = index + 1;
-			if (link.order === order) continue;
-			await tx.update(socialLinks).set({ order }).where(eq(socialLinks.id, link.id));
-		}
+			for (const [index, link] of links.entries()) {
+				const order = index + 1;
+				if (link.order === order) continue;
+				await tx.update(socialLinks).set({ order }).where(eq(socialLinks.id, link.id));
+			}
 
-		return moved.name;
-	});
+			return moved.name;
+		}),
+	);
 
 	if (name) {
 		updateTag(PUBLIC_SOCIAL_LINKS_CACHE_TAG);
