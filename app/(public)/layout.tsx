@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { AppDocument } from '@/components/app-document';
+import { WebVitals } from '@/components/web-vitals';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<AppDocument>
+			<WebVitals />
 			<div className="bg-background">
 				<Link
 					href="#portfolio-section-heading"

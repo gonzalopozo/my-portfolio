@@ -265,13 +265,12 @@ describe('music failure diagnostics', () => {
 		expect(result.status).toBe('unavailable');
 		expect(result.track).toBeNull();
 		expect(result.integrations[0].issues[0].code).toBe('network-error');
-		expect(console.error).toHaveBeenCalledExactlyOnceWith(
-			expect.objectContaining({
-				correlationId: result.correlationId,
-				code: 'network-error',
-				integration: 'lastfm',
-			}),
-		);
+		expect(console.error).toHaveBeenCalledOnce();
+		expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toMatchObject({
+			reference: result.correlationId,
+			classification: 'network-error',
+			operation: 'music.lastfm.request',
+		});
 		expect(JSON.stringify(result)).not.toContain('secret');
 		expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain('secret');
 	});
@@ -363,9 +362,12 @@ describe('music failure diagnostics', () => {
 		expect(result.status).toBe('degraded');
 		expect(result.track?.spotifyUrl).toBe(SPOTIFY_TRACK_URL);
 		expect(result.track?.artworkUrl).toBeNull();
-		expect(console.warn).toHaveBeenCalledWith(
-			expect.objectContaining({ correlationId: result.correlationId, httpStatus: 429 }),
-		);
+		expect(console.warn).toHaveBeenCalledOnce();
+		expect(JSON.parse(vi.mocked(console.warn).mock.calls[0][0])).toMatchObject({
+			reference: result.correlationId,
+			classification: 'http-error',
+			operation: 'music.spotify-artwork.request',
+		});
 	});
 
 	it('drops unsafe Last.fm links without dropping the song', async () => {

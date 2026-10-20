@@ -1,4 +1,6 @@
 import 'server-only';
+import { reportCaughtFailure } from '@/lib/observability/caught';
+import { logOperation } from '@/lib/observability/logger';
 import { randomUUID } from 'node:crypto';
 import type { OgImageError, OgImageErrorCode, OgImageStage } from '@/lib/og-image-feedback';
 
@@ -10,13 +12,8 @@ export function reportOgImageError(
 	httpStatus?: number,
 ): OgImageError {
 	const error = { code, stage, reference: randomUUID() };
-	const details = {
-		...error,
-		...(typeof projectId === 'number' && Number.isSafeInteger(projectId) && projectId > 0
-			? { projectId }
-			: {}),
-		...(httpStatus !== undefined ? { httpStatus } : {}),
-	};
+	// Row IDs and upstream URLs are unnecessary for telemetry; reference correlates UI feedback.
+	void projectId;
 	if (
 		[
 			'upload-failed',
@@ -26,9 +23,14 @@ export function reportOgImageError(
 			'unexpected',
 		].includes(code)
 	) {
-		console.error('OG image operation failed', details);
+		reportCaughtFailure(`project_image.${stage}`, code, error.reference);
 	} else {
-		console.warn('OG image operation failed', details);
+		logOperation('warn', {
+			operation: `project_image.${stage}`,
+			classification: code,
+			reference: error.reference,
+			status: httpStatus,
+		});
 	}
 	return error;
 }

@@ -22,13 +22,11 @@ describe('safe music logs', () => {
 		};
 		const correlationId = '00000000-0000-0000-0000-000000000000';
 		reportMusicIssues([issue], correlationId);
-		expect(console.error).toHaveBeenCalledExactlyOnceWith(
-			expect.objectContaining({
-				event: 'music-integration-failure',
-				correlationId,
-				code: 'network-error',
-			}),
-		);
+		expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toMatchObject({
+			operation: 'music.lastfm.request',
+			reference: correlationId,
+			classification: 'network-error',
+		});
 		expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain('secret');
 	});
 
@@ -47,7 +45,7 @@ describe('safe music logs', () => {
 		);
 		expect(console.error).not.toHaveBeenCalled();
 		expect(console.warn).toHaveBeenCalledOnce();
-		const [event] = vi.mocked(console.warn).mock.calls[0];
+		const event = JSON.parse(vi.mocked(console.warn).mock.calls[0][0]);
 		expect(event).not.toHaveProperty('httpStatus');
 		expect(event).not.toHaveProperty('apiCode');
 	});
