@@ -1,0 +1,37 @@
+[
+	{
+		"tag": "0000_fuzzy_tusk",
+		"sha256": "8e3bfe29d761eecba65697a923e5c26b735ecf0865c86e07bdaa1b4abe26f537",
+		"kind": "baseline"
+	},
+	{
+		"tag": "0001_lovely_omega_red",
+		"sha256": "707e74e2eb054483b2a11c7ca21f6f71dab9c228ff14ff5b9fb59edbc7daff96",
+		"kind": "baseline"
+	},
+	{
+		"tag": "0002_moaning_gideon",
+		"sha256": "09659b095cbcc021a5f03d2c799b8f04c4413930707b2805445f33f35569fe21",
+		"kind": "baseline"
+	},
+	{
+		"tag": "0003_chubby_daredevil",
+		"sha256": "017efeaa0212b0e4805aae0a13d2e8dff22c9bfd4b13ff88291c4e67c3172cd8",
+		"kind": "baseline"
+	},
+	{
+		"tag": "0004_swift_titania",
+		"sha256": "bfc2292a8447fe7e71056985daba0d8a3fa49efbc41be704ff594a9e1c4a478b",
+		"kind": "baseline"
+	},
+	{
+		"tag": "0005_custom_skill_icon",
+		"sha256": "47a9f3ad59cfc46e92fe8443bb20af166371d6fa2b6fef0bc89af463bf2f642c",
+		"kind": "baseline"
+	},
+	{
+		"tag": "0006_auth_rate_limits",
+		"sha256": "e51a532bdc4ebb31ef7a25530ff77223ff1417b78b95b7a4a1b5fd820ee5aa51",
+		"kind": "expand"
+	}
+]

@@ -1,6 +1,14 @@
 import { relations, sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
+/** Persistent across serverless instances; better-auth owns the counters. */
+export const rateLimits = sqliteTable('rate_limits', {
+	id: text('id').primaryKey(),
+	key: text('key').notNull().unique(),
+	count: integer('count').notNull(),
+	lastRequest: integer('last_request').notNull(),
+});
+
 export const users = sqliteTable('users', {
 	id: text('id').primaryKey(),
 	name: text('name').notNull(),
