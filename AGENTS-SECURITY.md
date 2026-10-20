@@ -268,12 +268,16 @@ better-auth manages session cookies with flags: `httpOnly: true`, `secure: true`
 | Auth protection | `/api/auth/*` | 20 req  | 60s    | Deny (429) |
 | General API     | `/api/*`      | 100 req | 60s    | Deny (429) |
 
+On Hobby, confirm the current custom-rule allowance and prioritize auth protection;
+do not assume both recommended rules can be enabled. No WAF rule is configured by
+repository files.
+
 ### Rules
 
-- **Enable better-auth rate limiting** as defense in depth — use `"database"` storage for production, `"memory"` acceptable as basic deterrent for low-traffic single-admin
+- better-auth rate limiting is explicitly enabled with database storage in `lib/auth-config.ts`; `rateLimits` persists counters across instances. Keep its migration and integration tests.
 - **Stricter limits on auth endpoints** (10-20 req/min) — most targeted
 - **Return `429 Too Many Requests`** with `Retry-After` header when possible
-- **Use `@vercel/firewall` SDK** for application-level context (user ID, etc.) — requires matching dashboard rule
+- Firewall SDK examples are optional references, not installed dependencies. Prefer the existing persistent auth limiter unless a reviewed dashboard rule needs additional application context.
 
 > Full `@vercel/firewall` SDK examples and WAF plan limits: [AGENTS-SECURITY-REFERENCE.md](./AGENTS-SECURITY-REFERENCE.md#rate-limiting-details)
 
@@ -282,14 +286,14 @@ better-auth manages session cookies with flags: `httpOnly: true`, `secure: true`
 ## Source Maps & Production Hardening
 
 - **Never enable `productionBrowserSourceMaps: true`** — exposes source code
-- **Add `removeConsole` to `next.config.ts`** — strips `console.log`/`debug`/`info`/`trace`, keeps `error`/`warn`
+- Preserve classified JSON operation logs; do not strip operational `info` logs globally. Sentry console forwarding remains disabled.
 - **Never log sensitive data** — tokens, passwords, DB URLs must never appear in logs
 
 ---
 
 ## Dependency Security
 
-- **Run `pnpm audit` before every deployment** — no high/critical vulnerabilities
+- Automated security workflows audit before release; no unresolved high/critical findings. The root restriction still governs agent-run local checks.
 - **`pnpm up` weekly** (within semver ranges), `pnpm dlx npm-check-updates` monthly (check majors)
 - **Lock file is your friend** — always commit `pnpm-lock.yaml`
 - **Ignore unfixable CVEs explicitly** in `auditConfig.ignoreCves` rather than ignoring the entire audit
@@ -342,5 +346,13 @@ better-auth manages session cookies with flags: `httpOnly: true`, `secure: true`
 - [x] Enforce administrator authorization on CMS reads, actions, and storage writes
 - [ ] Mark secrets as Sensitive in Vercel dashboard
 - [ ] Add WAF rate limit rules (`/api/auth/*` 20 req/min, `/api/*` 100 req/min)
-- [ ] Enable `rateLimit` in `lib/auth.ts`
+- [x] Configure persistent better-auth rate limiting and committed schema migration
 - [x] Add audit scripts to `package.json`
+
+## CI/CD security ownership
+
+See [CI/CD](./AGENTS-CICD.md) and [operations](./docs/operations/README.md) for
+workflow permissions, fork isolation, Dependabot/CodeQL/secret protection, production
+credentials, approval gates and recovery. These do not authorize local scans.
+Sentry uses explicit minimized data collection and private source-map upload.
+Public and administrative CSP allow only the configured exact Sentry ingest origin.

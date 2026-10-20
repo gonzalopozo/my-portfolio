@@ -55,8 +55,8 @@ First-time setup, environment configuration, and development prerequisites.
 
 ## Prerequisites
 
-- Node.js 24+
-- pnpm 10.33.0 via the repo's `packageManager` field
+- Node.js 24.x; `.nvmrc` follows the maintained major, including security patches.
+- pnpm 12.14.0 via the repo's `packageManager` field; CI pins the same version.
 - Turso CLI (optional, for local DB management)
 
 ## Environment Variables
@@ -81,12 +81,19 @@ pnpm i
 pnpm run hooks:install
 ```
 
-`ignore-scripts=true` is enabled in `.npmrc`, so lifecycle scripts do not run during install. Husky hooks must be installed manually with `pnpm run hooks:install`.
+`ignoreScripts: true` is enabled in `pnpm-workspace.yaml`, so lifecycle scripts do not run during install. Husky hooks must be installed manually with `pnpm run hooks:install`.
 
 ## Making Schema Changes
 
 1. Edit schema files in `db/schema/`
-2. Run `pnpm db:setup` to generate migrations and push to Turso
+2. Generate and review a versioned migration with `pnpm migrate:generate`.
+3. Classify the migration and commit its SQL hash in `db/migrations/policy.json`.
+4. CI replays every supported migration prefix with `pnpm migrate:check`.
+5. Production uses the protected Release workflow, never schema pushing.
+
+`pnpm db:setup` and `pnpm migrate:push` support disposable local file databases only.
+Commands in this guide do not override the root agent restriction on local checks.
+See [operations setup](./docs/operations/README.md) for environment isolation and release ordering.
 
 ## Agent Skills Installation Policy
 

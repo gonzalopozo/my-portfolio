@@ -8,14 +8,14 @@ Personal portfolio with a public page and an admin dashboard (CMS) — built wit
 
 ## Commands
 
-| Command         | Description                        |
-| --------------- | ---------------------------------- |
-| `pnpm dev`      | Start dev server (Turbopack)       |
-| `pnpm build`    | Production build                   |
-| `pnpm lint`     | ESLint                             |
-| `pnpm db:setup` | Generate + push Drizzle migrations |
-| `pnpm start`    | Start production server            |
-| `pnpm test`     | Vitest (watch mode)                |
+| Command         | Description                       |
+| --------------- | --------------------------------- |
+| `pnpm dev`      | Start dev server (Turbopack)      |
+| `pnpm build`    | Production build                  |
+| `pnpm lint`     | ESLint                            |
+| `pnpm db:setup` | Local-only generate + schema push |
+| `pnpm start`    | Start production server           |
+| `pnpm test`     | Vitest (watch mode)               |
 
 ## Git Rules
 
@@ -86,6 +86,13 @@ If any pre-commit check returns errors or warnings, fix them before creating the
 commit. Treat warnings as blockers unless they are explicitly confirmed to be
 false positives and documented in the commit notes.
 
+## Automated CI and local verification
+
+GitHub Actions runs validation automatically after pull requests and pushes. This
+does not authorize agents to run local checks. The pre-commit policy above,
+including the dedicated subagent and all required checks, remains unchanged.
+Implementation approval alone is not a request to commit. See [CI/CD](./AGENTS-CICD.md).
+
 ## Tech Stack
 
 | Category   | Technology                                         |
@@ -105,7 +112,7 @@ app/
 ├── (admin)/          # Dashboard + login (protected)
 ├── (public)/         # Portfolio page (public)
 ├── api/              # Auth routes (better-auth)
-└── layout.tsx        # Root layout
+└── # Each route group owns its root layout (shared AppDocument)
 components/
 ├── admin/            # Dashboard components
 ├── auth/             # Auth components
@@ -175,6 +182,7 @@ lib/
 
 | Guide                                                | When to read                                                                                           |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [CI/CD](./AGENTS-CICD.md)                            | Workflows, environments, migrations, releases, operations                                              |
 | [Setup](./AGENTS-SETUP.md)                           | First-time setup, env vars, prerequisites                                                              |
 | [Conventions](./AGENTS-CONVENTIONS.md)               | JSDoc style, when and how to document                                                                  |
 | [Patterns](./AGENTS-PATTERNS.md)                     | Architecture — Container-Presentational, Server Action hardening, Data Access Facade, Error Boundaries |

@@ -254,3 +254,17 @@ Add `<WebVitals />` to root layout for field data from real users. Built on `web
 - [ ] No barrel imports (`import * as ...`)
 - [ ] `<WebVitals />` in root layout for field monitoring
 - [ ] Lighthouse >= 90 (all categories) on production build
+
+## Production telemetry and cache ownership
+
+Public `components/web-vitals.tsx` emits LCP/INP/CLS field distributions through the
+single Sentry SDK, independently of trace sampling. Do not add duplicate field
+collection SDKs. Compare p75 by public route/release with sufficient real samples;
+Playwright timing is synthetic evidence, not field performance.
+
+CI and Vercel build-cache controls are separate from Cache Components, ISR/data
+caches and CDN behavior. Never disable legitimate runtime caching to comply with
+no-build-cache policy. Do not read request headers inside public cache entries just
+to add telemetry. See [operations](./docs/operations/services.md) for supported
+serverless signals, plan limitations, dashboards and alerts. Commands in this guide
+remain subject to the root local-verification restriction.

@@ -356,25 +356,13 @@ export async function POST(request: Request) {
 
 ### better-auth Rate Limiting Config
 
-```typescript
-// lib/auth.ts
-export const auth = betterAuth({
-	// ... existing config ...
-	rateLimit: {
-		enabled: true,
-		window: 60,
-		max: 10,
-		storage: 'memory', // Use "database" (Turso) for production reliability
-	},
-});
-```
-
-| Option    | Default    | Description                                                                                |
-| --------- | ---------- | ------------------------------------------------------------------------------------------ |
-| `enabled` | `false`    | Enable rate limiting for auth endpoints                                                    |
-| `window`  | `60`       | Time window in seconds                                                                     |
-| `max`     | `10`       | Max requests per window                                                                    |
-| `storage` | `"memory"` | `"memory"` has serverless issues; use `"database"` or `"secondary-storage"` for production |
+The implementation lives in `lib/auth-config.ts`: explicitly enabled database
+storage, a global 10-second/100-request window, and better-auth's stricter built-in
+endpoint rules. The plural Drizzle adapter maps `rateLimit` to `rateLimits`.
+`0006_auth_rate_limits.sql` must be applied through the controlled migration flow
+before the new application is exposed. Do not use memory counters across serverless
+instances or copy stale default values from examples. Integration tests exercise
+persistent limiting across independently initialized authentication instances.
 
 ### WAF Plan Limits
 
@@ -451,3 +439,13 @@ pnpm dlx vercel env pull .env.local            # Pull for local development
 | `VERCEL_URL`            | Deployment URL (no protocol)             | Construct `BETTER_AUTH_URL` dynamically |
 | `VERCEL_ENV`            | `production` / `preview` / `development` | Conditional logic per environment       |
 | `VERCEL_GIT_COMMIT_SHA` | Git commit hash                          | Cache busting, debugging                |
+
+## CI/CD and observability
+
+[Operations setup](./docs/operations/README.md) supersedes generic CI/deployment
+examples. Existing firewall examples are optional references, not installed SDKs or
+completed dashboard configuration. Hobby limits need confirmation before adding a
+rule. Production migrations and releases use protected approval environments.
+Audit fixes remain manual, reviewed dependency changes; never automate them on main.
+Sentry privacy, source-map token scope, native/fallback secret scanning and credential
+rotation procedures are documented in the operations guides.
