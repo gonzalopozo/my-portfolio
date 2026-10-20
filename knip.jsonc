@@ -6,7 +6,7 @@
 		"playwright.csp.config.ts",
 		"components/ui/**/*.{ts,tsx}",
 		"lib/queries/**/*.ts",
-		"scripts/**/*.{mts,ts}",
+		"scripts/**/*.{mts,ts,mjs}",
 	],
 	// Include repo-local TypeScript modules so Knip follows admin/public components behind route imports.
 	"project": ["**/*.{js,jsx,ts,tsx,mts}"],

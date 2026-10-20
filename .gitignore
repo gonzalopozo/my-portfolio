@@ -72,3 +72,6 @@ node_modules/
 # Temporal files
 .tmp/*
 !.tmp/.gitkeep
+!.env.example
+/.ci/
+/e2e/.auth/

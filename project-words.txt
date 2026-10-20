@@ -1,4 +1,4 @@
-# Repo-specific terms (see cspell.json). Keep sorted; use `pnpm spellcheck:words` to refresh candidates.
+# Repo-specific terms (see cspell.json). Add only reviewed project terminology.
 
 # Paths / tooling names (appear in JSON config)
 specstory
@@ -131,3 +131,30 @@ hermes
 chenini
 gomrassen
 tatto
+
+# CI/CD, observability and release tooling
+CodeQL
+Corepack
+Dependabot
+dpl
+Gitleaks
+INP
+LCOV
+nvmrc
+OTel
+PITR
+pnpm
+SARIF
+Sourcemaps
+tsx
+typegen
+uptime
+V8
+Vitest
+WebVitals
+
+# Security report formats and OpenSSL certificate flags
+addext
+gitleaks
+keyout
+sarif

@@ -2,15 +2,16 @@
 	"name": "portfolio-gonzalopozo",
 	"version": "0.1.0",
 	"private": true,
+	"type": "module",
 	"engines": {
-		"node": ">=24.0.0",
-		"pnpm": ">=12.0.0"
+		"node": "24.x",
+		"pnpm": ">=12.14.0 <13"
 	},
 	"scripts": {
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "eslint .",
+		"lint": "eslint . --max-warnings 0",
 		"lint:fix": "eslint . --fix",
 		"lint:staged": "lint-staged",
 		"commitlint": "commitlint",
@@ -20,11 +21,11 @@
 		"spellcheck:suggestions": "cspell lint . --config cspell.json --no-progress --show-suggestions",
 		"knip": "knip",
 		"knip:fix": "knip --fix",
-		"depcruise": "depcruise app components lib db proxy.ts scripts --config .dependency-cruiser.cjs",
-		"depcruise:graph": "depcruise app components lib db proxy.ts scripts --config .dependency-cruiser.cjs --output-type dot | dot -T svg > dependency-graph.svg",
+		"depcruise": "depcruise app components lib db proxy.ts instrumentation.ts instrumentation-client.ts scripts --config .dependency-cruiser.cjs",
+		"depcruise:graph": "depcruise app components lib db proxy.ts instrumentation.ts instrumentation-client.ts scripts --config .dependency-cruiser.cjs --output-type dot | dot -T svg > dependency-graph.svg",
 		"test": "vitest",
 		"migrate:generate": "drizzle-kit generate --config ./db/drizzle.config.ts",
-		"migrate:push": "drizzle-kit push --config ./db/drizzle.config.ts",
+		"migrate:push": "tsx scripts/database.mts push",
 		"db:setup": "pnpm migrate:generate && pnpm migrate:push",
 		"audit": "pnpm audit",
 		"audit:fix": "pnpm audit --fix=update",
@@ -36,7 +37,24 @@
 		"skills:sync": "pnpm skills:check && pnpm skills:update",
 		"icons:manifest": "pnpm tsx scripts/generate-icon-manifest.mts",
 		"hooks:install": "pnpm exec husky",
-		"prepare": "husky"
+		"prepare": "husky",
+		"typecheck": "next typegen && tsc --noEmit",
+		"test:run": "vitest run",
+		"test:unit": "vitest run --project unit",
+		"test:component": "vitest run --project component",
+		"test:integration": "vitest run --project integration",
+		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test",
+		"test:e2e:prod": "tsx scripts/run-production-e2e.mts",
+		"test:api": "tsx scripts/run-production-e2e.mts --project api",
+		"test:contract": "vitest run --config vitest.contract.config.mts",
+		"migrate:apply": "tsx scripts/database.mts apply",
+		"migrate:check": "tsx scripts/database.mts check",
+		"migrate:baseline": "tsx scripts/database.mts baseline",
+		"ci:quality": "tsx scripts/quality.mts",
+		"ci:secrets": "node scripts/scan-secrets.mjs",
+		"release": "tsx scripts/release.mts",
+		"smoke": "tsx scripts/smoke.mts"
 	},
 	"dependencies": {
 		"@dnd-kit/helpers": "^0.3.2",
@@ -53,6 +71,7 @@
 		"@radix-ui/react-slot": "^1.2.4",
 		"@radix-ui/react-switch": "^1.2.6",
 		"@radix-ui/react-tooltip": "^1.2.16",
+		"@sentry/nextjs": "11.8.0",
 		"@teritorio/openmaptiles-gl-language": "^1.5.4",
 		"@vercel/blob": "^2.3.2",
 		"better-auth": "^1.7.10",
@@ -83,6 +102,7 @@
 		"zod": "^4.6.5"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "4.11.1",
 		"@commitlint/cli": "^20.5.0",
 		"@commitlint/config-conventional": "^20.5.0",
 		"@commitlint/types": "^20.5.0",
@@ -90,11 +110,15 @@
 		"@playwright/test": "^1.58.2",
 		"@tailwindcss/postcss": "^4.2.1",
 		"@testing-library/dom": "^10.4.1",
+		"@testing-library/jest-dom": "6.9.1",
 		"@testing-library/react": "^16.3.2",
+		"@testing-library/user-event": "14.6.1",
+		"@types/geojson": "7946.0.16",
 		"@types/node": "^25.3.3",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^5.1.4",
+		"@vitest/coverage-v8": "4.1.12",
 		"@vitest/eslint-plugin": "^1.6.15",
 		"babel-plugin-react-compiler": "1.0.0",
 		"cspell": "^10.0.0",
@@ -118,5 +142,6 @@
 		"typescript": "^5.9.3",
 		"vite-tsconfig-paths": "^6.1.1",
 		"vitest": "^4.1.12"
-	}
+	},
+	"packageManager": "pnpm@12.14.0"
 }

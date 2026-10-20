@@ -39,3 +39,9 @@ lib/react-icons-manifest.json
 
 # Misc
 .next/cache
+
+# Disposable CI databases, certificates and release metadata
+.ci/
+
+# Third-party agent skill bundles
+.claude/

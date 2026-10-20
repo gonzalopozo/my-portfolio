@@ -34,6 +34,7 @@ module.exports = {
 					String.raw`(^|/)e2e/`,
 					String.raw`(^|/)scripts/`,
 					String.raw`^proxy[.]ts$`,
+					String.raw`^instrumentation(?:-client)?[.]ts$`,
 					String.raw`(^|/)next-env[.]d[.]ts$`,
 				],
 			},
@@ -104,6 +105,10 @@ module.exports = {
 	options: {
 		// Faster resolution for a typical TS + ESM/CJS Next app
 		moduleSystems: ['cjs', 'es6'],
+		enhancedResolveOptions: {
+			exportsFields: ['exports'],
+			conditionNames: ['import', 'require', 'node', 'default'],
+		},
 
 		tsConfig: {
 			fileName: 'tsconfig.json',
