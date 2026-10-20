@@ -16,23 +16,27 @@ export function LoginForm() {
 
 		const formData = new FormData(e.currentTarget);
 
-		await authClient.signIn.email(
-			{
-				email: formData.get('email') as string,
-				password: formData.get('password') as string,
-			},
-			{
-				onSuccess: () => {
-					toast.success('Signed in successfully');
-					window.location.assign('/dashboard');
+		try {
+			await authClient.signIn.email(
+				{
+					email: formData.get('email') as string,
+					password: formData.get('password') as string,
 				},
-				onError: (ctx) => {
-					toast.error(`Failed to sign in: ${ctx.error.message}`);
-					setError(ctx.error.message);
+				{
+					onSuccess: () => {
+						toast.success('Signed in successfully');
+						// eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Discard session-dependent router state with a full document load.
+						window.location.assign('/dashboard');
+					},
+					onError: () => {
+						toast.error('Unable to sign in. Check your credentials and try again.');
+						setError('Unable to sign in. Check your credentials and try again.');
+					},
 				},
-			},
-		);
-
+			);
+		} catch {
+			setError('Unable to sign in. Please try again.');
+		}
 		setLoading(false);
 	};
 
@@ -48,9 +52,9 @@ export function LoginForm() {
 				<input type="password" name="password" id="password" placeholder="password" />
 			</div>
 
-			{error && <div>{error}</div>}
+			{error && <div role="alert">{error}</div>}
 
-			<button type="submit">
+			<button type="submit" disabled={loading} aria-busy={loading}>
 				{loading && <Spinner className="size-6 text-current" />} Login!{' '}
 			</button>
 		</form>

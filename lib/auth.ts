@@ -1,26 +1,12 @@
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from '@/db';
-import * as authSchema from '@/db/schema/better-auth';
-import { nextCookies } from 'better-auth/next-js';
-import { getTrustedOrigins } from '@/lib/security/trusted-origins';
+import { createAuthentication } from '@/lib/auth-config';
 
-export const auth = betterAuth({
-	database: drizzleAdapter(db, {
-		provider: 'sqlite',
-		schema: { ...authSchema, user: authSchema.users },
-		usePlural: true,
-	}),
-	emailAndPassword: {
-		enabled: true,
-		disableSignUp: true, // Only allow sign-in, no registration
-	},
-	trustedOrigins: getTrustedOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
-	session: {
-		cookieCache: {
-			enabled: true,
-			maxAge: 5 * 60, // 5 minutes - avoids DB hit on every getSession call
-		},
-	},
-	plugins: [nextCookies()],
+const platformOrigin =
+	process.env.VERCEL === '1' && /^[a-z0-9-]+\.vercel\.app$/.test(process.env.VERCEL_URL ?? '')
+		? `https://${process.env.VERCEL_URL}`
+		: undefined;
+export const auth = createAuthentication(db, {
+	trustedOrigins:
+		[process.env.BETTER_AUTH_TRUSTED_ORIGINS, platformOrigin].filter(Boolean).join(',') ||
+		undefined,
 });

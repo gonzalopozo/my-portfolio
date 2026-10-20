@@ -16,6 +16,7 @@ export function LogOutButton() {
 			fetchOptions: {
 				onSuccess: () => {
 					toast.success('Signed out successfully');
+					// eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Discard session-dependent router state with a full document load.
 					window.location.assign('/login');
 				},
 				onError: (error) => {
