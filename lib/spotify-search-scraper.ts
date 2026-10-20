@@ -182,6 +182,8 @@ export function selectFirstValidatedSpotifyTrackUrl(
 }
 
 async function loadChromiumBrowserLauncher(): Promise<SpotifyBrowserLauncher | null> {
+	// Managed Vercel builds do not install Playwright browsers. Use the existing fallback.
+	if (process.env.VERCEL) return null;
 	const { chromium } = await import('@playwright/test');
 	return chromium ?? null;
 }
