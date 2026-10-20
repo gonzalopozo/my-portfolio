@@ -1,0 +1,17 @@
+title = "Portfolio credential detection"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Exact public synthetic credentials for isolated CI accounts only"
+regexTarget = "secret"
+regexes = [
+  '^synthetic-ci-only-auth-secret-32-characters$',
+  '^synthetic-integration-secret-at-least-32-characters$',
+  '^synthetic-ci-only-readiness$',
+  '^synthetic-ci-only$',
+  '^synthetic-platform-token$',
+  '^Synthetic-fixture-password-47!$',
+  '^Synthetic-visitor-password-47!$',
+]
