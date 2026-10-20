@@ -24,7 +24,7 @@ vi.mock('cheerio', async (importOriginal) => {
 import { deleteOldImageInVercelBlob, saveImageInVercelBlob } from '@/lib/og-image';
 
 const sourceUrl = 'https://example.com/project';
-const blobUrl = 'https://store.public.blob.vercel-storage.com/og-images/image.png';
+const blobUrl = 'https://store.public.blob.vercel-storage.com/og-images/7-123-random.png';
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function page(html = '<meta property="og:image" content="/image.png">', headers = {}) {
@@ -37,6 +37,7 @@ function image() {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	vi.stubEnv('BLOB_PUBLIC_HOSTNAME', 'https://store.public.blob.vercel-storage.com');
 	mocks.admin.mockResolvedValue({ user: { id: 'admin' } });
 	mocks.resolve4.mockResolvedValue(['93.184.216.34']);
 	mocks.resolve6.mockRejectedValue({ code: 'ENODATA' });
@@ -51,6 +52,7 @@ beforeEach(() => {
 afterEach(() => {
 	vi.restoreAllMocks();
 	vi.unstubAllGlobals();
+	vi.unstubAllEnvs();
 });
 
 describe('OG image download outcomes', () => {
@@ -153,10 +155,13 @@ describe('OG image download outcomes', () => {
 				ok: false,
 				error: { code: 'http-failed', stage: `${target}-fetch` },
 			});
-			expect(console.warn).toHaveBeenCalledWith(
-				'OG image operation failed',
-				expect.objectContaining({ httpStatus: 503 }),
-			);
+			expect(console.warn).toHaveBeenCalledOnce();
+			expect(JSON.parse(vi.mocked(console.warn).mock.calls[0][0])).toMatchObject({
+				operation: `project_image.${target}-fetch`,
+				classification: 'http-failed',
+				status: 503,
+			});
+			expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain('secret body');
 		},
 	);
 
@@ -312,9 +317,10 @@ describe('OG image download outcomes', () => {
 			error: { code: 'upload-failed', stage: 'upload' },
 		});
 		if (result.ok) throw new Error('Expected failure');
-		expect(console.error).toHaveBeenCalledExactlyOnceWith('OG image operation failed', {
-			...result.error,
-			projectId: 7,
+		expect(JSON.parse(vi.mocked(console.error).mock.calls[0][0])).toMatchObject({
+			classification: 'upload-failed',
+			reference: result.error.reference,
+			operation: 'project_image.upload',
 		});
 		expect(JSON.stringify(result)).not.toContain('secret');
 	});

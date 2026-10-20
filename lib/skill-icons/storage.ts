@@ -1,7 +1,8 @@
 import 'server-only';
+import { logOperation } from '@/lib/observability/logger';
 import { requireAdmin } from '@/lib/admin';
 import { randomUUID } from 'node:crypto';
-import { del, put } from '@vercel/blob';
+import { del, put } from '@/lib/blob';
 import { cacheLife, cacheTag } from 'next/cache';
 import { getSkillIconFileError, MAX_SKILL_ICON_BYTES } from '@/lib/schemas/skill-icon';
 import {
@@ -54,8 +55,11 @@ export async function deleteSkillIcon(url: string | null): Promise<void> {
 	if (!url || !isSkillIconUrl(url)) return;
 	try {
 		await del(url);
-	} catch (error) {
-		console.error('No se pudo eliminar el icono de la habilidad de Blob.', error);
+	} catch {
+		logOperation('warn', {
+			operation: 'skill_icon.delete',
+			classification: 'blob_cleanup_failed',
+		});
 	}
 }
 

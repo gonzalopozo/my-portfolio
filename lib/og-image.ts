@@ -1,9 +1,10 @@
 import 'server-only';
+import { isProjectImageUrl } from '@/lib/security/blob-ownership';
 import { requireAdmin } from '@/lib/admin';
 import { URL } from 'url';
 import { resolve4, resolve6 } from 'dns/promises';
 import * as cheerio from 'cheerio';
-import { del, put } from '@vercel/blob';
+import { del, put } from '@/lib/blob';
 import { entityIdSchema } from '@/lib/schemas/common';
 import { reportOgImageError } from '@/lib/og-image-errors';
 import type {
@@ -391,6 +392,9 @@ export async function deleteOldImageInVercelBlob(
 ): Promise<OgImageResult> {
 	await requireAdmin();
 	if (!oldImage) return { ok: true };
+	if (!isProjectImageUrl(oldImage, projectId, process.env.BLOB_PUBLIC_HOSTNAME)) {
+		return { ok: false, error: reportOgImageError('delete-failed', 'cleanup', projectId) };
+	}
 	try {
 		await del(oldImage);
 		return { ok: true };

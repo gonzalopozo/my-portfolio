@@ -135,7 +135,7 @@ describe('skill icon storage', () => {
 	});
 
 	it('logs cleanup failures without failing a successful save', async () => {
-		const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const log = vi.spyOn(console, 'warn').mockImplementation(() => {});
 		mocks.del.mockRejectedValue(new Error('Network error'));
 		await expect(deleteSkillIcon(url)).resolves.toBeUndefined();
 		expect(log).toHaveBeenCalledOnce();
