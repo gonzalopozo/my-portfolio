@@ -1,6 +1,4 @@
-import { expect, test } from '@playwright/test';
-
-test.use({ baseURL: 'http://localhost:3000' });
+import { expect, test } from './fixtures';
 
 test.describe('public responsive layout', () => {
 	for (const colorScheme of ['light', 'dark'] as const) {
@@ -81,7 +79,9 @@ test.describe('mobile section navigation', () => {
 			grid.locator('[data-portfolio-card]:not([data-category="experience"])'),
 		).toHaveCount(0);
 		await navigation.getByRole('button', { name: 'Show All section' }).tap();
-		await expect(page).toHaveURL('http://localhost:3000/');
+		await expect(page).toHaveURL(
+			new URL('/', process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000').href,
+		);
 		await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 		await expect
 			.poll(() =>

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 type Violation = { directive: string; source: string; disposition: string; route: string };
 type EvidenceWindow = Window & {
@@ -8,7 +8,7 @@ type EvidenceWindow = Window & {
 };
 
 // Requires a separately authorized, protected preview or production-mode local server.
-test.skip(!process.env.CSP_TEST_BASE_URL, 'Set CSP_TEST_BASE_URL for explicit preview validation.');
+if (!process.env.CSP_TEST_BASE_URL) throw new Error('CSP_TEST_BASE_URL is required.');
 
 test.beforeEach(async ({ page }) => {
 	await page.addInitScript(() => {
@@ -58,10 +58,7 @@ test('public enforced policy blocks script attributes while documenting permitte
 	page,
 }) => {
 	const response = await page.goto('/');
-	test.skip(
-		!response?.headers()['content-security-policy'],
-		'Requires public enforcement preview.',
-	);
+	expect(response?.headers()['content-security-policy']).toBeTruthy();
 	await page.evaluate(() => {
 		const button = document.createElement('button');
 		button.setAttribute('onclick', 'window.cspHandlerExecuted = true');
@@ -87,7 +84,7 @@ test('login receives the independent policy and rejects nonce-free scripts under
 	const policy = enforced ?? responseHeaders['content-security-policy-report-only'];
 	expect(policy).toBeTruthy();
 	expect(policy).not.toContain('cartocdn.com');
-	if (!policy.includes('nonce-')) return;
+	expect(policy).toContain('nonce-');
 	const nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
 	expect(nonce).toBeTruthy();
 	const scriptNonces = await page
@@ -101,7 +98,7 @@ test('login receives the independent policy and rejects nonce-free scripts under
 		secondHeaders['content-security-policy'] ??
 			secondHeaders['content-security-policy-report-only'],
 	).not.toBe(policy);
-	if (!enforced) return;
+	expect(enforced).toBeTruthy();
 	await page.evaluate(() => {
 		const script = document.createElement('script');
 		script.textContent = 'window.cspInlineExecuted = true';
@@ -134,10 +131,8 @@ test('forged session cookies do not expose administrative data or create redirec
 });
 
 test('login and logout work across document boundaries', async ({ page }) => {
-	test.skip(
-		!process.env.CSP_TEST_ADMIN_EMAIL || !process.env.CSP_TEST_ADMIN_PASSWORD,
-		'Requires a dedicated preview administrator account.',
-	);
+	if (!process.env.CSP_TEST_ADMIN_EMAIL || !process.env.CSP_TEST_ADMIN_PASSWORD)
+		throw new Error('Dedicated test administrator credentials are required.');
 	await page.goto('/login');
 	await page.getByLabel('Email:', { exact: true }).fill(process.env.CSP_TEST_ADMIN_EMAIL!);
 	await page.getByLabel('Password:', { exact: true }).fill(process.env.CSP_TEST_ADMIN_PASSWORD!);

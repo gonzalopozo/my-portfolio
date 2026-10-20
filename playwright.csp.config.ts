@@ -1,18 +1,14 @@
 import { defineConfig } from '@playwright/test';
 import config from './playwright.config';
 
-/** Opt-in preview checks use an existing server and never start a development build. */
+/** Remote acceptance uses a browser cookie bootstrap; no global bypass headers. */
 export default defineConfig({
 	...config,
 	testMatch: 'csp.spec.ts',
+	projects: config.projects
+		?.filter((project) => project.name !== 'api')
+		.map(({ name, use }) => ({ name, use })),
 	workers: 1,
-	use: {
-		...config.use,
-		baseURL: process.env.CSP_TEST_BASE_URL ?? 'http://localhost:3000',
-		// Authenticated pages can contain personal data; do not record cookies/passwords in traces.
-		trace: 'off',
-		extraHTTPHeaders: process.env.CSP_TEST_PREVIEW_BYPASS
-			? { 'x-vercel-protection-bypass': process.env.CSP_TEST_PREVIEW_BYPASS }
-			: undefined,
-	},
+	webServer: undefined,
+	use: { ...config.use, baseURL: process.env.CSP_TEST_BASE_URL, trace: 'off', screenshot: 'off' },
 });
