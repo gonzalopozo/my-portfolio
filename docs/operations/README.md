@@ -8,6 +8,10 @@ remain the owner's responsibility.
 
 ## Start here
 
+The service guide includes the [Preview administrator setup command](./services.md#create-the-preview-administrator).
+Record platform setup, validation, release and recovery evidence privately as you
+work through these operational guides.
+
 Perform these steps in order:
 
 1. Freeze automatic production promotion in the existing Vercel project before

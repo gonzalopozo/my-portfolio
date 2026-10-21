@@ -20,9 +20,10 @@ minutes to affect another cached session. This is an acknowledged security trade
    API token. The controller creates a fresh empty `ci-<run>-<suffix>` DB, applies
    committed migrations, runs transport/constraint tests and deletes only its owned
    DB. It never forks production data. Check database count/quota before activation.
-4. Provision Preview's dedicated synthetic administrator manually, using better-auth
-   password hashing. Do not enable public registration. Put its stable user ID in
-   Preview `ADMIN_USER_IDS`; keep production's allowlist independent.
+4. Create Preview's dedicated synthetic administrator with the
+   [Preview account setup command](#create-the-preview-administrator). It uses
+   better-auth password hashing while public registration stays disabled. Put its
+   stable user ID in Preview `ADMIN_USER_IDS`; keep production's allowlist independent.
 5. Prepare recovery before any production migration: confirm the current Turso
    retention/window in your plan and record a recovery point or verified backup.
    Free's documented PITR window is limited (24 hours at investigation); confirm the
@@ -70,6 +71,51 @@ If a runner is forcibly stopped after resource creation, review `ci-<run>-*` res
 and `ci/<run>/` Blob objects. Cleanup retries compare the owned database ID and name;
 never bulk-delete an entire group or store to clear an orphan. A failure before the
 ownership record is written requires an owner reconciliation, not guessed deletion.
+
+### Create the Preview administrator
+
+Create a test login for the CMS in the isolated Preview database. Applying
+migrations creates tables, but does not create a login account.
+This account belongs to your application; it is separate from your Turso or Vercel
+dashboard login and from your real production administrator.
+
+After applying the committed migrations to Preview, add these two values to your
+private `.env.preview.local` in the repository root:
+
+```dotenv
+PREVIEW_ADMIN_EMAIL=preview-admin@example.test
+PREVIEW_ADMIN_PASSWORD="replace-with-a-new-unique-password"
+```
+
+Keep `APP_ENV=preview`, the isolated `TURSO_DATABASE_URL` and its database-scoped
+`TURSO_AUTH_TOKEN` in that same file. Choose a password of 12–128 characters. The
+email uses the reserved `example.test` domain; this application does not require a
+verification email. The file is already excluded by `.gitignore`.
+
+Run this from the checkout containing the setup script:
+
+```bash
+env -u APP_ENV -u TURSO_DATABASE_URL -u TURSO_AUTH_TOKEN \
+  -u PREVIEW_ADMIN_EMAIL -u PREVIEW_ADMIN_PASSWORD \
+  pnpm exec tsx --env-file=.env.preview.local scripts/provision-preview-admin.mts
+```
+
+The command displays the database hostname. Confirm that it is your isolated
+Preview database, then type that hostname at the prompt. It creates the user and
+its credential account in one transaction, hashing the password with Better Auth.
+Repeating it with the same credentials returns the same ID; it does not reset an
+existing password. It prints `ADMIN_USER_IDS=<new-user-id>` without printing the
+password or database token.
+
+Copy the printed ID to **Vercel → project → Settings → Environment Variables →
+Preview → `ADMIN_USER_IDS`**, then create a new Preview deployment. For automated
+Preview acceptance, copy this test email and password to **GitHub → repository →
+Settings → Environments → `preview-acceptance` → Environment secrets** as
+`PREVIEW_ADMIN_EMAIL` and `PREVIEW_ADMIN_PASSWORD`. Store those credentials privately.
+
+The login account is created in Turso; the Vercel allowlist grants its CMS access.
+Public registration remains disabled. See [Better Auth user and account
+storage](https://better-auth.com/docs/concepts/users-accounts).
 
 ## Blob storage
 
