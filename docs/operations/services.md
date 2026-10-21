@@ -126,6 +126,15 @@ check. The contract verifies the store identifier encoded in the token **before*
 upload and writes only `ci/<run>/<uuid>` objects. Never use a production token to
 check whether isolation works.
 
+Connect the nonproduction store to Vercel Preview using
+`BLOB_PREVIEW_READ_WRITE_TOKEN` and set its exact public origin as
+`BLOB_PREVIEW_PUBLIC_HOSTNAME`. Keep `BLOB_READ_WRITE_TOKEN` and
+`BLOB_PUBLIC_HOSTNAME` scoped to Production. Application storage, image loading,
+CSP and ownership checks select the Preview pair on Preview deployments, with no
+fallback to the production pair. The protected service-contract workflow still
+passes its separate `NONPRODUCTION_BLOB_TOKEN` explicitly through its own
+`BLOB_READ_WRITE_TOKEN`; it does not use application environment selection.
+
 Application SVG and OG operations still authenticate server-side, validate input,
 restrict managed deletion paths, preserve compare-and-swap updates, and clean up
 unused/replaced objects. Local production tests use a guarded filesystem adapter;

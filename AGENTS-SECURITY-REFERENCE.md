@@ -46,9 +46,13 @@ Keep proxy and layout environment settings identical within a deployment.
 Carto origins: `basemaps.cartocdn.com`, `tiles.basemaps.cartocdn.com`, and
 `tiles-a` through `tiles-d.basemaps.cartocdn.com`, all HTTPS. Stylesheet glyphs are
 fetched map data governed by `connect-src`; ordinary page fonts are self-hosted.
-`BLOB_PUBLIC_HOSTNAME` must be a single HTTPS `*.public.blob.vercel-storage.com`
-store origin, without credentials, path, query, or fragment. No generic `https:`
-allowance is used. The image optimizer's remote patterns remain independent.
+The selected Blob hostname (`BLOB_PREVIEW_PUBLIC_HOSTNAME` on Preview,
+`BLOB_PUBLIC_HOSTNAME` elsewhere) must be a single HTTPS
+`*.public.blob.vercel-storage.com` store origin, without credentials, path, query,
+or fragment. Preview also selects `BLOB_PREVIEW_READ_WRITE_TOKEN`, with no fallback
+to `BLOB_READ_WRITE_TOKEN`. Selection uses `VERCEL_ENV` first, then `APP_ENV`.
+No generic `https:` allowance is used. The image optimizer's remote patterns
+remain independent and use that same selected hostname.
 
 Development adds script evaluation and WebSocket connections to localhost/127.0.0.1
 only, and omits insecure-request upgrades. Other development hostnames must be

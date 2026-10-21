@@ -51,24 +51,42 @@ must remain enabled where the application uses them. See [build cache](https://v
 Use **Settings → Environment Variables** with explicit environment scopes. Check
 values privately in the dashboard; never paste them into tickets, traces or docs.
 
-| Name                                            | Preview                                                                  | Production                                                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `APP_ENV`, `NEXT_PUBLIC_APP_ENV`                | `preview`                                                                | `production`                                                                               |
-| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`        | Dedicated synthetic Preview DB/token                                     | Production DB/token                                                                        |
-| `BETTER_AUTH_SECRET`                            | Independent Preview secret                                               | Production secret                                                                          |
-| `BETTER_AUTH_URL`                               | Appropriate exact Preview base origin; configure per branch if necessary | Canonical production origin                                                                |
-| `BETTER_AUTH_TRUSTED_ORIGINS`                   | Explicit HTTPS origins only                                              | Canonical origins; exact platform deployment origin is also validated from Vercel metadata |
-| `ADMIN_USER_IDS`                                | Synthetic Preview admin IDs                                              | Existing trusted administrator IDs                                                         |
-| `BLOB_PUBLIC_HOSTNAME`, `BLOB_READ_WRITE_TOKEN` | Separate nonproduction store                                             | Production store                                                                           |
-| `LASTFM_USERNAME`, `LASTFM_API_KEY`             | Test account or leave unset to exercise safe fallback                    | Production provider configuration                                                          |
-| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`    | Only if the current integration actually uses them                       | Existing provider configuration; hosted browser scraping falls back safely                 |
-| `CSP_PUBLIC_MODE`, `CSP_ADMIN_MODE`             | `enforce` for acceptance candidate                                       | Enforce after acceptance                                                                   |
-| `CSP_ADMIN_POLICY`                              | `nonce` for acceptance candidate                                         | `nonce` after acceptance                                                                   |
-| `HEALTH_READINESS_TOKEN`                        | Independent Preview credential                                           | Strong random production credential, shared only with protected GitHub jobs/uptime monitor |
-| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`          | Same Preview DSN or same project tagged Preview                          | Identical server/browser Production DSN                                                    |
-| `SENTRY_ORG`, `SENTRY_PROJECT`                  | Optional; no map upload                                                  | Required project slugs                                                                     |
-| `SENTRY_AUTH_TOKEN`                             | **Absent**                                                               | Build-only source map upload credential                                                    |
-| `VERCEL_FORCE_NO_BUILD_CACHE`                   | `1`                                                                      | `1`                                                                                        |
+| Name                                                            | Preview                                                                  | Production                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `APP_ENV`, `NEXT_PUBLIC_APP_ENV`                                | `preview`                                                                | `production`                                                                               |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                        | Dedicated synthetic Preview DB/token                                     | Production DB/token                                                                        |
+| `BETTER_AUTH_SECRET`                                            | Independent Preview secret                                               | Production secret                                                                          |
+| `BETTER_AUTH_URL`                                               | Appropriate exact Preview base origin; configure per branch if necessary | Canonical production origin                                                                |
+| `BETTER_AUTH_TRUSTED_ORIGINS`                                   | Explicit HTTPS origins only                                              | Canonical origins; exact platform deployment origin is also validated from Vercel metadata |
+| `ADMIN_USER_IDS`                                                | Synthetic Preview admin IDs                                              | Existing trusted administrator IDs                                                         |
+| `BLOB_PREVIEW_PUBLIC_HOSTNAME`, `BLOB_PREVIEW_READ_WRITE_TOKEN` | Dedicated nonproduction store, Preview scope only                        | Absent                                                                                     |
+| `BLOB_PUBLIC_HOSTNAME`, `BLOB_READ_WRITE_TOKEN`                 | Absent                                                                   | Production store, Production scope only                                                    |
+| `LASTFM_USERNAME`, `LASTFM_API_KEY`                             | Test account or leave unset to exercise safe fallback                    | Production provider configuration                                                          |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`                    | Only if the current integration actually uses them                       | Existing provider configuration; hosted browser scraping falls back safely                 |
+| `CSP_PUBLIC_MODE`, `CSP_ADMIN_MODE`                             | `enforce` for acceptance candidate                                       | Enforce after acceptance                                                                   |
+| `CSP_ADMIN_POLICY`                                              | `nonce` for acceptance candidate                                         | `nonce` after acceptance                                                                   |
+| `HEALTH_READINESS_TOKEN`                                        | Independent Preview credential                                           | Strong random production credential, shared only with protected GitHub jobs/uptime monitor |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`                          | Same Preview DSN or same project tagged Preview                          | Identical server/browser Production DSN                                                    |
+| `SENTRY_ORG`, `SENTRY_PROJECT`                                  | Optional; no map upload                                                  | Required project slugs                                                                     |
+| `SENTRY_AUTH_TOKEN`                                             | **Absent**                                                               | Build-only source map upload credential                                                    |
+| `VERCEL_FORCE_NO_BUILD_CACHE`                                   | `1`                                                                      | `1`                                                                                        |
+
+Blob selection uses `VERCEL_ENV` when present, otherwise `APP_ENV`. Preview reads
+only `BLOB_PREVIEW_PUBLIC_HOSTNAME` and `BLOB_PREVIEW_READ_WRITE_TOKEN`; there is no
+fallback to the unprefixed production credential. The same store selection applies
+to uploads, deletions, image optimization, CSP and file ownership checks. The token
+is passed explicitly to the Blob SDK. Production and local development/test use the
+unprefixed pair.
+
+`.env.example` documents variable names with placeholders and empty tokens; it
+contains no real credentials. Put real local values in a private `.env.local` or
+`.env.preview.local`. Next.js automatically loads `.env.local` for local runs; the
+custom `.env.preview.local` file must be loaded explicitly. To run the app locally
+with the Preview pair, set `APP_ENV=preview`, `NEXT_PUBLIC_APP_ENV=preview`, and both
+`BLOB_PREVIEW_*` values in the active local file, leaving `VERCEL_ENV` unset. Keep
+all database/auth settings consistent with the same isolated Preview resources.
+Migration and account-provisioning commands do not require Blob credentials. See
+[Next.js environment loading](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order).
 
 DSNs are public routing identifiers, not auth tokens. Their ingest origins are
 validated and added narrowly to `connect-src`. No blanket HTTPS allowance or
