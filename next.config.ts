@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import { buildCsp, getCspHeaderName, getCspMode } from './lib/security/csp';
+import { getBlobPublicHostname } from './lib/blob-environment';
 
 const nextConfig: NextConfig = {
 	env: {
@@ -16,7 +17,7 @@ const nextConfig: NextConfig = {
 			section: 'public',
 			mode,
 			isDevelopment: process.env.NODE_ENV === 'development',
-			blobHostname: process.env.BLOB_PUBLIC_HOSTNAME,
+			blobHostname: getBlobPublicHostname(),
 		});
 		return [
 			{
@@ -49,7 +50,7 @@ const nextConfig: NextConfig = {
 	},
 	images: {
 		remotePatterns: [
-			new URL(`${process.env.BLOB_PUBLIC_HOSTNAME}/**`),
+			new URL(`${getBlobPublicHostname()}/**`),
 			new URL('https://lastfm.freetls.fastly.net/**'),
 			new URL('https://image-cdn-**.spotifycdn.com/**'),
 			new URL('https://i.scdn.co/**'),

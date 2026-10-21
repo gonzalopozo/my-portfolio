@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getSessionCookie } from 'better-auth/cookies';
 import { randomBytes } from 'node:crypto';
 import { buildCsp, getAdminCspPolicy, getCspHeaderName, getCspMode } from '@/lib/security/csp';
+import { getBlobPublicHostname } from '@/lib/blob-environment';
 
 export async function proxy(request: NextRequest) {
 	const sessionCookie = getSessionCookie(request);
@@ -14,7 +15,7 @@ export async function proxy(request: NextRequest) {
 		section: 'admin',
 		mode,
 		isDevelopment: process.env.NODE_ENV === 'development',
-		blobHostname: process.env.BLOB_PUBLIC_HOSTNAME,
+		blobHostname: getBlobPublicHostname(),
 		nonce,
 	});
 	const requestHeaders = new Headers(request.headers);

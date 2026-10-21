@@ -7,9 +7,12 @@ vi.mock('better-auth/cookies', () => ({ getSessionCookie: mocks.getSessionCookie
 import { proxy } from '@/proxy';
 
 beforeEach(() => {
+	vi.stubEnv('VERCEL_ENV', undefined);
+	vi.stubEnv('APP_ENV', 'test');
 	vi.stubEnv('CSP_ADMIN_MODE', 'report-only');
 	vi.stubEnv('CSP_ADMIN_POLICY', 'static');
 	vi.stubEnv('BLOB_PUBLIC_HOSTNAME', 'https://images.public.blob.vercel-storage.com');
+	vi.stubEnv('BLOB_PREVIEW_PUBLIC_HOSTNAME', 'https://preview.public.blob.vercel-storage.com');
 	mocks.getSessionCookie.mockReturnValue(null);
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -47,6 +50,16 @@ describe('administrative request policy', () => {
 			expect(policy).toContain(`script-src 'self' 'nonce-${nonce}' 'strict-dynamic';`);
 			expect(policy).not.toContain('unsafe-eval');
 			expect(policy).not.toContain('script-src *');
+			expect(policy).toContain(
+				environment === 'preview'
+					? 'https://preview.public.blob.vercel-storage.com'
+					: 'https://images.public.blob.vercel-storage.com',
+			);
+			expect(policy).not.toContain(
+				environment === 'preview'
+					? 'https://images.public.blob.vercel-storage.com'
+					: 'https://preview.public.blob.vercel-storage.com',
+			);
 			expect(policy).toBe(first.headers.get('x-middleware-request-content-security-policy'));
 			expect(first.headers.has('content-security-policy-report-only')).toBe(false);
 			expect(first.headers.get('cache-control')).toBe('private, no-store');

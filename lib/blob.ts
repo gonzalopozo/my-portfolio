@@ -1,5 +1,6 @@
 import 'server-only';
 import { put as sdkPut, del as sdkDelete } from '@vercel/blob';
+import { getBlobReadWriteToken } from './blob-environment';
 
 /** Offline fixtures are available only in an explicitly isolated, non-hosted CI process. */
 function isolated() {
@@ -16,7 +17,7 @@ export const put: typeof sdkPut = async (pathname, body, options) => {
 		const { putFixture } = await import('../tests/fixtures/blob');
 		return putFixture(pathname, body, options);
 	}
-	return sdkPut(pathname, body, options);
+	return sdkPut(pathname, body, { ...options, token: getBlobReadWriteToken() });
 };
 
 export const del: typeof sdkDelete = async (url, options) => {
@@ -25,5 +26,5 @@ export const del: typeof sdkDelete = async (url, options) => {
 		await deleteFixture(url);
 		return;
 	}
-	return sdkDelete(url, options);
+	return sdkDelete(url, { ...options, token: getBlobReadWriteToken() });
 };

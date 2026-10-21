@@ -25,6 +25,8 @@ const environment: NodeJS.ProcessEnv = {
 	BETTER_AUTH_TRUSTED_ORIGINS: baseURL,
 	ADMIN_USER_IDS: fixtureUser.id,
 	BLOB_PUBLIC_HOSTNAME: 'https://fixture.public.blob.vercel-storage.com',
+	// The nonce harness uses VERCEL_ENV=preview; keep its selected Blob store synthetic.
+	BLOB_PREVIEW_PUBLIC_HOSTNAME: 'https://fixture.public.blob.vercel-storage.com',
 	LASTFM_USERNAME: 'fixture',
 	LASTFM_API_KEY: 'synthetic-ci-only',
 	HEALTH_READINESS_TOKEN: 'synthetic-ci-only-readiness',

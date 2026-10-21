@@ -5,6 +5,7 @@ import { URL } from 'url';
 import { resolve4, resolve6 } from 'dns/promises';
 import * as cheerio from 'cheerio';
 import { del, put } from '@/lib/blob';
+import { getBlobPublicHostname } from '@/lib/blob-environment';
 import { entityIdSchema } from '@/lib/schemas/common';
 import { reportOgImageError } from '@/lib/og-image-errors';
 import type {
@@ -392,7 +393,7 @@ export async function deleteOldImageInVercelBlob(
 ): Promise<OgImageResult> {
 	await requireAdmin();
 	if (!oldImage) return { ok: true };
-	if (!isProjectImageUrl(oldImage, projectId, process.env.BLOB_PUBLIC_HOSTNAME)) {
+	if (!isProjectImageUrl(oldImage, projectId, getBlobPublicHostname())) {
 		return { ok: false, error: reportOgImageError('delete-failed', 'cleanup', projectId) };
 	}
 	try {

@@ -3,6 +3,7 @@ import { logOperation } from '@/lib/observability/logger';
 import { requireAdmin } from '@/lib/admin';
 import { randomUUID } from 'node:crypto';
 import { del, put } from '@/lib/blob';
+import { getBlobPublicHostname } from '@/lib/blob-environment';
 import { cacheLife, cacheTag } from 'next/cache';
 import { getSkillIconFileError, MAX_SKILL_ICON_BYTES } from '@/lib/schemas/skill-icon';
 import {
@@ -14,7 +15,7 @@ import {
 /** Restrict reads and deletes to this store's managed skill icon objects. */
 function isSkillIconUrl(value: string): boolean {
 	try {
-		const configured = new URL(process.env.BLOB_PUBLIC_HOSTNAME ?? '');
+		const configured = new URL(getBlobPublicHostname() ?? '');
 		const url = new URL(value);
 		return (
 			configured.protocol === 'https:' &&

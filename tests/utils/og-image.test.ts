@@ -37,6 +37,9 @@ function image() {
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	vi.stubEnv('APP_ENV', 'test');
+	vi.stubEnv('VERCEL_ENV', undefined);
+	vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'synthetic-storage-token');
 	vi.stubEnv('BLOB_PUBLIC_HOSTNAME', 'https://store.public.blob.vercel-storage.com');
 	mocks.admin.mockResolvedValue({ user: { id: 'admin' } });
 	mocks.resolve4.mockResolvedValue(['93.184.216.34']);
@@ -327,6 +330,19 @@ describe('OG image download outcomes', () => {
 });
 
 describe('OG image cleanup and authorization', () => {
+	it('rejects production cleanup and uses Preview credentials for owned Preview images', async () => {
+		const previewOrigin = 'https://preview.public.blob.vercel-storage.com';
+		const previewUrl = `${previewOrigin}/og-images/7-123-random.png`;
+		vi.stubEnv('VERCEL_ENV', 'preview');
+		vi.stubEnv('BLOB_PREVIEW_PUBLIC_HOSTNAME', previewOrigin);
+		vi.stubEnv('BLOB_PREVIEW_READ_WRITE_TOKEN', 'synthetic-preview-token');
+
+		expect(await deleteOldImageInVercelBlob(blobUrl, 7)).toMatchObject({ ok: false });
+		expect(mocks.del).not.toHaveBeenCalled();
+		expect(await deleteOldImageInVercelBlob(previewUrl, 7)).toEqual({ ok: true });
+		expect(mocks.del).toHaveBeenCalledWith(previewUrl, { token: 'synthetic-preview-token' });
+	});
+
 	it('returns cleanup failure with a diagnostic reference', async () => {
 		mocks.del.mockRejectedValueOnce(new Error('storage token secret'));
 		expect(await deleteOldImageInVercelBlob(blobUrl, 7)).toMatchObject({

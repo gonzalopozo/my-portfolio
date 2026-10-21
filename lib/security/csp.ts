@@ -44,7 +44,7 @@ function getBlobOrigin(value: string | undefined): string | undefined {
 		url.hash ||
 		url.pathname !== '/'
 	) {
-		throw new Error('BLOB_PUBLIC_HOSTNAME must be an HTTPS public Blob store origin.');
+		throw new Error('The configured Blob hostname must be an HTTPS public Blob store origin.');
 	}
 	return url.origin;
 }

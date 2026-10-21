@@ -21,6 +21,9 @@ const fetchMock = vi.fn();
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	vi.stubEnv('APP_ENV', 'test');
+	vi.stubEnv('VERCEL_ENV', undefined);
+	vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'synthetic-storage-token');
 	mocks.requireAdmin.mockResolvedValue(undefined);
 	vi.stubEnv('BLOB_PUBLIC_HOSTNAME', origin);
 	vi.stubGlobal('fetch', fetchMock);
@@ -35,6 +38,24 @@ afterEach(() => {
 });
 
 describe('skill icon storage', () => {
+	it('loads and deletes only Preview icons on a Preview deployment', async () => {
+		const previewOrigin = 'https://preview.public.blob.vercel-storage.com';
+		const previewUrl = url.replace(origin, previewOrigin);
+		vi.stubEnv('VERCEL_ENV', 'preview');
+		vi.stubEnv('BLOB_PREVIEW_PUBLIC_HOSTNAME', previewOrigin);
+		vi.stubEnv('BLOB_PREVIEW_READ_WRITE_TOKEN', 'synthetic-preview-token');
+
+		expect(await loadSkillIcon(url)).toBeNull();
+		await deleteSkillIcon(url);
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(mocks.del).not.toHaveBeenCalled();
+
+		expect(await loadSkillIcon(previewUrl)).toMatchObject({ tag: 'svg' });
+		await deleteSkillIcon(previewUrl);
+		expect(fetchMock).toHaveBeenCalledWith(previewUrl, expect.any(Object));
+		expect(mocks.del).toHaveBeenCalledWith(previewUrl, { token: 'synthetic-preview-token' });
+	});
+
 	it('uploads only the normalized SVG using a unique managed pathname', async () => {
 		expect(await uploadSkillIcon(new File([svg], 'logo.svg', { type: 'image/svg+xml' }))).toBe(
 			url,
