@@ -53,7 +53,7 @@ values privately in the dashboard; never paste them into tickets, traces or docs
 
 | Name                                                            | Preview                                                                  | Production                                                                                 |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `APP_ENV`, `NEXT_PUBLIC_APP_ENV`                                | `preview`                                                                | `production`                                                                               |
+| `APP_ENV`                                                       | `preview`                                                                | `production`                                                                               |
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                        | Dedicated synthetic Preview DB/token                                     | Production DB/token                                                                        |
 | `BETTER_AUTH_SECRET`                                            | Independent Preview secret                                               | Production secret                                                                          |
 | `BETTER_AUTH_URL`                                               | Appropriate exact Preview base origin; configure per branch if necessary | Canonical production origin                                                                |
@@ -65,10 +65,7 @@ values privately in the dashboard; never paste them into tickets, traces or docs
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`                    | Only if the current integration actually uses them                       | Existing provider configuration; hosted browser scraping falls back safely                 |
 | `CSP_PUBLIC_MODE`, `CSP_ADMIN_MODE`                             | `enforce` for acceptance candidate                                       | Enforce after acceptance                                                                   |
 | `CSP_ADMIN_POLICY`                                              | `nonce` for acceptance candidate                                         | `nonce` after acceptance                                                                   |
-| `HEALTH_READINESS_TOKEN`                                        | Independent Preview credential                                           | Strong random production credential, shared only with protected GitHub jobs/uptime monitor |
-| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`                          | Same Preview DSN or same project tagged Preview                          | Identical server/browser Production DSN                                                    |
-| `SENTRY_ORG`, `SENTRY_PROJECT`                                  | Optional; no map upload                                                  | Required project slugs                                                                     |
-| `SENTRY_AUTH_TOKEN`                                             | **Absent**                                                               | Build-only source map upload credential                                                    |
+| `HEALTH_READINESS_TOKEN`                                        | Independent Preview credential                                           | Strong random production credential, shared only with protected GitHub jobs                |
 | `VERCEL_FORCE_NO_BUILD_CACHE`                                   | `1`                                                                      | `1`                                                                                        |
 
 Blob selection uses `VERCEL_ENV` when present, otherwise `APP_ENV`. Preview reads
@@ -82,16 +79,12 @@ unprefixed pair.
 contains no real credentials. Put real local values in a private `.env.local` or
 `.env.preview.local`. Next.js automatically loads `.env.local` for local runs; the
 custom `.env.preview.local` file must be loaded explicitly. To run the app locally
-with the Preview pair, set `APP_ENV=preview`, `NEXT_PUBLIC_APP_ENV=preview`, and both
+with the Preview pair, set `APP_ENV=preview` and both
 `BLOB_PREVIEW_*` values in the active local file, leaving `VERCEL_ENV` unset. Keep
 all database/auth settings consistent with the same isolated Preview resources.
 Migration and account-provisioning commands do not require Blob credentials. See
 [Next.js environment loading](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order).
 
-DSNs are public routing identifiers, not auth tokens. Their ingest origins are
-validated and added narrowly to `connect-src`. No blanket HTTPS allowance or
-Sentry tunnel is added. A DSN change requires rebuilding both environment scopes. Production builds reject
-missing/mismatched server/browser DSNs or environment tags.
 `NEXT_PUBLIC_RELEASE_SHA` is injected from the Vercel Git commit SHA at build time;
 leave it to committed configuration. Vercel supplies deployment/runtime identifiers.
 
@@ -152,6 +145,6 @@ See [rollback](https://vercel.com/docs/instant-rollback).
 - Health identity equals the candidate SHA before and canonical SHA after promotion.
 - Failed smoke checks produce a failed workflow, not a successful release record.
 - A rollback drill restores the previous deployment without reversing SQL migrations.
-- Error grouping, source maps, uptime, field metrics and alert delivery work.
+- Classified operation logs, deployment identity and protected readiness probes work.
 
 Do not report these as complete until you have recorded actual platform evidence.

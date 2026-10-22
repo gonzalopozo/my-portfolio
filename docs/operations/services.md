@@ -1,4 +1,4 @@
-# Turso, Blob, Sentry and monitoring setup
+# Turso, Blob and runtime diagnostics
 
 ## Turso and Drizzle
 
@@ -141,76 +141,43 @@ unused/replaced objects. Local production tests use a guarded filesystem adapter
 remote contracts exercise the real SDK and nonproduction store. Blob retention and
 query/operation quotas need owner review in the Vercel dashboard.
 
-## Sentry
+## Runtime diagnostics and health
 
-1. Create a Next.js project in the desired Sentry organization. Choose a data region
-   consistent with your privacy requirements and configure retention/usage limits.
-2. Copy the public DSN to both `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` in each Vercel
-   environment. Use `NEXT_PUBLIC_APP_ENV`/`APP_ENV` to distinguish Preview/Production.
-3. Create a restricted organization/source-map upload token with the scopes Sentry
-   currently requires for the selected project. Prefer a nonpersonal token where
-   your plan permits. Set `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` only for
-   Production Vercel builds. Never expose this token to Preview, PR CI or browsers.
-4. Deploy a candidate; source-map upload failures must fail its build. Confirm a
-   controlled synthetic exception resolves to the original source and no public
-   `.map` files remain in static output. Do not enable public production source maps.
-5. Inspect a synthetic event and span: no user identity/IP, cookies, headers, bodies,
-   query strings, private records, raw exception messages or DB parameters. Explicit
-   v11 `dataCollection` settings disable these categories. SDK defaults are not a
-   privacy policy. No Replay, profiling, console forwarding or second OTel SDK.
-6. Confirm release=Git SHA, environment and deployment tags. Node initialization runs
-   once via `instrumentation.ts`; `onRequestError` captures unhandled server failures.
-   Client initialization/router capture lives in `instrumentation-client.ts`.
-   Error boundaries skip digest-bearing server errors to avoid duplicate reports.
-   Returned unexpected provider/storage failures emit one classified event.
-7. Start with errors at 100%, production request traces at 10%, Preview tracing 0%.
-   Adjust only after reviewing traffic, cost, representativeness and privacy.
-8. Add alerts: new production error after release; sustained 5xx/action failures;
-   repeated provider/storage failures; latency regression. Send alerts to the owner
-   using Sentry's own notification configuration; the implementation does not message
-   anyone or configure external integrations automatically.
-9. Create metric dashboards for `web_vitals.lcp`, `.inp`, `.cls` p75 grouped by public
-   route/release, and `app.operation.duration` by operation/outcome. Field metric
-   distributions are emitted independently of 10% trace sampling. Low traffic means
-   an incomplete INP population and unstable percentiles; do not claim lab timing is
-   real-user data. Browser transport/ad blockers can reduce field coverage.
-10. Create the available uptime monitor for `GET /api/ready` with the private Bearer
-    token. Use one-minute polling, three consecutive failures to alert and two
-    successes to recover, if supported by the selected plan. Keep URL public but
-    credential private. Use `/api/health` for separate public liveness checks.
+Classified JSON operation logs are available in Vercel Runtime Logs. Each record
+contains an allowlisted operation name, outcome classification, duration where
+measured, and deployment/release identifiers. Returned unexpected failures include
+an opaque support reference. Raw errors, SQL parameters, credentials, sessions and
+private records must stay out of these logs.
 
-Sentry's current metrics, monitor counts and paid quotas vary by plan; inspect the
-project's subscription before activation. Start with the included single uptime
-monitor and metric quota where available, keep paid overages disabled unless the
-owner enables them. Do not add an overlapping monitoring service by default.
-See [Next.js setup](https://docs.sentry.io/platforms/javascript/guides/nextjs/),
-[source maps](https://docs.sentry.io/platforms/javascript/guides/nextjs/sourcemaps/),
-[data collection](https://docs.sentry.io/platforms/javascript/data-management/data-collected/),
-and [uptime monitoring](https://docs.sentry.io/product/uptime-monitoring/).
+`observeOperation` measures application-observed duration and sanitizes database
+errors before they reach the framework. Error boundaries show a generic recovery
+screen and retain the reset action.
+
+`GET /api/health` provides no-store liveness and release identity. The separate
+Bearer-protected `GET /api/ready` checks database/schema/migration readiness.
+Release candidate and canonical smoke probes use these endpoints; keep the
+readiness credential private.
+
+Browser error reporting, request tracing, real-user Web Vitals collection,
+continuous external uptime monitoring and application-error alerts are not
+configured. The release workflow checks availability during release operations;
+it does not continuously monitor the live site.
 
 ## Signals, dashboards and limitations
 
-| Signal                                 | Source / collection / display                                                                | Availability and suggested alert                                                                                                       | Limitation                                                                                                                          |
-| -------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Liveness and failed probes             | No-store `/api/health`, public SHA; Sentry uptime/readiness monitor                          | Included monitor where available; 3 failed probes, recovery after 2 successes                                                          | A probe is sampled availability, not every user request                                                                             |
-| Dependency readiness                   | Bearer-protected `/api/ready`, bounded SQL liveness/schema/ledger batch, 200/503             | Same monitor; investigate repeated 503                                                                                                 | Requires the deployment's committed migration; permits later compatible expand migrations; not a destructive write or full CMS test |
-| HTTP 5xx, timeouts, failed requests    | Vercel Observability/Runtime Logs + Sentry request errors/traces                             | Hobby includes limited telemetry/retention; alert >1% with a minimum 20 requests/5min, or 3 consecutive critical errors at low traffic | Sampled tracing cannot supply an exact request denominator                                                                          |
-| Server Action and query failures       | Next instrumentation, safe error boundaries, classified caught failures, operation JSON logs | Sentry alerts by operation/release; first regression or repeated critical failure                                                      | Expected validation/auth rejections are not unexpected production exceptions                                                        |
-| Request and critical action latency    | Vercel duration telemetry and Sentry sampled HTTP/action spans                               | Alert sustained p95 doubling over baseline with adequate traffic; investigate >2s critical action                                      | Cold starts and sample sizes matter; no invented universal SLO                                                                      |
-| Slow project/experience database reads | `observeOperation` spans, duration distributions and JSON logs                               | Sentry p95 operation duration >500ms repeatedly, or >2x baseline                                                                       | Measures app-observed latency; no automatic SQL text/record logging                                                                 |
-| LCP, INP, CLS p75                      | Public `useReportWebVitals` → Sentry distributions by route/release                          | LCP >2.5s, INP >200ms, CLS >0.1 after sufficient samples                                                                               | Field data, not Playwright timing; INP requires interactions                                                                        |
-| Browser exceptions and hydration       | Sentry browser SDK and error boundaries                                                      | New production issue after release or rising affected-session trend                                                                    | Network blockers and consent configuration can reduce collection                                                                    |
-| Failed navigation/client HTTP          | SDK router instrumentation, browser errors and sampled spans                                 | Repeated same-route failures; owner investigates alongside uptime                                                                      | Explicitly handled failures need classified reporting; no recording full responses                                                  |
-| CPU, memory, concurrency               | Vercel function invocations, duration/compute/limit metrics in supported Observability views | Investigate OOM, timeout, throttling and rising compute; set plan/usage notifications                                                  | Serverless has no host/pod CPU, RSS or connection-pool dashboard; richer views may require Observability Plus                       |
-| Turso service pressure                 | Turso Usage/Stats dashboard/API plus application latency/errors                              | Owner budget/row/storage/request-limit alerts; investigate rising errors/latency                                                       | Metric granularity and retention depend on plan; libSQL HTTP sessions are not persistent SQL server connections                     |
-| Release regression                     | Git SHA, Vercel deployment ID, GitHub release evidence, Sentry release/environment tags      | New error/latency spike after promotion or smoke failure                                                                               | An application rollback does not restore data                                                                                       |
+| Signal                           | Source                                                         | Owner review                                                            | Limitation                                                                                                                |
+| -------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Liveness and deployment identity | No-store `/api/health` and Git SHA                             | Release smoke evidence; canonical endpoint                              | A point-in-time probe does not establish continuous availability                                                          |
+| Dependency readiness             | Bearer-protected `/api/ready`, bounded SQL/schema/ledger batch | Protected release probe results; investigate 503 responses              | Requires the deployment's migration and permits later compatible expand migrations; no destructive write or full CMS test |
+| HTTP 5xx and timeouts            | Vercel Runtime Logs and available Observability views          | Compare failures with the deployment and recent changes                 | Available views and retention depend on the plan                                                                          |
+| Server Action and query failures | Classified caught-failure logs and safe database errors        | Filter by operation, classification, release and support reference      | Expected validation/auth rejections are distinct from unexpected failures                                                 |
+| Database operation latency       | `observeOperation` JSON logs with `durationMs`                 | Compare representative operation durations with the previous release    | No distributed traces or automatic percentile dashboard                                                                   |
+| Compute and service pressure     | Vercel function/usage views, Blob usage and Turso Usage/Stats  | Review timeouts, resource limits and available quota notifications      | Signal detail and notification support depend on each provider's plan                                                     |
+| Release regression               | Git SHA, Vercel deployment ID and GitHub release evidence      | Correlate smoke failures, runtime logs and service usage with promotion | An application rollback does not restore data                                                                             |
 
-Vercel Hobby's short runtime-log retention and free Observability window are useful
-for immediate incidents, not durable audit storage (investigation observed roughly
-one hour of runtime logs and a 12-hour free Observability window; confirm current
-entitlements). Observability Plus requires paid access and adds retention/detail.
-Current free Speed Insights may show only an aggregate score, with fuller Web Vitals
-views paid; this implementation collects its required p75 metrics in Sentry instead
-of installing a duplicate SDK. See [Vercel Observability](https://vercel.com/docs/observability),
-[Runtime Logs](https://vercel.com/docs/observability/runtime-logs),
-[Speed Insights](https://vercel.com/docs/speed-insights), and [Turso usage](https://docs.turso.tech/usage-and-billing).
+Confirm the current Vercel and Turso plan limits and retention in their dashboards.
+Runtime logs may expire before a later investigation; retain a private, sanitized
+incident timeline and release evidence. Synthetic browser timings are lab evidence,
+not real-user percentiles. See [Vercel Observability](https://vercel.com/docs/observability),
+[Runtime Logs](https://vercel.com/docs/observability/runtime-logs), and
+[Turso usage](https://docs.turso.tech/usage-and-billing).

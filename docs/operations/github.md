@@ -128,7 +128,7 @@ In **Settings → Advanced Security** (or **Code security / Secret protection**)
 - Enable repository-managed **advanced CodeQL**, and disable default setup to avoid
   duplicate analyses. Committed workflows analyze JS/TS and Actions without a build.
 - Enable native secret scanning and push protection, including eligible custom
-  patterns for Turso/Blob/Sentry/other credentials. Restrict bypasses and review alerts.
+  patterns for Turso/Blob/other credentials. Restrict bypasses and review alerts.
 - Review existing history findings and rotate exposed credentials; deleting a line
   or rewriting Git history alone does not revoke a secret. Never paste a secret in
   an issue, log, test artifact, or incident document.
