@@ -1,20 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import { captureException } from '@sentry/nextjs';
 import { Button } from '@/components/ui/button';
 
-/** Server digests are already captured by instrumentation; capture client failures once. */
-export function RequestError({
-	error,
-	reset,
-}: {
-	error: Error & { digest?: string };
-	reset: () => void;
-}) {
-	useEffect(() => {
-		if (!error.digest) captureException(error);
-	}, [error]);
+/** Show a recovery action without rendering private error details. */
+export function RequestError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
 	return (
 		<div
 			role="alert"

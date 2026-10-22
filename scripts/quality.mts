@@ -15,7 +15,6 @@ const result = spawnSync(
 		'db',
 		'proxy.ts',
 		'instrumentation.ts',
-		'instrumentation-client.ts',
 		'scripts',
 		'--config',
 		'.dependency-cruiser.cjs',

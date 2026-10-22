@@ -16,7 +16,6 @@ const environment: NodeJS.ProcessEnv = {
 	TMPDIR: process.env.TMPDIR,
 	CI: 'true',
 	APP_ENV: 'test',
-	NEXT_PUBLIC_APP_ENV: 'test',
 	NODE_ENV: 'production',
 	GITHUB_SHA: process.env.GITHUB_SHA ?? 'local',
 	TURSO_DATABASE_URL: database.url,

@@ -1,9 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-const capture = vi.hoisted(() => vi.fn());
-vi.mock('@sentry/nextjs', () => ({ captureException: capture }));
 import { RequestError } from '@/components/request-error';
 
 describe('safe error recovery', () => {
@@ -14,12 +11,12 @@ describe('safe error recovery', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
 		expect(reset).toHaveBeenCalledOnce();
 	});
-	it('does not duplicate the server instrumentation event', () => {
-		capture.mockClear();
+	it('does not render private server error details or its digest', () => {
 		const error = Object.assign(new Error('private server error'), {
 			digest: 'synthetic-digest',
 		});
 		render(<RequestError error={error} reset={vi.fn()} />);
-		expect(capture).not.toHaveBeenCalled();
+		expect(screen.getByRole('alert')).not.toHaveTextContent('private server error');
+		expect(screen.getByRole('alert')).not.toHaveTextContent('synthetic-digest');
 	});
 });

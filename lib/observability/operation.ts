@@ -1,5 +1,4 @@
 import 'server-only';
-import * as Sentry from '@sentry/nextjs';
 import { logOperation } from './logger';
 
 /** Use bounded operation names; returned values and thrown messages are never telemetry. */
@@ -16,7 +15,7 @@ export async function observeOperation<T>(operation: string, task: () => Promise
 			const { beforeQuery } = await import('../../tests/fixtures/query');
 			await beforeQuery(operation);
 		}
-		return await Sentry.startSpan({ name: operation, op: 'app.operation' }, task);
+		return await task();
 	} catch (error) {
 		failed = true;
 		const publicMessages = new Set([
@@ -37,10 +36,6 @@ export async function observeOperation<T>(operation: string, task: () => Promise
 			operation,
 			classification: failed ? 'operation_failed' : 'success',
 			durationMs,
-		});
-		Sentry.metrics.distribution('app.operation.duration', durationMs, {
-			unit: 'millisecond',
-			attributes: { operation, outcome: failed ? 'failure' : 'success' },
 		});
 	}
 }

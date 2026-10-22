@@ -1,13 +1,7 @@
 import 'server-only';
-import { captureMessage } from '@sentry/nextjs';
 import { logOperation } from './logger';
 
-/** Returned failure states do not reach onRequestError; report one classified event. */
+/** Log returned failure states with a classification and opaque support reference. */
 export function reportCaughtFailure(operation: string, classification: string, reference: string) {
 	logOperation('error', { operation, classification, reference });
-	captureMessage('Application operation failed', {
-		level: 'error',
-		fingerprint: [operation, classification],
-		tags: { operation, classification, reference },
-	});
 }

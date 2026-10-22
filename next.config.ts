@@ -1,5 +1,4 @@
 import type { NextConfig } from 'next';
-import { withSentryConfig } from '@sentry/nextjs/config';
 import { buildCsp, getCspHeaderName, getCspMode } from './lib/security/csp';
 import { getBlobPublicHostname } from './lib/blob-environment';
 
@@ -68,31 +67,4 @@ const nextConfig: NextConfig = {
 	},
 };
 
-const uploadSourceMaps = process.env.VERCEL_ENV === 'production' && process.env.VERCEL === '1';
-if (
-	uploadSourceMaps &&
-	(!process.env.SENTRY_AUTH_TOKEN || !process.env.SENTRY_ORG || !process.env.SENTRY_PROJECT)
-) {
-	throw new Error('Production builds require Sentry source map upload configuration.');
-}
-if (
-	uploadSourceMaps &&
-	(!process.env.SENTRY_DSN ||
-		process.env.SENTRY_DSN !== process.env.NEXT_PUBLIC_SENTRY_DSN ||
-		process.env.APP_ENV !== 'production' ||
-		process.env.NEXT_PUBLIC_APP_ENV !== 'production')
-) {
-	throw new Error(
-		'Production builds require matching server/browser Sentry DSNs and production environment tags.',
-	);
-}
-export default withSentryConfig(nextConfig, {
-	org: process.env.SENTRY_ORG,
-	project: process.env.SENTRY_PROJECT,
-	authToken: uploadSourceMaps ? process.env.SENTRY_AUTH_TOKEN : undefined,
-	silent: true,
-	errorHandler: () => {
-		throw new Error('Sentry source map upload failed.');
-	},
-	sourcemaps: { disable: !uploadSourceMaps, deleteSourcemapsAfterUpload: true },
-});
+export default nextConfig;

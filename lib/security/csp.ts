@@ -1,5 +1,3 @@
-import { sentryDsn } from '../observability/privacy';
-
 type CspMode = 'report-only' | 'enforce';
 
 /** Keep static as the fallback and allow nonces on Preview and Production deployments. */
@@ -71,7 +69,6 @@ export function buildCsp({
 		throw new Error('CSP nonces are only supported for administrative documents.');
 	}
 	const blobOrigin = getBlobOrigin(blobHostname);
-	const sentryOrigin = getSentryOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
 
 	const directives = [
 		"default-src 'self'",
@@ -81,7 +78,7 @@ export function buildCsp({
 		"style-src 'self' 'unsafe-inline'",
 		`img-src 'self' data:${isPublic ? ' blob:' : ''}${blobOrigin ? ` ${blobOrigin}` : ''}`,
 		"font-src 'self'",
-		`connect-src 'self'${sentryOrigin ? ` ${sentryOrigin}` : ''}${isPublic ? ` ${CARTO_ORIGINS.join(' ')}` : ''}${
+		`connect-src 'self'${isPublic ? ` ${CARTO_ORIGINS.join(' ')}` : ''}${
 			isDevelopment ? ' ws://localhost:* ws://127.0.0.1:*' : ''
 		}`,
 		`worker-src ${isPublic ? "'self' blob:" : "'none'"}`,
@@ -97,10 +94,4 @@ export function buildCsp({
 	// Browsers ignore this directive in report-only policies and warn on every response.
 	if (!isDevelopment && mode === 'enforce') directives.push('upgrade-insecure-requests');
 	return `${directives.join('; ')};`;
-}
-
-/** Permit only the configured Sentry ingest host, never arbitrary HTTPS endpoints. */
-function getSentryOrigin(value: string | undefined) {
-	const dsn = sentryDsn(value);
-	return dsn ? new URL(dsn).origin : undefined;
 }

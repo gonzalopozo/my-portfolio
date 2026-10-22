@@ -34,7 +34,7 @@ module.exports = {
 					String.raw`(^|/)e2e/`,
 					String.raw`(^|/)scripts/`,
 					String.raw`^proxy[.]ts$`,
-					String.raw`^instrumentation(?:-client)?[.]ts$`,
+					String.raw`^instrumentation[.]ts$`,
 					String.raw`(^|/)next-env[.]d[.]ts$`,
 				],
 			},
