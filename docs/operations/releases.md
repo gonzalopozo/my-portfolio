@@ -36,8 +36,8 @@ A failed, skipped, cancelled or missing required gate is not success.
    backward-compatible schema. A failed candidate leaves that app live; do not undo
    additive SQL merely because the candidate failed.
 8. Candidate checks verify project/state/source, health SHA, public content, login,
-   auth endpoint and database readiness. Review the protected deployment URL and
-   Sentry environment/release information. Smoke probes perform no CMS mutations.
+   auth endpoint and database readiness. Review the protected deployment URL,
+   deployment identity and runtime logs. Smoke probes perform no CMS mutations.
 9. Review **Release / Promote**. Approve the protected `production` environment only
    after reviewing the candidate and evidence. Rejecting approval leaves the old
    deployment live. Starting the workflow is not production approval.
@@ -47,8 +47,8 @@ A failed, skipped, cancelled or missing required gate is not success.
 11. Promotion uses **the same deployment ID** with no rebuild. The controller restores
     disabled domain assignment, waits for live identity, verifies the canonical
     origin and writes a successful GitHub deployment record only after smoke passes.
-12. Watch uptime, new Sentry issues, action failures, latency and field metrics. At
-    low traffic, inspect representative requests rather than trusting a tiny p75.
+12. Inspect Vercel Runtime Logs, action failures, operation durations and service
+    usage for regressions. Use representative requests when traffic is low.
     Record the release and previous known-good IDs for incident recovery.
 
 Production credential scopes are separated: migration gets only Turso credentials;
@@ -128,8 +128,8 @@ potentially lossy operation into a new database and needs an incident-specific p
       build-cache bypass is confirmed. Legitimate runtime/CDN caching is intact.
 - [ ] Candidate stays off the canonical domain until genuine protected approval;
       missing approval configuration, stale SHA and failed smoke tests block release.
-- [ ] Source maps, Sentry scrubbing, release tags, field metrics, uptime and owner
-      alerts are proven with synthetic events, without private records in artifacts.
+- [ ] Classified operation logs, release identity and health/readiness probes are
+      proven with synthetic requests, without private records in logs or artifacts.
 - [ ] Production promotion and a rollback drill have evidence; SQL compatibility and
       first-release recovery limitations are documented.
 - [ ] Agent documentation agrees with the architecture; root pre-commit/subagent

@@ -17,9 +17,8 @@ Perform these steps in order:
 1. Freeze automatic production promotion in the existing Vercel project before
    changing production branches. Record the current live deployment and recovery
    options. See [Vercel](./vercel.md).
-2. Provision separate nonproduction Turso resources and Blob store; create the
-   Sentry project. Review the existing production database ledger and recovery
-   window. See [services](./services.md).
+2. Provision separate nonproduction Turso resources and Blob store. Review the
+   existing production database ledger and recovery window. See [services](./services.md).
 3. Configure GitHub environments, environment-scoped credentials, and required
    reviewers **before enabling release operations**. See [GitHub](./github.md).
 4. Complete the history-preserving `restructure` → `main` baseline PR and change
@@ -50,7 +49,7 @@ flowchart TD
     DC --> A[Explicit production environment approval]
     A --> RE[Recheck SHA, approvals, CI, findings and candidate identity]
     RE --> PR[Promote the same deployment ID]
-    PR --> O[Canonical smoke tests, Sentry, field metrics and uptime]
+    PR --> O[Canonical smoke tests, runtime logs and service usage]
     O --> RB{Regression?}
     RB -->|Yes: owner approves| RO[Rollback to recorded previous deployment]
     RO --> O
@@ -75,8 +74,8 @@ and [GitHub environment protection](https://docs.github.com/en/actions/reference
 | Real service fidelity     | `services-contracts.yml`, `scripts/contracts.mts`                       | Dedicated Turso group and nonproduction Blob token |
 | Controlled release        | `release.yml`, `scripts/release.mts`, approval checks                   | Protected environments and Vercel settings         |
 | SQL evolution             | committed migrations, policy hashes, guarded migration/baseline tooling | Backup/recovery and existing-ledger reconciliation |
-| Error/performance signals | instrumentation, Sentry, JSON logs, Web Vitals                          | Sentry and monitor setup                           |
-| Liveness/readiness        | `/api/health`, `/api/ready`                                             | Credentialed uptime probe                          |
+| Error/performance signals | classified JSON operation logs and safe error boundaries                | Vercel Runtime Logs access                         |
+| Liveness/readiness        | `/api/health`, `/api/ready`                                             | Readiness credential in protected GitHub jobs      |
 
 ## Runtime and package policy
 
@@ -101,19 +100,17 @@ ISR/data caches and CDN caching remain application behavior and are preserved.
 
 ## Added dependencies
 
-| Addition                             | Necessity and maintenance                                                                                 | Existing alternative considered                                               |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `@sentry/nextjs@11.8.0`              | One SDK for browser/server errors, traces, metrics and source maps; review SDK/privacy changes on updates | Console and Vercel logs alone lack durable error grouping and field metrics   |
-| `@vitest/coverage-v8@4.1.12`         | Match Vitest exactly; V8 coverage and risk gates                                                          | Vitest requires a coverage provider; no second test runner                    |
-| `@testing-library/user-event@14.6.1` | Realistic pending/form interactions                                                                       | Keep `fireEvent` for low-level submissions, not as an interaction replacement |
-| `@testing-library/jest-dom@6.9.1`    | Accessible, readable DOM assertions                                                                       | Existing RTL renders components but does not provide these matchers           |
-| `@axe-core/playwright@4.11.1`        | Automated WCAG checks in real browsers                                                                    | Manual accessibility review remains necessary                                 |
-| `@types/geojson@7946.0.16`           | Declare the map component's GeoJSON types directly                                                        | Transitive package visibility is not guaranteed by pnpm                       |
+| Addition                             | Necessity and maintenance                          | Existing alternative considered                                               |
+| ------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `@vitest/coverage-v8@4.1.12`         | Match Vitest exactly; V8 coverage and risk gates   | Vitest requires a coverage provider; no second test runner                    |
+| `@testing-library/user-event@14.6.1` | Realistic pending/form interactions                | Keep `fireEvent` for low-level submissions, not as an interaction replacement |
+| `@testing-library/jest-dom@6.9.1`    | Accessible, readable DOM assertions                | Existing RTL renders components but does not provide these matchers           |
+| `@axe-core/playwright@4.11.1`        | Automated WCAG checks in real browsers             | Manual accessibility review remains necessary                                 |
+| `@types/geojson@7946.0.16`           | Declare the map component's GeoJSON types directly | Transitive package visibility is not guaranteed by pnpm                       |
 
-No dependencies were removed. Pinned native Gitleaks and pnpm archives are tools,
-not runtime packages. Their URLs/checksums in `tooling/binaries.json` need reviewed
-updates. No Docker, Vercel CLI dependency, Pino, extra OTel SDK, MSW, hosted browser
-service, Replay, or profiler was added.
+Pinned native Gitleaks and pnpm archives are tools, not runtime packages.
+Their URLs/checksums in `tooling/binaries.json` need reviewed
+updates. No Docker, Vercel CLI dependency, MSW, or hosted browser service was added.
 
 Initial dependency resolution reported deprecation and peer advisories. The
 authorized frozen installation completed without warnings; this does not establish
@@ -122,7 +119,8 @@ Never run `audit:fix` in CI or against protected branches.
 
 ## Local verification evidence
 
-The following commands passed on the combined change set:
+The following commands passed on the combined change set on 2026-10-20. This
+historical evidence does not verify subsequent changes:
 
 - `git status --short` and `git diff --check`: reviewed file scope and whitespace.
 - `pnpm install --frozen-lockfile --ignore-scripts`: reproducible local installation.
@@ -146,7 +144,7 @@ router state, with narrowly documented lint exceptions at those two calls.
 Runtime-generated CI fixture paths opt out of deployment file tracing.
 
 Production browser journeys, hosted service contracts, GitHub security workflows,
-source-map uploads and platform approval/recovery drills were not run locally.
+and platform approval/recovery drills were not run locally.
 See [testing inventory](./testing.md) for coverage limits and the
 [release runbook](./releases.md) for external acceptance. Hosted deployment readiness
 remains unproven until those checks and platform drills succeed.
