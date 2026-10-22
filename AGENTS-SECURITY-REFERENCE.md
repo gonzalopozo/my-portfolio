@@ -451,5 +451,5 @@ examples. Existing firewall examples are optional references, not installed SDKs
 completed dashboard configuration. Hobby limits need confirmation before adding a
 rule. Production migrations and releases use protected approval environments.
 Audit fixes remain manual, reviewed dependency changes; never automate them on main.
-Sentry privacy, source-map token scope, native/fallback secret scanning and credential
-rotation procedures are documented in the operations guides.
+Log privacy, native/fallback secret scanning and credential rotation procedures
+are documented in the operations guides.

@@ -286,7 +286,7 @@ repository files.
 ## Source Maps & Production Hardening
 
 - **Never enable `productionBrowserSourceMaps: true`** — exposes source code
-- Preserve classified JSON operation logs; do not strip operational `info` logs globally. Sentry console forwarding remains disabled.
+- Preserve classified JSON operation logs; do not strip operational `info` logs globally.
 - **Never log sensitive data** — tokens, passwords, DB URLs must never appear in logs
 
 ---
@@ -354,5 +354,3 @@ repository files.
 See [CI/CD](./AGENTS-CICD.md) and [operations](./docs/operations/README.md) for
 workflow permissions, fork isolation, Dependabot/CodeQL/secret protection, production
 credentials, approval gates and recovery. These do not authorize local scans.
-Sentry uses explicit minimized data collection and private source-map upload.
-Public and administrative CSP allow only the configured exact Sentry ingest origin.

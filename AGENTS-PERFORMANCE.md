@@ -202,28 +202,11 @@ Is the component interactive (onClick, onChange, state, effects)?
 
 ---
 
-## Monitoring with `useReportWebVitals`
+## Performance evidence
 
-```typescript
-// components/web-vitals.tsx
-'use client';
-
-import { useReportWebVitals } from 'next/web-vitals';
-
-export function WebVitals() {
-	useReportWebVitals((metric) => {
-		// metric.name: "LCP" | "INP" | "CLS" | "FCP" | "TTFB"
-		// metric.rating: "good" | "needs-improvement" | "poor"
-		if (process.env.NODE_ENV === 'development') {
-			console.log(metric.name, metric.value, metric.rating);
-		}
-		// Production: send to analytics endpoint
-	});
-	return null;
-}
-```
-
-Add `<WebVitals />` to root layout for field data from real users. Built on `web-vitals` library (no separate install needed).
+Review application operation durations in Vercel Runtime Logs and the platform's
+available duration/usage views. Browser tests and Lighthouse provide synthetic
+performance evidence. Real-user Web Vitals collection is not configured.
 
 ---
 
@@ -252,19 +235,17 @@ Add `<WebVitals />` to root layout for field data from real users. Built on `web
 
 - [ ] Heavy components use `dynamic()` imports with `loading` fallbacks
 - [ ] No barrel imports (`import * as ...`)
-- [ ] `<WebVitals />` in root layout for field monitoring
 - [ ] Lighthouse >= 90 (all categories) on production build
 
 ## Production telemetry and cache ownership
 
-Public `components/web-vitals.tsx` emits LCP/INP/CLS field distributions through the
-single Sentry SDK, independently of trace sampling. Do not add duplicate field
-collection SDKs. Compare p75 by public route/release with sufficient real samples;
-Playwright timing is synthetic evidence, not field performance.
+`observeOperation` retains classified timing logs with bounded operation names.
+Compare representative durations by operation and release. Playwright timing is
+synthetic evidence; the application does not collect real-user percentiles.
 
 CI and Vercel build-cache controls are separate from Cache Components, ISR/data
 caches and CDN behavior. Never disable legitimate runtime caching to comply with
 no-build-cache policy. Do not read request headers inside public cache entries just
 to add telemetry. See [operations](./docs/operations/services.md) for supported
-serverless signals, plan limitations, dashboards and alerts. Commands in this guide
+serverless signals, plan limitations and provider views. Commands in this guide
 remain subject to the root local-verification restriction.

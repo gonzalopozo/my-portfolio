@@ -190,7 +190,6 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
 // In error.tsx — log but don't display
 useEffect(() => {
 	console.error('Dashboard error:', error);
-	// TODO: Send to error tracking service (Sentry, etc.)
 }, [error]);
 ```
 
@@ -473,23 +472,24 @@ if (isNaN(numericId)) notFound();
 
 ### Instrumentation
 
-**File**: `instrumentation.ts` — Runs once when a new Next.js server instance starts. Used for observability tools.
+**File**: `instrumentation.ts` — Runs once when a new Next.js server instance starts.
 
-**Used in project**: No.
+**Used in project**: Yes — registers guarded network fixtures for isolated CI production tests.
 
-**When to add**: When the project is deployed to production and needs error tracking (e.g., Sentry) or performance monitoring.
+**Rule**: Fixture activation requires the Node.js runtime, `CI=true`, `APP_ENV=test`, and no Vercel runtime.
 
 ```typescript
 // instrumentation.ts
-import { type Instrumentation } from 'next';
-
-export function register() {
-	// Initialize observability tools
+export async function register() {
+	if (
+		process.env.NEXT_RUNTIME === 'nodejs' &&
+		process.env.CI === 'true' &&
+		process.env.APP_ENV === 'test' &&
+		!process.env.VERCEL
+	) {
+		await import('./tests/fixtures/network');
+	}
 }
-
-export const onRequestError: Instrumentation.onRequestError = async (err, request, context) => {
-	// Send error to tracking service
-};
 ```
 
 ---

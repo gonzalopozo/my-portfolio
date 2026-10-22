@@ -54,8 +54,9 @@ CI to satisfy the local agent restriction.
 
 Use classified JSON logs and bounded operation names. Do not log arbitrary Error
 objects, request bodies, tokens, full upstream URLs, sessions, or private records.
-SDK data collection must remain explicitly minimized. Do not add duplicate SDKs,
-Replay, console forwarding, profiling, or production traces/screenshots casually.
+Error boundaries show generic recovery messages. Runtime diagnostics rely on
+Vercel logs and the existing health/readiness endpoints; changes to collection
+must preserve the same privacy boundaries.
 
 Upload only synthetic local test diagnostics with short retention. Release evidence
 contains IDs, SHA, workflow run, time, and state; never credentials or response bodies.
