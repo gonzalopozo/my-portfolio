@@ -1,0 +1,3995 @@
+{
+  "version": "2.17",
+  "children": [
+    {
+      "type": "frame",
+      "id": "WLqdU",
+      "x": 0,
+      "y": 0,
+      "name": "00 - CURRENT",
+      "clip": true,
+      "width": 1440,
+      "height": 1020,
+      "fill": "$background",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "cf6QT",
+          "x": 56,
+          "y": 22,
+          "name": "Baseline Eyebrow",
+          "fill": "$muted-fg",
+          "content": "00 — CURRENT PAGE",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 12,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "DABVu",
+          "x": 56,
+          "y": 50,
+          "name": "Gonzalo Pozo Logo",
+          "width": 216,
+          "height": 72,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "../public/gonzalopozo-logo.png",
+            "mode": "fit"
+          },
+          "layout": "none"
+        },
+        {
+          "type": "frame",
+          "id": "s7otG",
+          "x": 496,
+          "y": 58,
+          "name": "Portfolio Navigation",
+          "width": 448,
+          "height": 44,
+          "fill": "#FFFFFFE8",
+          "cornerRadius": 22,
+          "stroke": "#D6D9E1B3",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1726",
+            "offset": {
+              "x": 0,
+              "y": 10
+            },
+            "blur": 28,
+            "spread": -12
+          },
+          "gap": 6,
+          "padding": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "sIHp0",
+              "name": "Active All Tab",
+              "width": 108,
+              "height": 36,
+              "fill": "$primary",
+              "cornerRadius": 18,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "OD9fb",
+                  "name": "All Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "layout-grid",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "N6dI4",
+                  "name": "All Label",
+                  "fill": "$primary-fg",
+                  "content": "All",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "bR6um",
+              "name": "About me Tab",
+              "width": 36,
+              "height": 36,
+              "fill": "$secondary",
+              "cornerRadius": 18,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "qgXzm",
+                  "name": "About me Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "user-round",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "aSkKi",
+              "name": "Projects Tab",
+              "width": 36,
+              "height": 36,
+              "fill": "$secondary",
+              "cornerRadius": 18,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "w7BpBm",
+                  "name": "Projects Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "briefcase-business",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "o3j4gt",
+              "name": "Experience Tab",
+              "width": 36,
+              "height": 36,
+              "fill": "$secondary",
+              "cornerRadius": 18,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "D0WOqQ",
+                  "name": "Experience Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "history",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WgT7T",
+              "name": "Contact Tab",
+              "width": 36,
+              "height": 36,
+              "fill": "$secondary",
+              "cornerRadius": 18,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "xBjoF",
+                  "name": "Contact Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "send",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ApGjz",
+          "x": 1256,
+          "y": 58,
+          "name": "Contact Button",
+          "width": 128,
+          "height": 44,
+          "fill": "$primary",
+          "cornerRadius": 22,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "vgpX0",
+              "name": "Contact Label",
+              "fill": "$primary-fg",
+              "content": "Contact",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "GzOlV",
+          "x": 56,
+          "y": 148,
+          "name": "Current About Card",
+          "clip": true,
+          "width": 648,
+          "height": 292,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1738",
+            "offset": {
+              "x": 0,
+              "y": 18
+            },
+            "blur": 46,
+            "spread": -34
+          },
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "KWCv5",
+              "x": 0,
+              "y": 0,
+              "name": "Profile Photo Pane",
+              "width": 258,
+              "height": 292,
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "r2sTA",
+                  "x": 51,
+                  "y": 24,
+                  "name": "Profile Photo",
+                  "clip": true,
+                  "width": 156,
+                  "height": 244,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../public/cv_pic.png",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 16,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#080C171F",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 8
+                  },
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "TbgLW",
+              "x": 282,
+              "y": 24,
+              "name": "Developer Role",
+              "fill": "$primary",
+              "content": "Full Stack Developer",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "Gs5yx",
+              "x": 472,
+              "y": 16,
+              "name": "Download CV Button",
+              "width": 156,
+              "height": 44,
+              "fill": "#E9EDF566",
+              "cornerRadius": 22,
+              "stroke": "#D6D9E1CC",
+              "strokeWidth": 1,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fm6hW",
+                  "name": "Download CV Label",
+                  "fill": "$muted-fg",
+                  "content": "Download CV",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "oPFdp",
+                  "name": "Download File Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fIJ3r",
+              "x": 282,
+              "y": 72,
+              "name": "Availability Status",
+              "width": 346,
+              "height": 42,
+              "fill": "#0084371A",
+              "cornerRadius": 12,
+              "stroke": "#00843759",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "HbhW7",
+                  "name": "Active Status Dot",
+                  "fill": "$status",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "wLoOd",
+                  "name": "Availability Label",
+                  "fill": "$foreground",
+                  "content": "OPEN TO WORK",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "yFM6r",
+              "x": 282,
+              "y": 132,
+              "name": "About Heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 328,
+              "content": "Hey, I’m Gonzalo.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 24,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "Iepob",
+              "x": 282,
+              "y": 168,
+              "name": "About Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width-height",
+              "width": 342,
+              "height": 52,
+              "content": "I love turning ideas into real products people can use. I care about thoughtful interfaces, solid backend foundations, and the kind of curious, collaborative work that keeps improving the product, the code, and the people building it.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "A5ptm",
+              "x": 476,
+              "y": 232,
+              "name": "Current About Me Button",
+              "width": 152,
+              "height": 44,
+              "fill": "$primary",
+              "cornerRadius": 22,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00459E26",
+                "offset": {
+                  "x": 0,
+                  "y": 3
+                },
+                "blur": 8,
+                "spread": -2
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eqLYW",
+                  "x": 28,
+                  "y": 13,
+                  "name": "Current About Me Button Text",
+                  "fill": "$primary-fg",
+                  "content": "About Me",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "icon",
+                  "id": "n8Bai",
+                  "x": 108,
+                  "y": 14,
+                  "name": "Current About Me Button Arrow",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "WyiK7",
+          "x": 720,
+          "y": 148,
+          "name": "Current Map Card",
+          "clip": true,
+          "width": 304,
+          "height": 292,
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "../public/arroyomolinos.jpg",
+            "mode": "fill"
+          },
+          "cornerRadius": 32,
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "PUN51",
+              "x": 130,
+              "y": 105,
+              "name": "Map Pin",
+              "width": 44,
+              "height": 44,
+              "fill": "$primary",
+              "cornerRadius": 22,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#080C1752",
+                "offset": {
+                  "x": 0,
+                  "y": 6
+                },
+                "blur": 16,
+                "spread": -4
+              },
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "POhbe",
+                  "name": "Map Pin Icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "map-pin",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TYdY2",
+          "x": 1040,
+          "y": 148,
+          "name": "Featured Project Card",
+          "clip": true,
+          "width": 344,
+          "height": 600,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "BKfHn",
+              "name": "Featured Project Visual",
+              "width": "fill_container",
+              "height": 346,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 135,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#00459E",
+                    "position": 0
+                  },
+                  {
+                    "color": "#080C17",
+                    "position": 1
+                  }
+                ]
+              },
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "tlcuE",
+                  "name": "Featured Project Icon",
+                  "width": 60,
+                  "height": 60,
+                  "icon": "blocks",
+                  "library": "lucide",
+                  "fill": "#F8FAFDE6"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "QFDJ5",
+              "name": "Featured Project Content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FyQFb",
+                  "name": "Featured Project Eyebrow",
+                  "fill": "$primary",
+                  "content": "FEATURED PROJECT",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "E9AG4",
+                  "name": "Featured Project Title",
+                  "fill": "$foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Production-ready web experiences",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 23,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "LUClx",
+                  "name": "Featured Project Description",
+                  "fill": "$muted-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Thoughtful frontend systems with robust foundations.",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14
+                },
+                {
+                  "type": "frame",
+                  "id": "u7Yae",
+                  "name": "Featured Project Button",
+                  "width": 144,
+                  "height": 42,
+                  "fill": "$secondary",
+                  "cornerRadius": 21,
+                  "gap": 8,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YVDaP",
+                      "name": "Featured Project Button Label",
+                      "fill": "$foreground",
+                      "content": "View project",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "UoGw1",
+                      "name": "Featured Project Arrow",
+                      "width": 15,
+                      "height": 15,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$foreground"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "RBIl4",
+          "x": 56,
+          "y": 456,
+          "name": "Music Card",
+          "width": 304,
+          "height": 276,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "layout": "vertical",
+          "padding": 24,
+          "justifyContent": "space_between",
+          "children": [
+            {
+              "type": "frame",
+              "id": "YzzrI",
+              "name": "Music Header",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NNzpr",
+                  "name": "Music Eyebrow",
+                  "fill": "$muted-fg",
+                  "content": "LAST TRACK",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "Z0CuAp",
+                  "name": "Music Icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "audio-lines",
+                  "library": "lucide",
+                  "fill": "$accent"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "i3KeK",
+              "name": "Album Placeholder",
+              "width": 110,
+              "height": 110,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "radial",
+                "enabled": true,
+                "rotation": 0,
+                "size": {
+                  "width": 1,
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#F07900",
+                    "position": 0
+                  },
+                  {
+                    "color": "#00459E",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 20,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "AXImE",
+                  "name": "Album Disc Icon",
+                  "width": 48,
+                  "height": 48,
+                  "icon": "disc-3",
+                  "library": "lucide",
+                  "fill": "#FFFFFFD9"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "JJyRW",
+              "name": "Track Title",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 256,
+              "content": "The soundtrack behind the work",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 15,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "o9RWaZ",
+          "x": 376,
+          "y": 456,
+          "name": "GitHub Card",
+          "width": 328,
+          "height": 276,
+          "fill": "#66696D",
+          "cornerRadius": 32,
+          "layout": "vertical",
+          "padding": 24,
+          "justifyContent": "space_between",
+          "children": [
+            {
+              "type": "icon",
+              "id": "sW9KB",
+              "name": "GitHub Mark",
+              "width": 56,
+              "height": 56,
+              "icon": "github",
+              "library": "lucide",
+              "fill": "#FFFFFFF2"
+            },
+            {
+              "type": "text",
+              "id": "qtTnG",
+              "name": "GitHub Label",
+              "fill": "#FFFFFFE6",
+              "textGrowth": "fixed-width",
+              "width": 280,
+              "content": "github.com/gonzalopozo",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LMSDW",
+          "x": 720,
+          "y": 456,
+          "name": "Experience Card",
+          "width": 304,
+          "height": 276,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "layout": "vertical",
+          "gap": 14,
+          "padding": 24,
+          "children": [
+            {
+              "type": "icon",
+              "id": "C4cmS",
+              "name": "Experience Icon",
+              "width": 28,
+              "height": 28,
+              "icon": "briefcase-business",
+              "library": "lucide",
+              "fill": "$primary"
+            },
+            {
+              "type": "text",
+              "id": "i7myWx",
+              "name": "Experience Eyebrow",
+              "fill": "$muted-fg",
+              "content": "EXPERIENCE",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "I8YOz2",
+              "name": "Experience Title",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 256,
+              "content": "Building reliable products",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 22,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "xPD2B",
+              "name": "Experience Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width",
+              "width": 256,
+              "content": "Frontend craft, backend foundations, and collaborative delivery.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 14
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NpDod",
+          "x": 56,
+          "y": 780,
+          "name": "Baseline Button Detail",
+          "width": 968,
+          "height": 184,
+          "fill": "#FFFFFFB8",
+          "cornerRadius": 28,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "padding": 28,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "P3AcAP",
+              "name": "Baseline Detail Copy",
+              "width": 520,
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "y2esNS",
+                  "name": "Baseline Detail Label",
+                  "fill": "$muted-fg",
+                  "content": "CURRENT HOVER BEHAVIOR",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "p75Ic",
+                  "name": "Baseline Detail Heading",
+                  "fill": "$foreground",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "The control lifts, then the arrow shifts right.",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 22,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "xnK3D",
+                  "name": "Baseline Detail Body",
+                  "fill": "$muted-fg",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "Useful feedback, but the button itself changes position. The redesigns keep the 152 × 44 px hit target anchored.",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "H9QFXK",
+              "name": "Current State Comparison",
+              "width": 324,
+              "gap": 20,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "FIOcX",
+                  "name": "Resting State Column",
+                  "width": 152,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JgPy5",
+                      "name": "Resting State Label",
+                      "fill": "$muted-fg",
+                      "content": "REST",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ij1Ft",
+                      "name": "Resting State Holder",
+                      "width": 152,
+                      "height": 48,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cyEkW",
+                          "x": 0,
+                          "y": 2,
+                          "name": "Resting State Button",
+                          "width": 152,
+                          "height": 44,
+                          "fill": "$primary",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00459E26",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            },
+                            "blur": 8,
+                            "spread": -2
+                          },
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WowtJ",
+                              "x": 28,
+                              "y": 13,
+                              "name": "Resting State Button Text",
+                              "fill": "$primary-fg",
+                              "content": "About Me",
+                              "lineHeight": 1.25,
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "DfEdW",
+                              "x": 108,
+                              "y": 14,
+                              "name": "Resting State Button Arrow",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "arrow-right",
+                              "library": "lucide",
+                              "fill": "$primary-fg"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pCYGF",
+                  "name": "Current Hover State Column",
+                  "width": 152,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Zcvwm",
+                      "name": "Current Hover State Label",
+                      "fill": "$muted-fg",
+                      "content": "HOVER · −2 PX",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 10,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ivt18",
+                      "name": "Current Hover State Holder",
+                      "width": 152,
+                      "height": 48,
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vfBEU",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Current Hover State Button",
+                          "width": 152,
+                          "height": 44,
+                          "fill": "$primary",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00459E26",
+                            "offset": {
+                              "x": 0,
+                              "y": 3
+                            },
+                            "blur": 8,
+                            "spread": -2
+                          },
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "byCdt",
+                              "x": 28,
+                              "y": 13,
+                              "name": "Current Hover State Button Text",
+                              "fill": "$primary-fg",
+                              "content": "About Me",
+                              "lineHeight": 1.25,
+                              "fontFamily": "$font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "HU1u3",
+                              "x": 110,
+                              "y": 14,
+                              "name": "Current Hover State Button Arrow",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "arrow-right",
+                              "library": "lucide",
+                              "fill": "$primary-fg"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "s5r22e",
+      "x": 1520,
+      "y": 0,
+      "name": "01 - VARIANT A",
+      "clip": true,
+      "width": 660,
+      "height": 650,
+      "fill": "$background",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "UIiSB",
+          "x": 28,
+          "y": 24,
+          "name": "01 - VARIANT A Title",
+          "fill": "$foreground",
+          "textGrowth": "fixed-width",
+          "width": 420,
+          "content": "01 — Luminous inset",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "m9K6pw",
+          "x": 470,
+          "y": 24,
+          "name": "01 - VARIANT A Direction Chip",
+          "width": 160,
+          "height": 28,
+          "fill": "$secondary",
+          "cornerRadius": 14,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "K7DJ3",
+              "name": "01 - VARIANT A Direction Label",
+              "fill": "$primary",
+              "content": "EVOLUTION",
+              "fontFamily": "$font-mono",
+              "fontSize": 10,
+              "fontWeight": "600",
+              "letterSpacing": 0.5
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "zywYx",
+          "x": 28,
+          "y": 62,
+          "name": "01 - VARIANT A Description",
+          "fill": "$muted-fg",
+          "textGrowth": "fixed-width",
+          "width": 604,
+          "content": "A restrained upgrade: depth and a quiet icon well appear inside the pill.",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 14
+        },
+        {
+          "type": "frame",
+          "id": "CZj5J",
+          "x": 28,
+          "y": 110,
+          "name": "01 - VARIANT A About Card",
+          "clip": true,
+          "width": 604,
+          "height": 292,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1738",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40,
+            "spread": -30
+          },
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Z4bRAM",
+              "x": 0,
+              "y": 0,
+              "name": "01 - VARIANT A Photo Pane",
+              "width": 242,
+              "height": 292,
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "lhDqB",
+                  "x": 52,
+                  "y": 24,
+                  "name": "01 - VARIANT A Profile Photo",
+                  "clip": true,
+                  "width": 138,
+                  "height": 244,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../public/cv_pic.png",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 16,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "Wp7Os",
+              "x": 266,
+              "y": 24,
+              "name": "01 - VARIANT A Developer Role",
+              "fill": "$primary",
+              "content": "Full Stack Developer",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "BCcuf",
+              "x": 432,
+              "y": 16,
+              "name": "01 - VARIANT A Download CV",
+              "width": 152,
+              "height": 44,
+              "fill": "#E9EDF566",
+              "cornerRadius": 22,
+              "stroke": "#D6D9E1CC",
+              "strokeWidth": 1,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nFSGt",
+                  "name": "01 - VARIANT A Download Label",
+                  "fill": "$muted-fg",
+                  "content": "Download CV",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "wslj5",
+                  "name": "01 - VARIANT A File Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WcNvv",
+              "x": 266,
+              "y": 72,
+              "name": "01 - VARIANT A Status",
+              "width": 318,
+              "height": 42,
+              "fill": "#0084371A",
+              "cornerRadius": 12,
+              "stroke": "#00843759",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "L5JPB",
+                  "name": "01 - VARIANT A Status Dot",
+                  "fill": "$status",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "HCKEv",
+                  "name": "01 - VARIANT A Status Label",
+                  "fill": "$foreground",
+                  "content": "OPEN TO WORK",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "ajS1S",
+              "x": 266,
+              "y": 132,
+              "name": "01 - VARIANT A Heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 318,
+              "content": "Hey, I’m Gonzalo.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 24,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "h8id1",
+              "x": 266,
+              "y": 168,
+              "name": "01 - VARIANT A Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width-height",
+              "width": 318,
+              "height": 52,
+              "content": "I love turning ideas into real products people can use. I care about thoughtful interfaces, solid backend foundations, and the kind of curious, collaborative work that keeps improving the product, the code, and the people building it.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "H1Zwlq",
+              "x": 432,
+              "y": 232,
+              "name": "Variant A Hover Button",
+              "clip": true,
+              "width": 152,
+              "height": 44,
+              "fill": "$primary",
+              "cornerRadius": 22,
+              "stroke": "#F0790066",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00459E52",
+                  "offset": {
+                    "x": 0,
+                    "y": 5
+                  },
+                  "blur": 14,
+                  "spread": -5
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF38",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                }
+              ],
+              "layout": "none",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 18,
+                  "id": "hlLmw",
+                  "x": 2,
+                  "y": 2,
+                  "name": "Variant A Inset Sheen",
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 180,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#FFFFFF38",
+                        "position": 0
+                      },
+                      {
+                        "color": "#FFFFFF00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 148,
+                  "height": 18
+                },
+                {
+                  "type": "text",
+                  "id": "meG7p",
+                  "x": 24,
+                  "y": 13,
+                  "name": "Variant A Hover Label",
+                  "fill": "$primary-fg",
+                  "content": "About Me",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "me8jO",
+                  "x": 112,
+                  "y": 8,
+                  "name": "Variant A Arrow Well",
+                  "fill": "#FFFFFF24",
+                  "width": 28,
+                  "height": 28
+                },
+                {
+                  "type": "icon",
+                  "id": "YD4f5",
+                  "x": 118,
+                  "y": 14,
+                  "name": "Variant A Hover Arrow",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "UYUGc",
+          "x": 28,
+          "y": 426,
+          "name": "01 - VARIANT A State Comparison",
+          "width": 604,
+          "height": 188,
+          "fill": "#FFFFFFB8",
+          "cornerRadius": 24,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "xHIDz",
+              "x": 24,
+              "y": 18,
+              "name": "01 - VARIANT A State Title",
+              "fill": "$muted-fg",
+              "content": "STATE CHECK · IDENTICAL 152 × 44 BOUNDS",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "QdhqR",
+              "x": 54,
+              "y": 48,
+              "name": "01 - VARIANT A Rest State Label",
+              "fill": "$muted-fg",
+              "content": "REST",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "ThgjO",
+              "x": 398,
+              "y": 48,
+              "name": "01 - VARIANT A Hover State Label",
+              "fill": "$muted-fg",
+              "content": "HOVER",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "mL2W4",
+              "x": 54,
+              "y": 70,
+              "name": "01 - VARIANT A Rest Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wTgqy",
+                  "x": 0,
+                  "y": 0,
+                  "name": "01 - VARIANT A Rest Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00459E26",
+                    "offset": {
+                      "x": 0,
+                      "y": 3
+                    },
+                    "blur": 8,
+                    "spread": -2
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WybB4",
+                      "x": 28,
+                      "y": 13,
+                      "name": "01 - VARIANT A Rest Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "NMqo7",
+                      "x": 108,
+                      "y": 14,
+                      "name": "01 - VARIANT A Rest Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "U6R3Iy",
+              "x": 398,
+              "y": 70,
+              "name": "01 - VARIANT A Hover Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "XHayh",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Variant A Hover Button",
+                  "clip": true,
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "stroke": "#F0790066",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "effect": [
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#00459E52",
+                      "offset": {
+                        "x": 0,
+                        "y": 5
+                      },
+                      "blur": 14,
+                      "spread": -5
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#FFFFFF38",
+                      "offset": {
+                        "x": 0,
+                        "y": 1
+                      },
+                      "blur": 3
+                    }
+                  ],
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 18,
+                      "id": "G9U08R",
+                      "x": 2,
+                      "y": 2,
+                      "name": "Variant A Inset Sheen",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 180,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#FFFFFF38",
+                            "position": 0
+                          },
+                          {
+                            "color": "#FFFFFF00",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "width": 148,
+                      "height": 18
+                    },
+                    {
+                      "type": "text",
+                      "id": "ggxRs",
+                      "x": 24,
+                      "y": 13,
+                      "name": "Variant A Hover Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "twPtO",
+                      "x": 112,
+                      "y": 8,
+                      "name": "Variant A Arrow Well",
+                      "fill": "#FFFFFF24",
+                      "width": 28,
+                      "height": 28
+                    },
+                    {
+                      "type": "icon",
+                      "id": "N4ouHk",
+                      "x": 118,
+                      "y": 14,
+                      "name": "Variant A Hover Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "g5GPbd",
+              "x": 24,
+              "y": 128,
+              "name": "01 - VARIANT A Shared Baseline",
+              "fill": "$border",
+              "width": 556,
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "e9RqTP",
+              "x": 24,
+              "y": 144,
+              "name": "01 - VARIANT A Bounds Note",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width",
+              "width": 556,
+              "content": "180 ms ease-out · sheen and icon well fade in; outer position stays fixed.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "XWInK",
+      "x": 2200,
+      "y": 0,
+      "name": "02 - VARIANT B",
+      "clip": true,
+      "width": 660,
+      "height": 650,
+      "fill": "$background",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "v7DKMH",
+          "x": 28,
+          "y": 24,
+          "name": "02 - VARIANT B Title",
+          "fill": "$foreground",
+          "textGrowth": "fixed-width",
+          "width": 420,
+          "content": "02 — Accent icon bay",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "lp2UC",
+          "x": 470,
+          "y": 24,
+          "name": "02 - VARIANT B Direction Chip",
+          "width": 160,
+          "height": 28,
+          "fill": "#F079001F",
+          "cornerRadius": 14,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "fykXd",
+              "name": "02 - VARIANT B Direction Label",
+              "fill": "$accent-fg",
+              "content": "DENSE / ICON-LED",
+              "fontFamily": "$font-mono",
+              "fontSize": 10,
+              "fontWeight": "600",
+              "letterSpacing": 0.5
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "qR9oh",
+          "x": 28,
+          "y": 62,
+          "name": "02 - VARIANT B Description",
+          "fill": "$muted-fg",
+          "textGrowth": "fixed-width",
+          "width": 604,
+          "content": "The arrow gains a dedicated amber action bay for immediate directional feedback.",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 14
+        },
+        {
+          "type": "frame",
+          "id": "n5FWQf",
+          "x": 28,
+          "y": 110,
+          "name": "02 - VARIANT B About Card",
+          "clip": true,
+          "width": 604,
+          "height": 292,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1738",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40,
+            "spread": -30
+          },
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "f0uYh",
+              "x": 0,
+              "y": 0,
+              "name": "02 - VARIANT B Photo Pane",
+              "width": 242,
+              "height": 292,
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "hlIMD",
+                  "x": 52,
+                  "y": 24,
+                  "name": "02 - VARIANT B Profile Photo",
+                  "clip": true,
+                  "width": 138,
+                  "height": 244,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../public/cv_pic.png",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 16,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "q3Wxg",
+              "x": 266,
+              "y": 24,
+              "name": "02 - VARIANT B Developer Role",
+              "fill": "$primary",
+              "content": "Full Stack Developer",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "lsJ7q",
+              "x": 432,
+              "y": 16,
+              "name": "02 - VARIANT B Download CV",
+              "width": 152,
+              "height": 44,
+              "fill": "#E9EDF566",
+              "cornerRadius": 22,
+              "stroke": "#D6D9E1CC",
+              "strokeWidth": 1,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H8iPK",
+                  "name": "02 - VARIANT B Download Label",
+                  "fill": "$muted-fg",
+                  "content": "Download CV",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "g4LXZ",
+                  "name": "02 - VARIANT B File Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Jq0H4",
+              "x": 266,
+              "y": 72,
+              "name": "02 - VARIANT B Status",
+              "width": 318,
+              "height": 42,
+              "fill": "#0084371A",
+              "cornerRadius": 12,
+              "stroke": "#00843759",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "W58GS",
+                  "name": "02 - VARIANT B Status Dot",
+                  "fill": "$status",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "u0dtQE",
+                  "name": "02 - VARIANT B Status Label",
+                  "fill": "$foreground",
+                  "content": "OPEN TO WORK",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "m0WakR",
+              "x": 266,
+              "y": 132,
+              "name": "02 - VARIANT B Heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 318,
+              "content": "Hey, I’m Gonzalo.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 24,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "wsxW8",
+              "x": 266,
+              "y": 168,
+              "name": "02 - VARIANT B Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width-height",
+              "width": 318,
+              "height": 52,
+              "content": "I love turning ideas into real products people can use. I care about thoughtful interfaces, solid backend foundations, and the kind of curious, collaborative work that keeps improving the product, the code, and the people building it.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "nOVsR",
+              "x": 432,
+              "y": 232,
+              "name": "Variant B Hover Button",
+              "clip": true,
+              "width": 152,
+              "height": 44,
+              "fill": "$primary",
+              "cornerRadius": 22,
+              "stroke": "#00459E",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "OMdJ7",
+                  "x": 22,
+                  "y": 13,
+                  "name": "Variant B Hover Label",
+                  "fill": "$primary-fg",
+                  "content": "About Me",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "I00RB",
+                  "x": 108,
+                  "y": 0,
+                  "name": "Variant B Accent Icon Bay",
+                  "width": 44,
+                  "height": 44,
+                  "fill": "$accent",
+                  "cornerRadius": [
+                    0,
+                    22,
+                    22,
+                    0
+                  ],
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "X6fY3",
+                      "x": 14,
+                      "y": 14,
+                      "name": "Variant B Hover Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$accent-fg"
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "aU37e",
+                  "x": 107,
+                  "y": 8,
+                  "name": "Variant B Bay Separator",
+                  "fill": "#FFFFFF4D",
+                  "width": 1,
+                  "height": 28
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "X9F8jO",
+          "x": 28,
+          "y": 426,
+          "name": "02 - VARIANT B State Comparison",
+          "width": 604,
+          "height": 188,
+          "fill": "#FFFFFFB8",
+          "cornerRadius": 24,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "ZdEj3",
+              "x": 24,
+              "y": 18,
+              "name": "02 - VARIANT B State Title",
+              "fill": "$muted-fg",
+              "content": "STATE CHECK · IDENTICAL 152 × 44 BOUNDS",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "Dznbg",
+              "x": 54,
+              "y": 48,
+              "name": "02 - VARIANT B Rest State Label",
+              "fill": "$muted-fg",
+              "content": "REST",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "gK22c",
+              "x": 398,
+              "y": 48,
+              "name": "02 - VARIANT B Hover State Label",
+              "fill": "$muted-fg",
+              "content": "HOVER",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "g3YHvU",
+              "x": 54,
+              "y": 70,
+              "name": "02 - VARIANT B Rest Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "HJs5J",
+                  "x": 0,
+                  "y": 0,
+                  "name": "02 - VARIANT B Rest Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00459E26",
+                    "offset": {
+                      "x": 0,
+                      "y": 3
+                    },
+                    "blur": 8,
+                    "spread": -2
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "IbMHj",
+                      "x": 28,
+                      "y": 13,
+                      "name": "02 - VARIANT B Rest Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "xsU9z",
+                      "x": 108,
+                      "y": 14,
+                      "name": "02 - VARIANT B Rest Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "x6f4n5",
+              "x": 398,
+              "y": 70,
+              "name": "02 - VARIANT B Hover Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "tbDpx",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Variant B Hover Button",
+                  "clip": true,
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "stroke": "#00459E",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "W9Gu5",
+                      "x": 22,
+                      "y": 13,
+                      "name": "Variant B Hover Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "w2mJHk",
+                      "x": 108,
+                      "y": 0,
+                      "name": "Variant B Accent Icon Bay",
+                      "width": 44,
+                      "height": 44,
+                      "fill": "$accent",
+                      "cornerRadius": [
+                        0,
+                        22,
+                        22,
+                        0
+                      ],
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "ZOxC9",
+                          "x": 14,
+                          "y": 14,
+                          "name": "Variant B Hover Arrow",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$accent-fg"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "rOJvk",
+                      "x": 107,
+                      "y": 8,
+                      "name": "Variant B Bay Separator",
+                      "fill": "#FFFFFF4D",
+                      "width": 1,
+                      "height": 28
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "zqSgh",
+              "x": 24,
+              "y": 128,
+              "name": "02 - VARIANT B Shared Baseline",
+              "fill": "$border",
+              "width": 556,
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "Bi5FN",
+              "x": 24,
+              "y": 144,
+              "name": "02 - VARIANT B Bounds Note",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width",
+              "width": 556,
+              "content": "160 ms ease-out · trailing bay fills from transparent; outer position stays fixed.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "D8ZGW",
+      "x": 2880,
+      "y": 0,
+      "name": "03 - VARIANT C",
+      "clip": true,
+      "width": 660,
+      "height": 650,
+      "fill": "$background",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "Nhyb6",
+          "x": 28,
+          "y": 24,
+          "name": "03 - VARIANT C Title",
+          "fill": "$foreground",
+          "textGrowth": "fixed-width",
+          "width": 420,
+          "content": "03 — Underline pulse",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "dnWYY",
+          "x": 470,
+          "y": 24,
+          "name": "03 - VARIANT C Direction Chip",
+          "width": 160,
+          "height": 28,
+          "fill": "$card",
+          "cornerRadius": 14,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "AR2DH",
+              "name": "03 - VARIANT C Direction Label",
+              "fill": "$primary",
+              "content": "MINIMAL",
+              "fontFamily": "$font-mono",
+              "fontSize": 10,
+              "fontWeight": "600",
+              "letterSpacing": 0.5
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "cylWc",
+          "x": 28,
+          "y": 62,
+          "name": "03 - VARIANT C Description",
+          "fill": "$muted-fg",
+          "textGrowth": "fixed-width",
+          "width": 604,
+          "content": "A deepened surface and short amber line sharpen the label with minimal noise.",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 14
+        },
+        {
+          "type": "frame",
+          "id": "BlItY",
+          "x": 28,
+          "y": 110,
+          "name": "03 - VARIANT C About Card",
+          "clip": true,
+          "width": 604,
+          "height": 292,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1738",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40,
+            "spread": -30
+          },
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ip2UJ",
+              "x": 0,
+              "y": 0,
+              "name": "03 - VARIANT C Photo Pane",
+              "width": 242,
+              "height": 292,
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "SZKWK",
+                  "x": 52,
+                  "y": 24,
+                  "name": "03 - VARIANT C Profile Photo",
+                  "clip": true,
+                  "width": 138,
+                  "height": 244,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../public/cv_pic.png",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 16,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "ocxfy",
+              "x": 266,
+              "y": 24,
+              "name": "03 - VARIANT C Developer Role",
+              "fill": "$primary",
+              "content": "Full Stack Developer",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "d6arc",
+              "x": 432,
+              "y": 16,
+              "name": "03 - VARIANT C Download CV",
+              "width": 152,
+              "height": 44,
+              "fill": "#E9EDF566",
+              "cornerRadius": 22,
+              "stroke": "#D6D9E1CC",
+              "strokeWidth": 1,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "GKtqx",
+                  "name": "03 - VARIANT C Download Label",
+                  "fill": "$muted-fg",
+                  "content": "Download CV",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "TbJSM",
+                  "name": "03 - VARIANT C File Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "NAOd9",
+              "x": 266,
+              "y": 72,
+              "name": "03 - VARIANT C Status",
+              "width": 318,
+              "height": 42,
+              "fill": "#0084371A",
+              "cornerRadius": 12,
+              "stroke": "#00843759",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "QNtx2",
+                  "name": "03 - VARIANT C Status Dot",
+                  "fill": "$status",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "SZRLt",
+                  "name": "03 - VARIANT C Status Label",
+                  "fill": "$foreground",
+                  "content": "OPEN TO WORK",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "k42pg",
+              "x": 266,
+              "y": 132,
+              "name": "03 - VARIANT C Heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 318,
+              "content": "Hey, I’m Gonzalo.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 24,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "l7EjP",
+              "x": 266,
+              "y": 168,
+              "name": "03 - VARIANT C Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width-height",
+              "width": 318,
+              "height": 52,
+              "content": "I love turning ideas into real products people can use. I care about thoughtful interfaces, solid backend foundations, and the kind of curious, collaborative work that keeps improving the product, the code, and the people building it.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "uRge9",
+              "x": 432,
+              "y": 232,
+              "name": "Variant C Hover Button",
+              "width": 152,
+              "height": 44,
+              "fill": "#003A84",
+              "cornerRadius": 22,
+              "stroke": "#005DB866",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "NoIpf",
+                  "x": 28,
+                  "y": 11,
+                  "name": "Variant C Hover Label",
+                  "fill": "$primary-fg",
+                  "content": "About Me",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 1,
+                  "id": "hk9d2",
+                  "x": 28,
+                  "y": 33,
+                  "name": "Variant C Accent Underline",
+                  "fill": "$accent",
+                  "width": 64,
+                  "height": 2
+                },
+                {
+                  "type": "icon",
+                  "id": "kgqOT",
+                  "x": 108,
+                  "y": 14,
+                  "name": "Variant C Hover Arrow",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ybws4",
+          "x": 28,
+          "y": 426,
+          "name": "03 - VARIANT C State Comparison",
+          "width": 604,
+          "height": 188,
+          "fill": "#FFFFFFB8",
+          "cornerRadius": 24,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "FivVW",
+              "x": 24,
+              "y": 18,
+              "name": "03 - VARIANT C State Title",
+              "fill": "$muted-fg",
+              "content": "STATE CHECK · IDENTICAL 152 × 44 BOUNDS",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "YsZze",
+              "x": 54,
+              "y": 48,
+              "name": "03 - VARIANT C Rest State Label",
+              "fill": "$muted-fg",
+              "content": "REST",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "h38x8d",
+              "x": 398,
+              "y": 48,
+              "name": "03 - VARIANT C Hover State Label",
+              "fill": "$muted-fg",
+              "content": "HOVER",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "t5fEKW",
+              "x": 54,
+              "y": 70,
+              "name": "03 - VARIANT C Rest Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "A8JzaO",
+                  "x": 0,
+                  "y": 0,
+                  "name": "03 - VARIANT C Rest Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00459E26",
+                    "offset": {
+                      "x": 0,
+                      "y": 3
+                    },
+                    "blur": 8,
+                    "spread": -2
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PMlzp",
+                      "x": 28,
+                      "y": 13,
+                      "name": "03 - VARIANT C Rest Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "lwAc4",
+                      "x": 108,
+                      "y": 14,
+                      "name": "03 - VARIANT C Rest Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "s4BVbU",
+              "x": 398,
+              "y": 70,
+              "name": "03 - VARIANT C Hover Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "oQ27N",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Variant C Hover Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "#003A84",
+                  "cornerRadius": 22,
+                  "stroke": "#005DB866",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PEN48",
+                      "x": 28,
+                      "y": 11,
+                      "name": "Variant C Hover Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 1,
+                      "id": "ziQbj",
+                      "x": 28,
+                      "y": 33,
+                      "name": "Variant C Accent Underline",
+                      "fill": "$accent",
+                      "width": 64,
+                      "height": 2
+                    },
+                    {
+                      "type": "icon",
+                      "id": "SwkfM",
+                      "x": 108,
+                      "y": 14,
+                      "name": "Variant C Hover Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "wTdEx",
+              "x": 24,
+              "y": 128,
+              "name": "03 - VARIANT C Shared Baseline",
+              "fill": "$border",
+              "width": 556,
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "Urq42",
+              "x": 24,
+              "y": 144,
+              "name": "03 - VARIANT C Bounds Note",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width",
+              "width": 556,
+              "content": "160 ms ease-out · underline reveals from left; outer position stays fixed.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "q7lr8",
+      "x": 1520,
+      "y": 700,
+      "name": "04 - VARIANT D",
+      "clip": true,
+      "width": 660,
+      "height": 650,
+      "fill": "$background",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "WeJVl",
+          "x": 28,
+          "y": 24,
+          "name": "04 - VARIANT D Title",
+          "fill": "$foreground",
+          "textGrowth": "fixed-width",
+          "width": 420,
+          "content": "04 — Inverse signal",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "QIBMT",
+          "x": 470,
+          "y": 24,
+          "name": "04 - VARIANT D Direction Chip",
+          "width": 160,
+          "height": 28,
+          "fill": "$primary",
+          "cornerRadius": 14,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "l9wRt",
+              "name": "04 - VARIANT D Direction Label",
+              "fill": "$primary-fg",
+              "content": "STRONG HIERARCHY",
+              "fontFamily": "$font-mono",
+              "fontSize": 10,
+              "fontWeight": "600",
+              "letterSpacing": 0.5
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ZihNh",
+          "x": 28,
+          "y": 62,
+          "name": "04 - VARIANT D Description",
+          "fill": "$muted-fg",
+          "textGrowth": "fixed-width",
+          "width": 604,
+          "content": "The control inverts to a light surface while the arrow remains strongly primary.",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 14
+        },
+        {
+          "type": "frame",
+          "id": "mSv72",
+          "x": 28,
+          "y": 110,
+          "name": "04 - VARIANT D About Card",
+          "clip": true,
+          "width": 604,
+          "height": 292,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1738",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40,
+            "spread": -30
+          },
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "yVGTq",
+              "x": 0,
+              "y": 0,
+              "name": "04 - VARIANT D Photo Pane",
+              "width": 242,
+              "height": 292,
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Zjuyq",
+                  "x": 52,
+                  "y": 24,
+                  "name": "04 - VARIANT D Profile Photo",
+                  "clip": true,
+                  "width": 138,
+                  "height": 244,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../public/cv_pic.png",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 16,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "XfgUN",
+              "x": 266,
+              "y": 24,
+              "name": "04 - VARIANT D Developer Role",
+              "fill": "$primary",
+              "content": "Full Stack Developer",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "F2KOn",
+              "x": 432,
+              "y": 16,
+              "name": "04 - VARIANT D Download CV",
+              "width": 152,
+              "height": 44,
+              "fill": "#E9EDF566",
+              "cornerRadius": 22,
+              "stroke": "#D6D9E1CC",
+              "strokeWidth": 1,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sFVnT",
+                  "name": "04 - VARIANT D Download Label",
+                  "fill": "$muted-fg",
+                  "content": "Download CV",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "bxUUK",
+                  "name": "04 - VARIANT D File Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "R2HLY",
+              "x": 266,
+              "y": 72,
+              "name": "04 - VARIANT D Status",
+              "width": 318,
+              "height": 42,
+              "fill": "#0084371A",
+              "cornerRadius": 12,
+              "stroke": "#00843759",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "rBOsG",
+                  "name": "04 - VARIANT D Status Dot",
+                  "fill": "$status",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "gCqJa",
+                  "name": "04 - VARIANT D Status Label",
+                  "fill": "$foreground",
+                  "content": "OPEN TO WORK",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "NXKrK",
+              "x": 266,
+              "y": 132,
+              "name": "04 - VARIANT D Heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 318,
+              "content": "Hey, I’m Gonzalo.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 24,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "h1eN1B",
+              "x": 266,
+              "y": 168,
+              "name": "04 - VARIANT D Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width-height",
+              "width": 318,
+              "height": 52,
+              "content": "I love turning ideas into real products people can use. I care about thoughtful interfaces, solid backend foundations, and the kind of curious, collaborative work that keeps improving the product, the code, and the people building it.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "u6WSay",
+              "x": 432,
+              "y": 232,
+              "name": "Variant D Hover Button",
+              "width": 152,
+              "height": 44,
+              "fill": "$card",
+              "cornerRadius": 22,
+              "stroke": "$primary",
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00459E3D",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12,
+                "spread": -5
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vhjoc",
+                  "x": 24,
+                  "y": 13,
+                  "name": "Variant D Hover Label",
+                  "fill": "$primary",
+                  "content": "About Me",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "okrVO",
+                  "x": 110,
+                  "y": 7,
+                  "name": "Variant D Primary Arrow Disc",
+                  "fill": "$primary",
+                  "width": 30,
+                  "height": 30
+                },
+                {
+                  "type": "icon",
+                  "id": "Zmq0s",
+                  "x": 117,
+                  "y": 14,
+                  "name": "Variant D Hover Arrow",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "s6adB",
+          "x": 28,
+          "y": 426,
+          "name": "04 - VARIANT D State Comparison",
+          "width": 604,
+          "height": 188,
+          "fill": "#FFFFFFB8",
+          "cornerRadius": 24,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "XZFeJ",
+              "x": 24,
+              "y": 18,
+              "name": "04 - VARIANT D State Title",
+              "fill": "$muted-fg",
+              "content": "STATE CHECK · IDENTICAL 152 × 44 BOUNDS",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "vJ8Qe",
+              "x": 54,
+              "y": 48,
+              "name": "04 - VARIANT D Rest State Label",
+              "fill": "$muted-fg",
+              "content": "REST",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "A5NWn",
+              "x": 398,
+              "y": 48,
+              "name": "04 - VARIANT D Hover State Label",
+              "fill": "$muted-fg",
+              "content": "HOVER",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "x8NOAz",
+              "x": 54,
+              "y": 70,
+              "name": "04 - VARIANT D Rest Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "p5NpR",
+                  "x": 0,
+                  "y": 0,
+                  "name": "04 - VARIANT D Rest Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00459E26",
+                    "offset": {
+                      "x": 0,
+                      "y": 3
+                    },
+                    "blur": 8,
+                    "spread": -2
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "BYwNA",
+                      "x": 28,
+                      "y": 13,
+                      "name": "04 - VARIANT D Rest Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "ZzGVN",
+                      "x": 108,
+                      "y": 14,
+                      "name": "04 - VARIANT D Rest Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Rr8z3",
+              "x": 398,
+              "y": 70,
+              "name": "04 - VARIANT D Hover Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zMXa3",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Variant D Hover Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$card",
+                  "cornerRadius": 22,
+                  "stroke": "$primary",
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00459E3D",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 12,
+                    "spread": -5
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "OwQ7C",
+                      "x": 24,
+                      "y": 13,
+                      "name": "Variant D Hover Label",
+                      "fill": "$primary",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "T3lPCM",
+                      "x": 110,
+                      "y": 7,
+                      "name": "Variant D Primary Arrow Disc",
+                      "fill": "$primary",
+                      "width": 30,
+                      "height": 30
+                    },
+                    {
+                      "type": "icon",
+                      "id": "P9smQQ",
+                      "x": 117,
+                      "y": 14,
+                      "name": "Variant D Hover Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "g918gp",
+              "x": 24,
+              "y": 128,
+              "name": "04 - VARIANT D Shared Baseline",
+              "fill": "$border",
+              "width": 556,
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "nRGJ6",
+              "x": 24,
+              "y": 144,
+              "name": "04 - VARIANT D Bounds Note",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width",
+              "width": 556,
+              "content": "180 ms ease-out · fill and border cross-fade; outer position stays fixed.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "dOEr1",
+      "x": 2200,
+      "y": 700,
+      "name": "05 - VARIANT E",
+      "clip": true,
+      "width": 660,
+      "height": 650,
+      "fill": "$background",
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "PVAMG",
+          "x": 28,
+          "y": 24,
+          "name": "05 - VARIANT E Title",
+          "fill": "$foreground",
+          "textGrowth": "fixed-width",
+          "width": 420,
+          "content": "05 — Orbit trace",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 24,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "hksHE",
+          "x": 470,
+          "y": 24,
+          "name": "05 - VARIANT E Direction Chip",
+          "width": 160,
+          "height": 28,
+          "fill": "$dark-card",
+          "cornerRadius": 14,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "C84pIf",
+              "name": "05 - VARIANT E Direction Label",
+              "fill": "$dark-fg",
+              "content": "EXPERIMENTAL",
+              "fontFamily": "$font-mono",
+              "fontSize": 10,
+              "fontWeight": "600",
+              "letterSpacing": 0.5
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "EczZT",
+          "x": 28,
+          "y": 62,
+          "name": "05 - VARIANT E Description",
+          "fill": "$muted-fg",
+          "textGrowth": "fixed-width",
+          "width": 604,
+          "content": "An amber trace travels the pill edge, ending at a framed arrow target.",
+          "lineHeight": 1.25,
+          "fontFamily": "$font-sans",
+          "fontSize": 14
+        },
+        {
+          "type": "frame",
+          "id": "v3te4",
+          "x": 28,
+          "y": 110,
+          "name": "05 - VARIANT E About Card",
+          "clip": true,
+          "width": 604,
+          "height": 292,
+          "fill": "$card",
+          "cornerRadius": 32,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#080C1738",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40,
+            "spread": -30
+          },
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "bXlFs",
+              "x": 0,
+              "y": 0,
+              "name": "05 - VARIANT E Photo Pane",
+              "width": 242,
+              "height": 292,
+              "stroke": "$border",
+              "strokeWidth": {
+                "right": 1
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n6bb1L",
+                  "x": 52,
+                  "y": 24,
+                  "name": "05 - VARIANT E Profile Photo",
+                  "clip": true,
+                  "width": 138,
+                  "height": 244,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "../public/cv_pic.png",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 16,
+                  "layout": "none"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "eUUCr",
+              "x": 266,
+              "y": 24,
+              "name": "05 - VARIANT E Developer Role",
+              "fill": "$primary",
+              "content": "Full Stack Developer",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "AeMiG",
+              "x": 432,
+              "y": 16,
+              "name": "05 - VARIANT E Download CV",
+              "width": 152,
+              "height": 44,
+              "fill": "#E9EDF566",
+              "cornerRadius": 22,
+              "stroke": "#D6D9E1CC",
+              "strokeWidth": 1,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W2viv",
+                  "name": "05 - VARIANT E Download Label",
+                  "fill": "$muted-fg",
+                  "content": "Download CV",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "icon",
+                  "id": "l9zDX",
+                  "name": "05 - VARIANT E File Icon",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "file",
+                  "library": "lucide",
+                  "fill": "$muted-fg"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "GtKOp",
+              "x": 266,
+              "y": 72,
+              "name": "05 - VARIANT E Status",
+              "width": 318,
+              "height": 42,
+              "fill": "#0084371A",
+              "cornerRadius": 12,
+              "stroke": "#00843759",
+              "strokeWidth": 1,
+              "gap": 10,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "Mr87E",
+                  "name": "05 - VARIANT E Status Dot",
+                  "fill": "$status",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "CiyXX",
+                  "name": "05 - VARIANT E Status Label",
+                  "fill": "$foreground",
+                  "content": "OPEN TO WORK",
+                  "fontFamily": "$font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "MHzxS",
+              "x": 266,
+              "y": 132,
+              "name": "05 - VARIANT E Heading",
+              "fill": "$foreground",
+              "textGrowth": "fixed-width",
+              "width": 318,
+              "content": "Hey, I’m Gonzalo.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 24,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "HhcaO",
+              "x": 266,
+              "y": 168,
+              "name": "05 - VARIANT E Description",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width-height",
+              "width": 318,
+              "height": 52,
+              "content": "I love turning ideas into real products people can use. I care about thoughtful interfaces, solid backend foundations, and the kind of curious, collaborative work that keeps improving the product, the code, and the people building it.",
+              "lineHeight": 1.35,
+              "fontFamily": "$font-sans",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "r2NUl",
+              "x": 432,
+              "y": 232,
+              "name": "Variant E Hover Button",
+              "width": 152,
+              "height": 44,
+              "fill": "$primary",
+              "cornerRadius": 22,
+              "stroke": {
+                "type": "gradient",
+                "gradientType": "angular",
+                "enabled": true,
+                "rotation": 0,
+                "size": {
+                  "width": 1,
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "$accent",
+                    "position": 0
+                  },
+                  {
+                    "color": "$primary-fg",
+                    "position": 0.28
+                  },
+                  {
+                    "color": "$primary",
+                    "position": 0.55
+                  },
+                  {
+                    "color": "$accent",
+                    "position": 1
+                  }
+                ]
+              },
+              "strokeWidth": 2,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#F0790047",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 16,
+                "spread": -4
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "ATotm",
+                  "x": 10,
+                  "y": 18,
+                  "name": "Variant E Orbit Dot",
+                  "fill": "$accent",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "S0KalB",
+                  "x": 28,
+                  "y": 13,
+                  "name": "Variant E Hover Label",
+                  "fill": "$primary-fg",
+                  "content": "About Me",
+                  "lineHeight": 1.25,
+                  "fontFamily": "$font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "ellipse",
+                  "id": "i8RXL9",
+                  "x": 108,
+                  "y": 7,
+                  "name": "Variant E Orbit Arrow Ring",
+                  "fill": "#FFFFFF0F",
+                  "width": 30,
+                  "height": 30,
+                  "stroke": "#FFFFFF70",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "icon",
+                  "id": "auy3T",
+                  "x": 115,
+                  "y": 14,
+                  "name": "Variant E Hover Arrow",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "arrow-right",
+                  "library": "lucide",
+                  "fill": "$primary-fg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TtaMh",
+          "x": 28,
+          "y": 426,
+          "name": "05 - VARIANT E State Comparison",
+          "width": 604,
+          "height": 188,
+          "fill": "#FFFFFFB8",
+          "cornerRadius": 24,
+          "stroke": "$border",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "E8k42y",
+              "x": 24,
+              "y": 18,
+              "name": "05 - VARIANT E State Title",
+              "fill": "$muted-fg",
+              "content": "STATE CHECK · IDENTICAL 152 × 44 BOUNDS",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "E4Fuk",
+              "x": 54,
+              "y": 48,
+              "name": "05 - VARIANT E Rest State Label",
+              "fill": "$muted-fg",
+              "content": "REST",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "ATTHj",
+              "x": 398,
+              "y": 48,
+              "name": "05 - VARIANT E Hover State Label",
+              "fill": "$muted-fg",
+              "content": "HOVER",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "WNZ6r",
+              "x": 54,
+              "y": 70,
+              "name": "05 - VARIANT E Rest Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "j3zgh",
+                  "x": 0,
+                  "y": 0,
+                  "name": "05 - VARIANT E Rest Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00459E26",
+                    "offset": {
+                      "x": 0,
+                      "y": 3
+                    },
+                    "blur": 8,
+                    "spread": -2
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "r5OjZ",
+                      "x": 28,
+                      "y": 13,
+                      "name": "05 - VARIANT E Rest Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "HsQWk",
+                      "x": 108,
+                      "y": 14,
+                      "name": "05 - VARIANT E Rest Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UTBc3",
+              "x": 398,
+              "y": 70,
+              "name": "05 - VARIANT E Hover Holder",
+              "width": 152,
+              "height": 44,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wtUIb",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Variant E Hover Button",
+                  "width": 152,
+                  "height": 44,
+                  "fill": "$primary",
+                  "cornerRadius": 22,
+                  "stroke": {
+                    "type": "gradient",
+                    "gradientType": "angular",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "$accent",
+                        "position": 0
+                      },
+                      {
+                        "color": "$primary-fg",
+                        "position": 0.28
+                      },
+                      {
+                        "color": "$primary",
+                        "position": 0.55
+                      },
+                      {
+                        "color": "$accent",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "strokeWidth": 2,
+                  "strokeAlignment": "inner",
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#F0790047",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 16,
+                    "spread": -4
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "m67nZ3",
+                      "x": 10,
+                      "y": 18,
+                      "name": "Variant E Orbit Dot",
+                      "fill": "$accent",
+                      "width": 8,
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "id": "AAOCR",
+                      "x": 28,
+                      "y": 13,
+                      "name": "Variant E Hover Label",
+                      "fill": "$primary-fg",
+                      "content": "About Me",
+                      "lineHeight": 1.25,
+                      "fontFamily": "$font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "KsBYt",
+                      "x": 108,
+                      "y": 7,
+                      "name": "Variant E Orbit Arrow Ring",
+                      "fill": "#FFFFFF0F",
+                      "width": 30,
+                      "height": 30,
+                      "stroke": "#FFFFFF70",
+                      "strokeWidth": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "jGwEw",
+                      "x": 115,
+                      "y": 14,
+                      "name": "Variant E Hover Arrow",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "arrow-right",
+                      "library": "lucide",
+                      "fill": "$primary-fg"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "nADyO",
+              "x": 24,
+              "y": 128,
+              "name": "05 - VARIANT E Shared Baseline",
+              "fill": "$border",
+              "width": 556,
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "n0neCM",
+              "x": 24,
+              "y": 144,
+              "name": "05 - VARIANT E Bounds Note",
+              "fill": "$muted-fg",
+              "textGrowth": "fixed-width",
+              "width": 556,
+              "content": "220 ms ease-out · border trace animates; reduced motion shows the final ring.",
+              "lineHeight": 1.25,
+              "fontFamily": "$font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "background": {
+      "type": "color",
+      "value": "#F5F7FC"
+    },
+    "foreground": {
+      "type": "color",
+      "value": "#080C17"
+    },
+    "card": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "primary": {
+      "type": "color",
+      "value": "#00459E"
+    },
+    "primary-fg": {
+      "type": "color",
+      "value": "#F8FAFD"
+    },
+    "secondary": {
+      "type": "color",
+      "value": "#E9EDF5"
+    },
+    "muted": {
+      "type": "color",
+      "value": "#E2E4EA"
+    },
+    "muted-fg": {
+      "type": "color",
+      "value": "#4A505B"
+    },
+    "accent": {
+      "type": "color",
+      "value": "#F07900"
+    },
+    "accent-fg": {
+      "type": "color",
+      "value": "#270F00"
+    },
+    "border": {
+      "type": "color",
+      "value": "#D6D9E1"
+    },
+    "ring": {
+      "type": "color",
+      "value": "#005DB8"
+    },
+    "status": {
+      "type": "color",
+      "value": "#008437"
+    },
+    "dark-bg": {
+      "type": "color",
+      "value": "#04050F"
+    },
+    "dark-card": {
+      "type": "color",
+      "value": "#0D101A"
+    },
+    "dark-fg": {
+      "type": "color",
+      "value": "#ECEEF4"
+    },
+    "dark-primary": {
+      "type": "color",
+      "value": "#00BCFF"
+    },
+    "dark-accent": {
+      "type": "color",
+      "value": "#FF994D"
+    },
+    "font-sans": {
+      "type": "string",
+      "value": "Geist"
+    },
+    "font-mono": {
+      "type": "string",
+      "value": "Geist Mono"
+    }
+  },
+  "fileToken": "6b0adc5c-3c19-4d8c-9b7d-9eaccfb7acac"
+}

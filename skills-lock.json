@@ -1,0 +1,106 @@
+{
+	"version": 1,
+	"skills": {
+		"accessibility-compliance": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"computedHash": "36d3b046163c42251732b3127c042f6b8eb7d91fcbf7ef9ae79fde79e9c99369"
+		},
+		"agent-browser": {
+			"source": "vercel-labs/agent-browser",
+			"sourceType": "github",
+			"skillPath": "skills/agent-browser/SKILL.md",
+			"computedHash": "80161e6836b3b40f4e83730a290deb40ac14d877d38c97ad5f6d71be37ce74c3"
+		},
+		"better-auth-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
+		},
+		"drizzle-orm": {
+			"source": "bobmatnyc/claude-mpm-skills",
+			"sourceType": "github",
+			"computedHash": "9aea7469d696c9b5fa54a84b7a92ea692872fb624fb028f866ab0f3deac84867"
+		},
+		"find-skills": {
+			"source": "vercel-labs/skills",
+			"sourceType": "github",
+			"computedHash": "d31e234f0c90694a670222cdd1dafa853e051d7066beda389f1097c22dadd461"
+		},
+		"frontend-design": {
+			"source": "anthropics/skills",
+			"sourceType": "github",
+			"computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+		},
+		"next-best-practices": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"computedHash": "515ba75178bd44875812d9a560bdf14651f86709f89cf1d4f209638e879807f3"
+		},
+		"next-cache-components": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"computedHash": "a94b83ddcd2ff1c30722577f693b1bfe32f2e1a83abdd6c08c2d6cc6753b53c8"
+		},
+		"nextjs-app-router-patterns": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"computedHash": "d2f0a7065f7418fdb3ae88559f1f1426f40c26f2b5aebcd394797418d4bb3b04"
+		},
+		"playwright-best-practices": {
+			"source": "currents-dev/playwright-best-practices-skill",
+			"sourceType": "github",
+			"computedHash": "320eaf861e3a0a923bfaad0726cb311a3fe30093378f8d26c89b9c5ae5c42b35"
+		},
+		"playwright-cli": {
+			"source": "microsoft/playwright-cli",
+			"sourceType": "github",
+			"computedHash": "7075ab30f588019197a2f1518bb4c9d33d69d33352af079b5f9c60303ad3886e"
+		},
+		"seo-audit": {
+			"source": "coreyhaines31/marketingskills",
+			"sourceType": "github",
+			"computedHash": "ec3109d213dde1747614ad1112ef0e498e04b24e464538968e156dfbfadb2121"
+		},
+		"shadcn": {
+			"source": "shadcn/ui",
+			"sourceType": "github",
+			"computedHash": "507f011a70e8b3ae242bdc0bb5b39fd91a1d4049a0f3c281991ccf84973d591c"
+		},
+		"tailwind-design-system": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"computedHash": "7ff2f4650597e98ca4cd8f01231fb432ab4d187d6b12e641485aa871a04448cc"
+		},
+		"typescript-advanced-types": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"computedHash": "3a3be8c925f96ac4e1280db28a01677e7ca5197f3792de2bbf35ab3bb324b6dd"
+		},
+		"vercel-composition-patterns": {
+			"source": "vercel-labs/agent-skills",
+			"sourceType": "github",
+			"computedHash": "f98931159fa9c7fed043bcd18a891a46dcf89ababa38df13a4c5b7b30dc0ce07"
+		},
+		"vercel-react-best-practices": {
+			"source": "vercel-labs/agent-skills",
+			"sourceType": "github",
+			"computedHash": "bbc31a48537b473ff4feea6360ef0de3bfdcbef26c14f4967a5deefe8ca801d3"
+		},
+		"vitest": {
+			"source": "antfu/skills",
+			"sourceType": "github",
+			"computedHash": "669c7275f7e1379b06b2bcfa593603aead4c983b951c7e8edbc09640aa38d0a1"
+		},
+		"wcag-audit-patterns": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"computedHash": "df495bdd3466d293e019fa191422d0a3e6cb9c50f275189a70d9da25add075ac"
+		},
+		"web-design-guidelines": {
+			"source": "vercel-labs/agent-skills",
+			"sourceType": "github",
+			"computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+		}
+	}
+}

@@ -1,0 +1,4 @@
+interface:
+    display_name: 'Git Worktree Task'
+    short_description: 'Run coding tasks in isolated worktrees'
+    default_prompt: 'Use $git-worktree-task to complete this coding task in an isolated Git worktree.'

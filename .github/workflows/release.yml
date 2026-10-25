@@ -1,0 +1,265 @@
+name: Release
+on:
+    workflow_dispatch:
+        inputs:
+            operation:
+                type: choice
+                options: [release, rollback, baseline]
+                required: true
+                default: release
+            sha:
+                description: Full main commit SHA; rollback uses the previous release SHA
+                required: true
+                type: string
+            deployment_id:
+                description: Previous known-good deployment ID for rollback
+                type: string
+            recovery_point:
+                description: Confirmed Turso recovery point or backup reference before migrations
+                type: string
+            baseline_tag:
+                description: Exact verified migration prefix, for baseline operation only
+                type: string
+permissions: {}
+concurrency:
+    group: portfolio-production
+    cancel-in-progress: false
+env:
+    EXPECTED_SHA: ${{ inputs.sha }}
+    VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+    PRODUCTION_ORIGIN: ${{ vars.PRODUCTION_ORIGIN }}
+jobs:
+    preflight:
+        name: Release / Preflight
+        if: github.ref == 'refs/heads/main' && inputs.operation == 'release'
+        environment: release-candidate
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: read
+            actions: read
+            security-events: read
+        outputs:
+            previous: ${{ steps.preflight.outputs.previous }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - id: preflight
+              run: pnpm release preflight
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+                  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    contracts:
+        needs: preflight
+        uses: ./.github/workflows/services-contracts.yml
+        permissions:
+            contents: read
+    migrations:
+        name: Release / Migrations
+        needs: [preflight, contracts]
+        environment: production-migrations
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            actions: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm migrate:apply
+              env:
+                  APP_ENV: production
+                  GITHUB_TOKEN: ${{ github.token }}
+                  MIGRATION_APPROVED: 'true'
+                  TURSO_RECOVERY_POINT: ${{ inputs.recovery_point }}
+                  TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+                  TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+    candidate:
+        name: Release / Candidate
+        needs: [preflight, migrations]
+        environment: release-candidate
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        permissions:
+            contents: read
+            actions: read
+            security-events: read
+        outputs:
+            deployment: ${{ steps.candidate.outputs.deployment }}
+            origin: ${{ steps.candidate.outputs.origin }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - id: candidate
+              run: pnpm release create
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+                  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+                  VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+                  HEALTH_READINESS_TOKEN: ${{ secrets.HEALTH_READINESS_TOKEN }}
+                  PREVIOUS_DEPLOYMENT_ID: ${{ needs.preflight.outputs.previous }}
+            - name: Retain candidate verification evidence
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: candidate-${{ github.run_id }}
+                  path: .ci/release-evidence.json
+                  include-hidden-files: true
+                  retention-days: 7
+                  if-no-files-found: error
+    promote:
+        name: Release / Promote
+        needs: [preflight, candidate]
+        environment:
+            name: production
+            url: ${{ needs.candidate.outputs.origin }}
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            actions: read
+            security-events: read
+            deployments: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm release promote
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+                  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+                  VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+                  HEALTH_READINESS_TOKEN: ${{ secrets.HEALTH_READINESS_TOKEN }}
+                  DEPLOYMENT_ID: ${{ needs.candidate.outputs.deployment }}
+                  PREVIOUS_DEPLOYMENT_ID: ${{ needs.preflight.outputs.previous }}
+            - name: Retain nonsensitive release evidence
+              if: always()
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: release-${{ github.run_id }}
+                  path: .ci/release-evidence.json
+                  include-hidden-files: true
+                  retention-days: 90
+                  if-no-files-found: ignore
+    rollback:
+        name: Release / Rollback
+        if: github.ref == 'refs/heads/main' && inputs.operation == 'rollback'
+        environment: production
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            actions: read
+            deployments: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm release rollback
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+                  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+                  VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+                  HEALTH_READINESS_TOKEN: ${{ secrets.HEALTH_READINESS_TOKEN }}
+                  DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+            - name: Retain rollback evidence
+              if: always()
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: rollback-${{ github.run_id }}
+                  path: .ci/release-evidence.json
+                  include-hidden-files: true
+                  retention-days: 90
+                  if-no-files-found: ignore
+    baseline:
+        name: Release / Baseline
+        if: github.ref == 'refs/heads/main' && inputs.operation == 'baseline'
+        environment: production-migrations
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+        permissions:
+            contents: read
+            actions: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm migrate:baseline
+              env:
+                  APP_ENV: production
+                  GITHUB_TOKEN: ${{ github.token }}
+                  MIGRATION_APPROVED: 'true'
+                  BASELINE_APPROVED: 'true'
+                  MIGRATION_BASELINE_TAG: ${{ inputs.baseline_tag }}
+                  TURSO_RECOVERY_POINT: ${{ inputs.recovery_point }}
+                  TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+                  TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}

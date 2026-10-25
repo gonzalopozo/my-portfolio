@@ -1,0 +1,2 @@
+# Pre-commit — ESLint + Prettier on staged files via lint-staged (see lint-staged.config.mjs).
+pnpm run lint:staged

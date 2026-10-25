@@ -1,0 +1,79 @@
+{
+	"$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+	"version": "0.2",
+	"language": "en,es",
+	"import": ["@cspell/dict-es-es/cspell-ext.json"],
+	"dictionaryDefinitions": [
+		{
+			"name": "project-words",
+			"path": "./project-words.txt",
+			"addWords": true,
+			"description": "Stack- and repo-specific terms (Turso, MapLibre, package names, etc.)"
+		}
+	],
+	"dictionaries": [
+		"project-words",
+		"typescript",
+		"node",
+		"npm",
+		"html",
+		"css",
+		"softwareTerms",
+		"filetypes",
+		"bash",
+		"companies"
+	],
+	"ignorePaths": [
+		"node_modules",
+		".next",
+		"out",
+		"build",
+		"coverage",
+		".vercel",
+		"pnpm-lock.yaml",
+		"package-lock.json",
+		"yarn.lock",
+		"**/*.tsbuildinfo",
+		".specstory/**",
+		".pnpm-store",
+		"playwright-report",
+		"test-results",
+		"blob-report",
+		"playwright/.cache",
+		"playwright/.auth",
+		"public",
+		"lib/react-icons-manifest.json",
+		"skills-lock.json",
+		"project-words.txt",
+		"next-env.d.ts",
+		".cursor",
+		".agents",
+		".codex",
+		".claude",
+		".vscode",
+		"**/*.svg",
+		"**/*.png",
+		"**/*.jpg",
+		"**/*.jpeg",
+		"**/*.webp",
+		"**/*.ico",
+		"**/*.woff",
+		"**/*.woff2",
+		"designs/**/*.pen"
+	],
+	"useGitignore": true,
+	"overrides": [
+		{
+			"filename": "**/package.json",
+			"minWordLength": 3
+		},
+		{
+			"filename": "**/pnpm-lock.yaml",
+			"enabled": false
+		},
+		{
+			"filename": "**/*.css",
+			"dictionaries": ["css", "typescript", "softwareTerms"]
+		}
+	]
+}

@@ -1,0 +1,164 @@
+# Repo-specific terms (see cspell.json). Add only reviewed project terminology.
+
+# Paths / tooling names (appear in JSON config)
+specstory
+
+# package.json — pnpm orgs & script tokens
+anthropics
+bobmatnyc
+claude
+coreyhaines
+dlx
+gonzalopozo
+marketingskills
+mpm
+mts
+wshobson
+
+# shadcn registry
+mapcn
+
+# AVIF / ISO BMFF
+avis
+BMFF
+FOURCC
+fourcc
+FTYP
+ftyp
+
+# Drizzle / SQLite (libSQL / Turso)
+autoincrement
+AUTOINCREMENT
+
+# Drizzle migration tags (generated names)
+gideon
+
+# MapLibre / maps
+Arroyomolinos
+Carto
+redireccionar
+redirecciones
+styledata
+unclustered
+Unclustered
+
+# Node / DNS
+ESOCKETNODATA
+ETIMEOUT
+
+# CSP / Next.js rendering terminology
+basemaps
+cartocdn
+jitless
+nonced
+prerendered
+prerendering
+
+# Legacy conversation filename
+configur
+
+# npm / UI libraries
+cmdk
+dnd
+depcruise
+Devicons
+geist
+Hoverable
+maplibre
+maplibregl
+Nuqs
+nuqs
+openmaptiles
+Tabler
+teritorio
+
+# Social / fonts (strings or next/font)
+fraunces
+linkedin
+
+# SQL / Turso
+libsql
+subsecond
+TURSO
+turso
+unixepoch
+
+# Technical / comments
+Graphviz
+lockfiles
+subcomponents
+unrs
+unstub
+
+# Documentation (AGENTS-*.md) — acronyms & product terms
+bento
+clickjacking
+Contentful
+Cves
+firefox
+FOUT
+GSAP
+HSTS
+interruptible
+navigations
+navs
+nosniff
+opengraph
+parameterizes
+SAMEORIGIN
+testid
+TTFB
+turbopack
+Turbopack
+WCAG
+wcag
+
+# Lastfm / Spotify / external images
+domcontentloaded
+getrecenttracks
+lastfm
+mzstatic
+nowplaying
+oembed
+recenttracks
+scdn
+spotify
+spotifycdn
+unsplash
+
+# CSS
+hermes
+chenini
+gomrassen
+tatto
+
+# CI/CD, observability and release tooling
+CodeQL
+Corepack
+Dependabot
+dpl
+Gitleaks
+INP
+LCOV
+nvmrc
+OTel
+PITR
+pnpm
+SARIF
+Sourcemaps
+tsx
+typegen
+uptime
+V8
+Vitest
+WebVitals
+
+# Security report formats and OpenSSL certificate flags
+addext
+gitleaks
+keyout
+sarif
+
+# Dependency updater API keys and weekday values
+cooldown
+monday

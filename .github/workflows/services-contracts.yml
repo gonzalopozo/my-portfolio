@@ -1,0 +1,46 @@
+name: Service contracts
+on:
+    workflow_call:
+    workflow_dispatch:
+permissions: {}
+jobs:
+    contracts:
+        name: Services / Contracts
+        if: github.ref == 'refs/heads/main'
+        environment: service-contracts
+        runs-on: ubuntu-24.04
+        timeout-minutes: 20
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: 12.14.0
+                  cache: false
+                  run_install: false
+            - run: pnpm install --frozen-lockfile --ignore-scripts
+            - run: pnpm tsx scripts/contracts.mts
+              env:
+                  APP_ENV: contract
+                  TURSO_API_TOKEN: ${{ secrets.TURSO_API_TOKEN }}
+                  TURSO_NONPRODUCTION_ORG: ${{ vars.TURSO_NONPRODUCTION_ORG }}
+                  TURSO_NONPRODUCTION_GROUP: ${{ vars.TURSO_NONPRODUCTION_GROUP }}
+                  CONTRACT_BLOB_ORIGIN: ${{ vars.CONTRACT_BLOB_ORIGIN }}
+                  PRODUCTION_BLOB_ORIGIN: ${{ vars.PRODUCTION_BLOB_ORIGIN }}
+                  BLOB_READ_WRITE_TOKEN: ${{ secrets.NONPRODUCTION_BLOB_TOKEN }}
+            - name: Clean an interrupted owned database
+              if: always()
+              run: pnpm tsx scripts/contracts.mts cleanup
+              env:
+                  APP_ENV: contract
+                  TURSO_API_TOKEN: ${{ secrets.TURSO_API_TOKEN }}
+                  TURSO_NONPRODUCTION_ORG: ${{ vars.TURSO_NONPRODUCTION_ORG }}
+                  TURSO_NONPRODUCTION_GROUP: ${{ vars.TURSO_NONPRODUCTION_GROUP }}

@@ -1,0 +1,1 @@
+ALTER TABLE `skills` ADD `custom_icon_url` text;

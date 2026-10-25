@@ -1,0 +1,47 @@
+# Dependencies & tooling
+node_modules
+.pnpm-store
+
+# Bundled skills / editor chat history (not app source — keeps `pnpm format` fast and stable)
+.agents/
+.specstory/
+.cursor/
+
+# Next.js / build
+.next
+out
+build
+.vercel
+
+# Tests & reports
+coverage
+playwright-report
+test-results
+
+# Lockfiles & generated
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+*.tsbuildinfo
+
+# Large / binary public assets (keep formatting for small text files in public/ if added)
+public/**/*.png
+public/**/*.jpg
+public/**/*.jpeg
+public/**/*.gif
+public/**/*.webp
+public/**/*.ico
+public/**/*.woff
+public/**/*.woff2
+
+# Large icons JSON
+lib/react-icons-manifest.json
+
+# Misc
+.next/cache
+
+# Disposable CI databases, certificates and release metadata
+.ci/
+
+# Third-party agent skill bundles
+.claude/
