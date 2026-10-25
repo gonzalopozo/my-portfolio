@@ -36,6 +36,8 @@ In **Settings → Build and Deployment**:
 - Use the committed install/build commands from `vercel.json`; remove conflicting
   dashboard overrides. They bootstrap verified pnpm 12.14.0 natively on Linux x64.
 - Do not set `CI` test fixtures, `APP_ENV=test`, or `TEST_FIXTURE_DIRECTORY` on Vercel.
+- In **Environment Variables**, enable **Enable access to System Environment Variables**
+  so the application receives Vercel's deployment hostname and environment metadata.
 - Set `VERCEL_FORCE_NO_BUILD_CACHE=1` independently for Preview and Production.
   Rebuild without cache once to confirm the setting is effective in deployment logs.
 - Do not enable `.next` cache persistence. The framework configuration disables
@@ -51,22 +53,36 @@ must remain enabled where the application uses them. See [build cache](https://v
 Use **Settings → Environment Variables** with explicit environment scopes. Check
 values privately in the dashboard; never paste them into tickets, traces or docs.
 
-| Name                                                            | Preview                                                                  | Production                                                                                 |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `APP_ENV`                                                       | `preview`                                                                | `production`                                                                               |
-| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                        | Dedicated synthetic Preview DB/token                                     | Production DB/token                                                                        |
-| `BETTER_AUTH_SECRET`                                            | Independent Preview secret                                               | Production secret                                                                          |
-| `BETTER_AUTH_URL`                                               | Appropriate exact Preview base origin; configure per branch if necessary | Canonical production origin                                                                |
-| `BETTER_AUTH_TRUSTED_ORIGINS`                                   | Explicit HTTPS origins only                                              | Canonical origins; exact platform deployment origin is also validated from Vercel metadata |
-| `ADMIN_USER_IDS`                                                | Synthetic Preview admin IDs                                              | Existing trusted administrator IDs                                                         |
-| `BLOB_PREVIEW_PUBLIC_HOSTNAME`, `BLOB_PREVIEW_READ_WRITE_TOKEN` | Dedicated nonproduction store, Preview scope only                        | Absent                                                                                     |
-| `BLOB_PUBLIC_HOSTNAME`, `BLOB_READ_WRITE_TOKEN`                 | Absent                                                                   | Production store, Production scope only                                                    |
-| `LASTFM_USERNAME`, `LASTFM_API_KEY`                             | Test account or leave unset to exercise safe fallback                    | Production provider configuration                                                          |
-| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`                    | Only if the current integration actually uses them                       | Existing provider configuration; hosted browser scraping falls back safely                 |
-| `CSP_PUBLIC_MODE`, `CSP_ADMIN_MODE`                             | `enforce` for acceptance candidate                                       | Enforce after acceptance                                                                   |
-| `CSP_ADMIN_POLICY`                                              | `nonce` for acceptance candidate                                         | `nonce` after acceptance                                                                   |
-| `HEALTH_READINESS_TOKEN`                                        | Independent Preview credential                                           | Strong random production credential, shared only with protected GitHub jobs                |
-| `VERCEL_FORCE_NO_BUILD_CACHE`                                   | `1`                                                                      | `1`                                                                                        |
+| Name                                                            | Preview                                               | Production                                                                                 |
+| --------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `APP_ENV`                                                       | `preview`                                             | `production`                                                                               |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`                        | Dedicated synthetic Preview DB/token                  | Production DB/token                                                                        |
+| `BETTER_AUTH_SECRET`                                            | Independent Preview secret                            | Production secret                                                                          |
+| `BETTER_AUTH_URL`                                               | Unset; derived from validated `VERCEL_URL`            | Canonical production origin                                                                |
+| `BETTER_AUTH_TRUSTED_ORIGINS`                                   | Optional additional exact HTTPS origins               | Canonical origins; exact platform deployment origin is also validated from Vercel metadata |
+| `ADMIN_USER_IDS`                                                | Synthetic Preview admin IDs                           | Existing trusted administrator IDs                                                         |
+| `BLOB_PREVIEW_PUBLIC_HOSTNAME`, `BLOB_PREVIEW_READ_WRITE_TOKEN` | Dedicated nonproduction store, Preview scope only     | Absent                                                                                     |
+| `BLOB_PUBLIC_HOSTNAME`, `BLOB_READ_WRITE_TOKEN`                 | Absent                                                | Production store, Production scope only                                                    |
+| `LASTFM_USERNAME`, `LASTFM_API_KEY`                             | Test account or leave unset to exercise safe fallback | Production provider configuration                                                          |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`                    | Only if the current integration actually uses them    | Existing provider configuration; hosted browser scraping falls back safely                 |
+| `CSP_PUBLIC_MODE`, `CSP_ADMIN_MODE`                             | `enforce` for acceptance candidate                    | Enforce after acceptance                                                                   |
+| `CSP_ADMIN_POLICY`                                              | `nonce` for acceptance candidate                      | `nonce` after acceptance                                                                   |
+| `HEALTH_READINESS_TOKEN`                                        | Independent Preview credential                        | Strong random production credential, shared only with protected GitHub jobs                |
+| `VERCEL_FORCE_NO_BUILD_CACHE`                                   | `1`                                                   | `1`                                                                                        |
+
+On hosted Vercel Preview deployments, `lib/auth.ts` constructs the authentication
+base URL from the validated `VERCEL_URL` hostname and automatically trusts that
+exact HTTPS origin. Every new deployment receives its own URL without manual
+updates. Missing or malformed Preview hostnames stop authentication initialization.
+Remove fixed Preview `BETTER_AUTH_URL` values, including branch-specific overrides.
+Production uses `BETTER_AUTH_URL=https://www.gonzalopozo.dev`; local runs use their
+configured `BETTER_AUTH_URL`, including local `APP_ENV=preview` simulations.
+
+`BETTER_AUTH_TRUSTED_ORIGINS` is only needed for additional exact aliases or local
+development origins. The validated Vercel deployment origin is added automatically
+in both Preview and Production. Preview does not need a per-deployment entry or a
+wildcard. Branch-specific overrides are optional for additional aliases, not required
+for deployment URLs. See [Vercel system environment variables](https://vercel.com/docs/environment-variables/system-environment-variables).
 
 Blob selection uses `VERCEL_ENV` when present, otherwise `APP_ENV`. Preview reads
 only `BLOB_PREVIEW_PUBLIC_HOSTNAME` and `BLOB_PREVIEW_READ_WRITE_TOKEN`; there is no
