@@ -133,8 +133,10 @@ Never require every response to be a cache hit or a PPR final response to be cac
 
 Provision a dedicated test account and set its stable user ID in `ADMIN_USER_IDS`.
 Use separate Preview database/Blob resources; do not test mutations against Production.
-Configure the exact Preview origin in `BETTER_AUTH_TRUSTED_ORIGINS` and the appropriate
-better-auth base URL. Keep Vercel Deployment Protection enabled.
+Enable Vercel's System Environment Variables. Hosted Preview authentication uses
+the validated `VERCEL_URL` as its base URL and trusts that exact origin automatically.
+Leave Preview `BETTER_AUTH_URL` unset; configure `BETTER_AUTH_TRUSTED_ORIGINS` only
+for additional exact HTTPS aliases. Keep Vercel Deployment Protection enabled.
 
 Start with `CSP_PUBLIC_MODE=report-only`, `CSP_ADMIN_MODE=report-only`, and
 `CSP_ADMIN_POLICY=static`. Collect browser console/network evidence and
@@ -438,11 +440,11 @@ pnpm dlx vercel env pull .env.local            # Pull for local development
 
 ### Vercel Auto-Provided Variables
 
-| Variable                | Value                                    | Usage                                   |
-| ----------------------- | ---------------------------------------- | --------------------------------------- |
-| `VERCEL_URL`            | Deployment URL (no protocol)             | Construct `BETTER_AUTH_URL` dynamically |
-| `VERCEL_ENV`            | `production` / `preview` / `development` | Conditional logic per environment       |
-| `VERCEL_GIT_COMMIT_SHA` | Git commit hash                          | Cache busting, debugging                |
+| Variable                | Value                                    | Usage                                    |
+| ----------------------- | ---------------------------------------- | ---------------------------------------- |
+| `VERCEL_URL`            | Deployment URL (no protocol)             | Preview auth base URL and trusted origin |
+| `VERCEL_ENV`            | `production` / `preview` / `development` | Conditional logic per environment        |
+| `VERCEL_GIT_COMMIT_SHA` | Git commit hash                          | Cache busting, debugging                 |
 
 ## CI/CD and observability
 

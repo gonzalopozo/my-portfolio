@@ -27,10 +27,16 @@ Redeploy after changing these settings. Nonces apply only to administrative
 documents; the public policy remains static to preserve public rendering/caching.
 Restore `CSP_ADMIN_POLICY=static` and redeploy if administrative compatibility fails.
 
-`BETTER_AUTH_TRUSTED_ORIGINS` can contain comma-separated explicit Preview HTTPS
-origins or HTTP local development origins such as `http://localhost:3000`. Configure
-the corresponding better-auth base URL normally. Wildcard Vercel origins are not
-accepted. Keep Preview deployments access-protected and use separate test data.
+Hosted Vercel Preview derives its better-auth base URL from the validated
+`VERCEL_URL` and automatically trusts that exact HTTPS origin. Enable access to
+Vercel's System Environment Variables and leave Preview `BETTER_AUTH_URL` unset,
+including branch-specific entries. Production and local development use their
+configured `BETTER_AUTH_URL`; a local `APP_ENV=preview` run also uses that setting.
+
+`BETTER_AUTH_TRUSTED_ORIGINS` can contain comma-separated additional exact HTTPS
+aliases or HTTP local development origins such as `http://localhost:3000`.
+Wildcard Vercel origins are not accepted. Keep Preview deployments access-protected
+and use separate test data.
 
 This setting contains website origins, not user IDs, tokens, or secrets. For local
 development, use `BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:3000` (adjust the port
