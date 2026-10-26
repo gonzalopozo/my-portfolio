@@ -2,7 +2,6 @@
 'use no memo';
 
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
-import { useQueryState } from 'nuqs';
 import { GridLayout, verticalCompactor, useContainerWidth, type Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -13,7 +12,10 @@ import { MapGridItemContent } from '@/components/public/map-grid-item-content';
 import { LastTrackGridItemContent } from '@/components/public/last-track-grid-item-content';
 import { HobbiesGridItemContent } from '@/components/public/hobbies-grid-item-content';
 import { BB8ThemeSwitcher } from '@/components/public/bb8-theme-switcher';
-import { portfolioSectionParser } from '@/components/public/portfolio-sections';
+import {
+	PortfolioSectionProvider,
+	usePortfolioSection,
+} from '@/components/public/portfolio-section-provider';
 import {
 	createCollectionCards,
 	createSectionLayouts,
@@ -46,7 +48,15 @@ const GRID_MAX_WIDTH_PX = 1308.6;
 const GRID_ROW_HEIGHT_PX = 34.5;
 const GRID_ITEM_MARGIN: [number, number] = [16, 16];
 
-export function PortfolioGrid({
+export function PortfolioGrid(props: PortfolioGridProps) {
+	return (
+		<PortfolioSectionProvider>
+			<PortfolioGridContent {...props} />
+		</PortfolioSectionProvider>
+	);
+}
+
+function PortfolioGridContent({
 	infoAboutMe,
 	projectCards,
 	experienceCards,
@@ -54,7 +64,7 @@ export function PortfolioGrid({
 	socialLinkCards,
 	lastTrack,
 }: PortfolioGridProps) {
-	const [section, setSection] = useQueryState('section', portfolioSectionParser);
+	const { section, setSection } = usePortfolioSection();
 	const shouldReduceMotion = useReducedMotion();
 	const [isGridEntering, setIsGridEntering] = useState(true);
 	const [savedLayouts, setSavedLayouts] = useState<

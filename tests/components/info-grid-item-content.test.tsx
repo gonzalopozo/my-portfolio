@@ -2,6 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InfoGridItemContent } from '@/components/public/info-grid-item-content';
+import { PortfolioSectionProvider } from '@/components/public/portfolio-section-provider';
 
 vi.mock('@/components/public/use-portfolio-media', () => ({
 	usePortfolioMedia: () => ({ isMobile: true, hasDragPointer: false }),
@@ -15,13 +16,15 @@ describe('mobile introduction', () => {
 			'Looking for a thoughtful team building useful, accessible products together.';
 		render(
 			<NuqsTestingAdapter>
-				<InfoGridItemContent
-					infoAboutMe={{
-						isEmployed: false,
-						statusMessage: status,
-						resumeUrl: 'https://example.com/cv.pdf',
-					}}
-				/>
+				<PortfolioSectionProvider>
+					<InfoGridItemContent
+						infoAboutMe={{
+							isEmployed: false,
+							statusMessage: status,
+							resumeUrl: 'https://example.com/cv.pdf',
+						}}
+					/>
+				</PortfolioSectionProvider>
 			</NuqsTestingAdapter>,
 		);
 		expect(
@@ -38,9 +41,11 @@ describe('mobile introduction', () => {
 	it('omits an unavailable CV and redundant section action in About me', () => {
 		render(
 			<NuqsTestingAdapter searchParams="?section=About+me">
-				<InfoGridItemContent
-					infoAboutMe={{ isEmployed: null, statusMessage: null, resumeUrl: '' }}
-				/>
+				<PortfolioSectionProvider>
+					<InfoGridItemContent
+						infoAboutMe={{ isEmployed: null, statusMessage: null, resumeUrl: '' }}
+					/>
+				</PortfolioSectionProvider>
 			</NuqsTestingAdapter>,
 		);
 		expect(screen.getByRole('status').textContent).toBe('Open to Work');
