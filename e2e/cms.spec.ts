@@ -1,7 +1,7 @@
 import type { Page, Response } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { fixtureUser, fixtureVisitor } from '../tests/fixtures/database';
-import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
 
 async function login(page: Page, user = fixtureUser) {
 	await page.goto('/login');
@@ -11,12 +11,30 @@ async function login(page: Page, user = fixtureUser) {
 	await expect(page).toHaveURL(/\/dashboard$/);
 }
 
+async function expectDashboardToFitViewport(page: Page) {
+	const viewport = page.viewportSize();
+	if (!viewport) throw new Error('The CMS tests require a fixed viewport.');
+	await expect
+		.poll(() => page.evaluate(() => document.documentElement.scrollWidth), {
+			message: 'Wide CMS tables should scroll internally without expanding the page.',
+		})
+		.toBeLessThanOrEqual(viewport.width + 1);
+}
+
+async function snapshotBlobDirectory(folder: 'skill-icons' | 'og-images') {
+	const directory = `${process.env.TEST_FIXTURE_DIRECTORY}/blobs/${folder}`;
+	await mkdir(directory, { recursive: true });
+	// Retries share storage with earlier attempts; assert against this attempt's baseline.
+	const existing = (await readdir(directory)).sort();
+	return { directory, existing };
+}
+
 test('CMS icon changes render publicly without loading icon catalogs in the browser', async ({
 	page,
 	context,
 }, testInfo) => {
 	await login(page);
-	const name = `CMS icon selection ${testInfo.project.name}`;
+	const name = `CMS icon selection ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
 	const publicPage = await context.newPage();
 	let editUrl = '';
 
@@ -43,6 +61,8 @@ test('CMS icon changes render publicly without loading icon catalogs in the brow
 			const row = page
 				.getByRole('row')
 				.filter({ has: page.getByText(name, { exact: true }) });
+			await expect(row).toBeVisible();
+			await expectDashboardToFitViewport(page);
 			editUrl = (await row
 				.getByRole('link', { name: 'Editar', exact: true })
 				.getAttribute('href'))!;
@@ -130,7 +150,7 @@ for (const entity of [
 		page,
 	}, testInfo) => {
 		await login(page);
-		const name = `${entity.name} ${testInfo.project.name}`;
+		const name = `${entity.name} ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
 		await page.goto(`/dashboard/${entity.path}/new`);
 		await page.getByRole('button', { name: entity.create, exact: true }).click();
 		await expect(page.getByLabel(entity.field, { exact: true })).toBeFocused();
@@ -141,6 +161,7 @@ for (const entity of [
 		await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
 		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
 		await expect(row).toBeVisible();
+		await expectDashboardToFitViewport(page);
 		await row.getByRole('link', { name: 'Editar', exact: true }).click();
 		await page.getByLabel(entity.field, { exact: true }).fill(`${name} edited`);
 		await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
@@ -222,7 +243,8 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 	page,
 }, testInfo) => {
 	await login(page);
-	const name = `SVG fixture ${testInfo.project.name}`;
+	const name = `SVG fixture ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
+	const { directory, existing } = await snapshotBlobDirectory('skill-icons');
 	await page.goto('/dashboard/skills/new');
 	await page.getByLabel('Nombre', { exact: true }).fill(name);
 	await page.getByRole('switch', { name: 'Usar icono personalizado', exact: true }).check();
@@ -235,6 +257,7 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 	});
 	await page.getByRole('button', { name: 'Crear habilidad', exact: true }).click();
 	await expect(page.getByRole('alert').filter({ hasText: /SVG/ })).toBeVisible();
+	expect((await readdir(directory)).sort()).toEqual(existing);
 	await page.getByLabel('Nombre', { exact: true }).fill(name);
 	await page.getByLabel('Archivo del icono').setInputFiles({
 		name: 'icon.svg',
@@ -247,8 +270,8 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 	await expect(page).toHaveURL(/\/dashboard\/skills$/);
 	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
 	await expect(row.locator('svg').first()).toBeVisible();
-	const directory = `${process.env.TEST_FIXTURE_DIRECTORY}/blobs/skill-icons`;
-	const before = await readdir(directory);
+	await expectDashboardToFitViewport(page);
+	const before = (await readdir(directory)).filter((file) => !existing.includes(file));
 	expect(before).toHaveLength(1);
 	expect(await readFile(`${directory}/${before[0]}`, 'utf8')).not.toContain('fill="red"');
 	await row.getByRole('link', { name: 'Editar', exact: true }).click();
@@ -261,7 +284,8 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 	});
 	await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
 	await expect(page).toHaveURL(/\/dashboard\/skills$/);
-	const after = await readdir(directory);
+	await expectDashboardToFitViewport(page);
+	const after = (await readdir(directory)).filter((file) => !existing.includes(file));
 	expect(after).toHaveLength(1);
 	expect(after[0]).not.toBe(before[0]);
 	await page
@@ -270,14 +294,15 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 		.getByRole('button', { name: 'Eliminar', exact: true })
 		.click();
 	await expect(page.getByText(name, { exact: true })).toHaveCount(0);
-	expect(await readdir(directory)).toEqual([]);
+	await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
 });
 
 test('project OG refresh persists its new image and deletes the replaced object', async ({
 	page,
 }, testInfo) => {
 	await login(page);
-	const name = `OG fixture ${testInfo.project.name}`;
+	const name = `OG fixture ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
+	const { directory, existing } = await snapshotBlobDirectory('og-images');
 	await page.goto('/dashboard/projects/new');
 	await page.getByLabel('Título', { exact: true }).fill(name);
 	await page.getByLabel('Descripción', { exact: true }).fill('Synthetic Open Graph journey');
@@ -287,34 +312,38 @@ test('project OG refresh persists its new image and deletes the replaced object'
 	await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
 	await expect(page).toHaveURL(/\/dashboard\/projects$/);
 	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-	const directory = `${process.env.TEST_FIXTURE_DIRECTORY}/blobs/og-images`;
-	const previous = await readdir(directory);
+	await expect(row).toBeVisible();
+	await expectDashboardToFitViewport(page);
+	const previous = (await readdir(directory)).filter((file) => !existing.includes(file));
 	expect(previous).toHaveLength(1);
-	const refreshResponse = page.waitForResponse(
-		(response) =>
-			response.request().method() === 'POST' &&
-			new URL(response.url()).pathname === '/dashboard/projects',
-	);
-	await row
-		.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true })
-		.click();
-	await refreshResponse;
+	await Promise.all([
+		page.waitForResponse(
+			(response) =>
+				response.request().method() === 'POST' &&
+				new URL(response.url()).pathname === '/dashboard/projects',
+		),
+		row
+			.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true })
+			.click(),
+	]);
 	await expect(
 		row.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true }),
 	).toBeEnabled();
-	await expect.poll(() => readdir(directory)).not.toEqual(previous);
-	expect(await readdir(directory)).toHaveLength(1);
+	const readImages = async () =>
+		(await readdir(directory)).filter((file) => !existing.includes(file));
+	await expect.poll(readImages).not.toEqual(previous);
+	expect(await readImages()).toHaveLength(1);
 	page.once('dialog', (dialog) => dialog.accept());
 	await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
 	await expect(page.getByText(name, { exact: true })).toHaveCount(0);
-	expect(await readdir(directory)).toEqual([]);
+	await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
 });
 
 test('a delayed cache miss returns public card HTML before hydration', async ({
 	page,
 }, testInfo) => {
 	await login(page);
-	const name = `Streaming fixture ${testInfo.project.name}`;
+	const name = `Streaming fixture ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
 	const scenario = `${process.env.TEST_FIXTURE_DIRECTORY}/query.json`;
 	try {
 		await page.goto('/dashboard/projects/new');
@@ -323,6 +352,7 @@ test('a delayed cache miss returns public card HTML before hydration', async ({
 		await writeFile(scenario, JSON.stringify({ operation: 'db.projects.read', delayMs: 2000 }));
 		await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
 		await expect(page).toHaveURL(/\/dashboard\/projects$/);
+		await expectDashboardToFitViewport(page);
 		const response = await page.request.get('/');
 		expect(response.status()).toBe(200);
 		const html = await response.text();
@@ -334,6 +364,8 @@ test('a delayed cache miss returns public card HTML before hydration', async ({
 		await writeFile(scenario, '{}');
 		await page.goto('/dashboard/projects');
 		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+		await expect(row).toBeVisible();
+		await expectDashboardToFitViewport(page);
 		page.once('dialog', (dialog) => dialog.accept());
 		await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
 		await expect(row).toHaveCount(0);
@@ -395,7 +427,7 @@ for (const entity of [
 		page,
 	}, testInfo) => {
 		await login(page);
-		const name = `${entity.name} ${testInfo.project.name}`;
+		const name = `${entity.name} ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
 		await page.goto(`/dashboard/${entity.path}/new`);
 		await page.getByLabel(entity.field, { exact: true }).fill(name);
 		if (entity.path === 'projects')
@@ -404,6 +436,8 @@ for (const entity of [
 		await page.getByRole('button', { name: entity.create, exact: true }).click();
 		await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
 		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+		await expect(row).toBeVisible();
+		await expectDashboardToFitViewport(page);
 		const initialBounds = await row.boundingBox();
 		if (!initialBounds) throw new Error('The ordering fixture has no visible row.');
 		const handle = page.getByRole('button', {
@@ -427,6 +461,7 @@ for (const entity of [
 		await expect(row.getByText('1', { exact: true })).toBeVisible();
 		await expect(page.getByRole('table')).toHaveAttribute('aria-busy', 'false');
 		await page.reload();
+		await expectDashboardToFitViewport(page);
 		await expect(
 			page
 				.getByRole('row')
