@@ -143,7 +143,11 @@ The base `Card` component in `components/ui/card.tsx` has `shadow-sm` by default
 
 ## 3. Grid System
 
-Tablet and desktop use `react-grid-layout`. Mobile uses a natural-height CSS grid with two columns. Card descriptors and section query state are shared between both renderers.
+The first paint uses a responsive CSS grid generated from the shared card layout
+definitions. After measurement, tablet and desktop use `react-grid-layout`
+positioning. Mobile keeps a natural-height CSS grid with two columns. Shared card
+elements remain mounted through hydration and breakpoint changes so controls and
+focus are preserved; drag behavior stays disabled on mobile.
 
 ### 3.1 Breakpoints & Columns
 
@@ -177,7 +181,9 @@ Shared vocabulary for layout composition. Sizes refer to `{w, h}` values in reac
 
 At `md` (4 columns): introduction → 4×8, wide → 4×6, standard → 2×6, tall → 2×12.
 
-At `sm` (CSS grid): reading cards span two columns and grow naturally; square cards span one column with a 1:1 ratio. Mobile has no row-height layout metadata or draggable renderer.
+At `sm` (CSS grid): reading cards span two columns and grow naturally; square cards
+span one column with a 1:1 ratio. CSS overrides the shared wrappers' measured
+positions and row heights; mobile never enables dragging.
 
 ### 3.4 Content Adaptation Rules
 
