@@ -39,7 +39,7 @@ async function AuthorizedDashboard({ children }: { children: ReactNode }) {
 			<Suspense fallback={<AdminSidebarFallback />}>
 				<AdminSidebar />
 			</Suspense>
-			<div className="flex flex-1 flex-col">
+			<div className="flex min-w-0 flex-1 flex-col">
 				<Suspense fallback={<AdminHeaderFallback />}>
 					<AdminHeader />
 				</Suspense>
