@@ -1,44 +1,45 @@
 'use client';
 
-import { useRef, useState, type ReactNode } from 'react';
+import { Component, useRef, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
-import { Map, MapMarker, MarkerContent } from '@/components/ui/map';
 import { ArroyomolinosMarkerPin, ArroyomolinosPopup } from '@/components/public/map-marker-content';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { usePortfolioMedia } from '@/components/public/use-portfolio-media';
+import { cn } from '@/lib/utils';
+import { useDeferredMap } from '@/components/public/use-deferred-map';
 
-export function MapGridItemContent({
-	fingerIcon,
-	clickIcon,
-}: {
+const LocationMap = dynamic(() => import('@/components/public/location-map'), {
+	ssr: false,
+	loading: () => null,
+});
+
+class MapBoundary extends Component<
+	{ children: ReactNode; onError: () => void },
+	{ failed: boolean }
+> {
+	state = { failed: false };
+
+	static getDerivedStateFromError() {
+		return { failed: true };
+	}
+
+	componentDidCatch() {
+		this.props.onError();
+	}
+
+	render() {
+		return this.state.failed ? null : this.props.children;
+	}
+}
+
+interface MapGridItemContentProps {
 	fingerIcon: ReactNode;
 	clickIcon: ReactNode;
-}) {
-	const { isMobile, hasDragPointer } = usePortfolioMedia();
-	const markerElementRef = useRef<HTMLElement | null>(null);
-	const shouldReduceMotion = useReducedMotion();
-	const [isMapPopupOpen, setIsMapPopupOpen] = useState(false);
-	const [canMapMarkerJiggle, setCanMapMarkerJiggle] = useState(false);
-	const handleMapGridMouseEnter = () => {
-		if (hasDragPointer && !isMapPopupOpen) {
-			setCanMapMarkerJiggle(true);
-		}
-	};
+}
 
-	const handleMapGridMouseLeave = () => {
-		setCanMapMarkerJiggle(false);
-	};
-
-	const handleMapPopupOpen = (event: MouseEvent) => {
-		markerElementRef.current =
-			event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-		setIsMapPopupOpen(true);
-		setCanMapMarkerJiggle(false);
-	};
-
-	const handleMapPopupClose = () => {
-		setIsMapPopupOpen(false);
-	};
+function getMapAnimations(shouldReduceMotion: boolean | null) {
 	const backdropEnterTransition = {
 		duration: shouldReduceMotion ? 0.12 : 0.2,
 		ease: 'easeOut' as const,
@@ -58,36 +59,106 @@ export function MapGridItemContent({
 		duration: shouldReduceMotion ? 0.12 : 0.18,
 		ease: 'easeIn' as const,
 	};
+	return {
+		backdropEnterTransition,
+		backdropExitTransition,
+		popupInitial,
+		popupAnimate,
+		popupExit,
+		popupEnterTransition,
+		popupExitTransition,
+	};
+}
+
+export function MapGridItemContent({ fingerIcon, clickIcon }: MapGridItemContentProps) {
+	const { isMobile, hasDragPointer } = usePortfolioMedia();
+	const { containerRef, shouldLoadMap } = useDeferredMap();
+	const markerElementRef = useRef<HTMLElement | null>(null);
+	const [isMapReady, setIsMapReady] = useState(false);
+	const [hasMapError, setHasMapError] = useState(false);
+	const shouldReduceMotion = useReducedMotion();
+	const [isMapPopupOpen, setIsMapPopupOpen] = useState(false);
+	const [canMapMarkerJiggle, setCanMapMarkerJiggle] = useState(false);
+	const handleMapGridMouseEnter = () => {
+		if (hasDragPointer && !isMapPopupOpen) {
+			setCanMapMarkerJiggle(true);
+		}
+	};
+
+	const handleMapGridMouseLeave = () => {
+		setCanMapMarkerJiggle(false);
+	};
+
+	const handleMapPopupOpen = (element: HTMLButtonElement) => {
+		markerElementRef.current = element;
+		setIsMapPopupOpen(true);
+		setCanMapMarkerJiggle(false);
+	};
+
+	const handleMapPopupClose = () => {
+		setIsMapPopupOpen(false);
+		markerElementRef.current?.focus({ preventScroll: true });
+	};
+
+	function handleMapError() {
+		setHasMapError(true);
+		setIsMapReady(false);
+	}
+	const showMap = isMapReady && !hasMapError;
+	const {
+		backdropEnterTransition,
+		backdropExitTransition,
+		popupInitial,
+		popupAnimate,
+		popupExit,
+		popupEnterTransition,
+		popupExitTransition,
+	} = getMapAnimations(shouldReduceMotion);
 
 	return (
 		<div
+			ref={containerRef}
+			data-location-map
+			data-map-state={hasMapError ? 'fallback' : showMap ? 'ready' : 'preview'}
 			className="relative size-full"
 			onMouseEnter={handleMapGridMouseEnter}
 			onMouseLeave={handleMapGridMouseLeave}
 		>
-			<Map
-				className="[&_.maplibregl-canvas]:pointer-events-none"
-				center={[-3.916, 40.27]}
-				zoom={13}
-				attributionControl={false}
-				interactive={false}
+			<div className={cn('absolute inset-0', showMap && 'invisible')} aria-hidden="true">
+				<Image
+					src="/arroyomolinos.jpg"
+					alt=""
+					fill
+					sizes="(max-width: 767px) 50vw, (max-width: 1071px) 50vw, 25vw"
+					className="object-cover"
+				/>
+				<span className="absolute inset-x-3 bottom-3 w-fit rounded-md bg-media-background/80 px-2 py-1 text-xs text-media-foreground">
+					Arroyomolinos, Madrid
+				</span>
+			</div>
+			{shouldLoadMap && !hasMapError ? (
+				<MapBoundary onError={handleMapError}>
+					<div
+						className={cn('absolute inset-0', !showMap && 'opacity-0')}
+						aria-hidden="true"
+					>
+						<LocationMap onReady={() => setIsMapReady(true)} onError={handleMapError} />
+					</div>
+				</MapBoundary>
+			) : null}
+			<button
+				type="button"
+				aria-label="Map marker"
+				aria-expanded={isMapPopupOpen}
+				className="absolute top-1/2 left-1/2 z-1 grid size-14 -translate-1/2 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+				onClick={(event) => handleMapPopupOpen(event.currentTarget)}
 			>
-				<MapMarker
-					key={'map-marker'}
-					asButton
-					longitude={-3.916}
-					latitude={40.27}
-					onClick={handleMapPopupOpen}
-				>
-					<MarkerContent>
-						<ArroyomolinosMarkerPin
-							fingerIcon={fingerIcon}
-							clickIcon={clickIcon}
-							shouldJiggle={canMapMarkerJiggle && !isMapPopupOpen}
-						/>
-					</MarkerContent>
-				</MapMarker>
-			</Map>
+				<ArroyomolinosMarkerPin
+					fingerIcon={fingerIcon}
+					clickIcon={clickIcon}
+					shouldJiggle={canMapMarkerJiggle && !isMapPopupOpen}
+				/>
+			</button>
 			{isMobile ? (
 				<Dialog open={isMapPopupOpen} onOpenChange={setIsMapPopupOpen}>
 					<DialogContent
