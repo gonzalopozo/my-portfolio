@@ -5,6 +5,7 @@ type EvidenceWindow = Window & {
 	cspEvidence?: Violation[];
 	cspInlineExecuted?: boolean;
 	cspHandlerExecuted?: boolean;
+	cspNonceExecuted?: boolean;
 };
 
 // Requires a separately authorized, protected preview or production-mode local server.
@@ -92,19 +93,43 @@ test('login receives the independent policy and rejects nonce-free scripts under
 		.evaluateAll((scripts) => scripts.map((script) => (script as HTMLScriptElement).nonce));
 	expect(scriptNonces.length).toBeGreaterThan(0);
 	expect(scriptNonces.every((value) => value === nonce)).toBe(true);
-	const second = await page.reload();
-	const secondHeaders = second?.headers() ?? {};
-	expect(
-		secondHeaders['content-security-policy'] ??
-			secondHeaders['content-security-policy-report-only'],
-	).not.toBe(policy);
 	expect(enforced).toBeTruthy();
-	await page.evaluate(() => {
-		const script = document.createElement('script');
-		script.textContent = 'window.cspInlineExecuted = true';
-		document.body.append(script);
-		script.remove();
+	// Parser-inserted probes exercise CSP without page.evaluate's protocol bypass.
+	await page.route(new URL('/login', page.url()).href, async (route) => {
+		if (!route.request().isNavigationRequest()) return route.fallback();
+		const upstream = await route.fetch();
+		const upstreamPolicy = upstream.headers()['content-security-policy'] ?? '';
+		const upstreamNonce = /'nonce-([^']+)'/.exec(upstreamPolicy)?.[1];
+		if (!upstreamNonce)
+			throw new Error('The login response requires an enforced nonce policy.');
+		const html = await upstream.text();
+		expect(html).toContain('</head>');
+		await route.fulfill({
+			response: upstream,
+			body: html.replace(
+				'</head>',
+				`<script id="csp-inline-probe">window.cspInlineExecuted = true</script><script nonce="${upstreamNonce}">window.cspNonceExecuted = true</script></head>`,
+			),
+		});
 	});
+	const second = await page.reload();
+	const secondPolicy = second?.headers()['content-security-policy'];
+	expect(secondPolicy).toBeTruthy();
+	expect(secondPolicy).not.toBe(policy);
+	expect(await page.evaluate(() => (window as EvidenceWindow).cspNonceExecuted)).toBe(true);
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				(window as EvidenceWindow).cspEvidence?.some(
+					(violation) =>
+						['script-src', 'script-src-elem'].includes(violation.directive) &&
+						violation.source === 'inline' &&
+						violation.disposition === 'enforce' &&
+						violation.route === '/login',
+				),
+			),
+		)
+		.toBe(true);
 	expect(await page.evaluate(() => (window as EvidenceWindow).cspInlineExecuted)).not.toBe(true);
 });
 
