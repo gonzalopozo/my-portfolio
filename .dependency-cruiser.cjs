@@ -83,6 +83,17 @@ module.exports = {
 			from: { path: '^components/public/' },
 			to: { path: '^components/admin/' },
 		},
+		{
+			name: 'public-icons-use-server-resolver',
+			comment:
+				'Resolve public icons through the server-only DynamicIcon component and pass SVG nodes into interactive clients.',
+			severity: 'error',
+			from: {
+				path: '^components/public/',
+				pathNot: '^components/public/dynamic-icon[.]tsx$',
+			},
+			to: { path: '(^|/)react-icons(/|$)|^lib/react-icons-manifest[.]json$' },
+		},
 
 		// -----------------------------------------------------------------
 		// Merge with recommended `not-to-unresolvable`: some npm packages use

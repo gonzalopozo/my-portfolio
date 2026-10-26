@@ -24,11 +24,26 @@ for (const file of files) {
 			const score = Number(rule?.properties?.['security-severity'] ?? 0);
 			if (!Number.isFinite(score)) throw new Error('Invalid CodeQL severity metadata.');
 			const level = result.level ?? rule?.defaultConfiguration?.level ?? 'warning';
-			if (score >= 7 || level === 'error') blocking++;
+			if (score >= 7 || level === 'error') {
+				blocking++;
+				const location = result.locations?.[0]?.physicalLocation;
+				console.error(
+					'Blocking CodeQL finding:',
+					JSON.stringify({
+						rule: rule.id,
+						securitySeverity: score,
+						level,
+						file: location?.artifactLocation?.uri,
+						line: location?.region?.startLine,
+						column: location?.region?.startColumn,
+						message: result.message?.text ?? result.message?.markdown,
+					}),
+				);
+			}
 		}
 	}
 }
 if (blocking)
 	throw new Error(
-		`CodeQL reported ${blocking} blocking security findings. Review them in GitHub Security.`,
+		`CodeQL reported ${blocking} blocking security findings. Review the findings above and in GitHub Security.`,
 	);

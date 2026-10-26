@@ -24,7 +24,6 @@ export function PortfolioNavigation({ section, onSectionChange }: PortfolioNavig
 	const navIndicatorTransition = shouldReduceMotion
 		? { duration: 0.01, ease: 'linear' as const }
 		: { type: 'spring' as const, stiffness: 420, damping: 34, mass: 0.9 };
-	const navIndicatorInitial = shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 };
 	const navIndicatorAnimate = shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 };
 	const navLabelInitial = shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -4 };
 	const navLabelAnimate = shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 };
@@ -71,7 +70,7 @@ export function PortfolioNavigation({ section, onSectionChange }: PortfolioNavig
 									{isActive && (
 										<m.span
 											className="absolute inset-0 rounded-full bg-primary shadow-lg shadow-primary/25"
-											initial={navIndicatorInitial}
+											initial={false}
 											animate={navIndicatorAnimate}
 											transition={navIndicatorTransition}
 										/>

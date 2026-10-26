@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { ExperienceOverviewGridItemContent } from '@/components/public/experience-overview-grid-item-content';
 import { ExperienceGridItemContent } from '@/components/public/experience-grid-item-content';
 import { PortfolioGrid } from '@/components/public/portfolio-grid';
-import { PortfolioGridSkeleton } from '@/components/loading/portfolio-grid-skeleton';
 import { ProjectGridItemContent } from '@/components/public/project-grid-item-content';
 import { getPublicInfoAboutMe } from '@/lib/queries/about-me';
 import { SocialLinkGridItemContent } from '@/components/public/social-link-grid-item-content';
@@ -14,6 +12,8 @@ import { getPublicSocialLinks } from '@/lib/queries/social-links';
 import { getPublicProjects } from '@/lib/queries/projects';
 import { getPublicUsedSkills } from '@/lib/queries/skills';
 import { getTrack } from '@/lib/queries/last-fm';
+import { HobbiesGridItemContent } from '@/components/public/hobbies-grid-item-content';
+import { MapGridItem } from '@/components/public/map-grid-item';
 
 export const metadata: Metadata = {
 	title: 'Gonzalo Pozo - Full Stack Developer',
@@ -66,6 +66,8 @@ async function PortfolioContent() {
 
 	return (
 		<PortfolioGrid
+			hobbiesCard={<HobbiesGridItemContent />}
+			mapCard={<MapGridItem />}
 			infoAboutMe={aboutMe}
 			projectCards={projectCards}
 			experienceCards={experienceCards}
@@ -76,10 +78,6 @@ async function PortfolioContent() {
 	);
 }
 
-export default function PublicPage() {
-	return (
-		<Suspense fallback={<PortfolioGridSkeleton />}>
-			<PortfolioContent />
-		</Suspense>
-	);
+export default async function PublicPage() {
+	return await PortfolioContent();
 }

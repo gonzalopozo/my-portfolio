@@ -1,5 +1,45 @@
 import { expect, test } from './fixtures';
 
+test.describe('server-rendered portfolio', () => {
+	test.use({ javaScriptEnabled: false });
+
+	for (const width of [390, 820, 1440]) {
+		test(`shows readable cards before hydration at ${width}px`, async ({ page }) => {
+			await page.setViewportSize({ width, height: 844 });
+			await page.goto('/');
+			const grid = page.locator('[data-portfolio-grid]');
+			await expect(grid).toHaveAttribute('data-grid-ready', 'false');
+			const info = grid.locator('[data-portfolio-card="info"]');
+			await expect(info.getByRole('heading', { name: "Hey, I'm Gonzalo." })).toBeVisible();
+			await expect(grid.locator('[data-location-map]')).toHaveAttribute(
+				'data-map-state',
+				'preview',
+			);
+			const boxes = await grid.locator('[data-portfolio-card]:visible').evaluateAll((cards) =>
+				cards.map((card) => {
+					const { x, y, width, height } = card.getBoundingClientRect();
+					return { x, y, width, height };
+				}),
+			);
+			expect(boxes.length).toBeGreaterThan(5);
+			for (const [index, box] of boxes.entries()) {
+				expect(box.width).toBeGreaterThan(0);
+				expect(box.height).toBeGreaterThan(0);
+				expect(box.x).toBeGreaterThanOrEqual(0);
+				expect(box.x + box.width).toBeLessThanOrEqual(width);
+				for (const other of boxes.slice(index + 1)) {
+					expect(
+						box.x < other.x + other.width &&
+							other.x < box.x + box.width &&
+							box.y < other.y + other.height &&
+							other.y < box.y + box.height,
+					).toBe(false);
+				}
+			}
+		});
+	}
+});
+
 test.describe('public responsive layout', () => {
 	for (const colorScheme of ['light', 'dark'] as const) {
 		for (const width of [320, 390, 430, 767, 768, 1024, 1440]) {
@@ -125,6 +165,23 @@ test.describe('mobile section navigation', () => {
 		).toHaveCSS('font-size', '20px');
 		await page.keyboard.press('Escape');
 		await expect(dialog).toBeHidden();
+		await expect(marker).toBeFocused();
+	});
+
+	test('keeps the map story usable when external map resources fail', async ({ page }) => {
+		await page.route('**/*cartocdn.com/**', (route) => route.abort());
+		await page.goto('/?section=About+me');
+		const marker = page.getByRole('button', { name: 'Map marker', exact: true });
+		await marker.scrollIntoViewIfNeeded();
+		await expect(page.locator('[data-location-map]')).toHaveAttribute(
+			'data-map-state',
+			'fallback',
+		);
+		await marker.focus();
+		await marker.press('Enter');
+		await expect(page.getByRole('dialog')).toBeVisible();
+		await page.keyboard.press('Escape');
+		await expect(page.getByRole('dialog')).toBeHidden();
 		await expect(marker).toBeFocused();
 	});
 

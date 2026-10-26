@@ -146,6 +146,8 @@ type MapProps = {
 	 * to enable controlled mode where the map viewport is driven by your state.
 	 */
 	onViewportChange?: (viewport: MapViewport) => void;
+	/** Callback for map resource failures or a lost WebGL context. */
+	onError?: () => void;
 } & Omit<MapLibreGL.MapOptions, 'container' | 'style'>;
 
 function DefaultLoader() {
@@ -179,6 +181,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 		projection,
 		viewport,
 		onViewportChange,
+		onError,
 		...props
 	},
 	ref,
@@ -199,6 +202,10 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 	useEffect(() => {
 		onViewportChangeRef.current = onViewportChange;
 	}, [onViewportChange]);
+	const onErrorRef = useRef(onError);
+	useEffect(() => {
+		onErrorRef.current = onError;
+	}, [onError]);
 
 	const mapStyles = useMemo(
 		() => ({
@@ -257,6 +264,7 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 			}, 100);
 		};
 		const loadHandler = () => setIsLoaded(true);
+		const errorHandler = () => onErrorRef.current?.();
 
 		// Viewport change handler - skip if triggered by internal update
 		const handleMove = () => {
@@ -267,6 +275,9 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 		map.on('load', loadHandler);
 		map.on('styledata', styleDataHandler);
 		map.on('move', handleMove);
+		// Resource failures can arrive before children receive the map through context.
+		map.on('error', errorHandler);
+		map.on('webglcontextlost', errorHandler);
 		setMapInstance(map);
 
 		return () => {
@@ -274,6 +285,8 @@ const Map = forwardRef<MapRef, MapProps>(function Map(
 			map.off('load', loadHandler);
 			map.off('styledata', styleDataHandler);
 			map.off('move', handleMove);
+			map.off('error', errorHandler);
+			map.off('webglcontextlost', errorHandler);
 			map.remove();
 			setIsLoaded(false);
 			setIsStyleLoaded(false);

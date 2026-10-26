@@ -119,11 +119,11 @@ For pages with multiple independent data sources, use separate `<Suspense>` boun
 
 ### Where to Add Loading Files
 
-| Route                                    | Needed? | Reason                     |
-| ---------------------------------------- | ------- | -------------------------- |
-| `app/(admin)/dashboard/*/page.tsx` (all) | Yes     | All fetch from DB          |
-| `app/(public)/page.tsx`                  | Yes     | Fetches all portfolio data |
-| `app/(admin)/login/page.tsx`             | No      | No data fetching           |
+| Route                                    | Needed?               | Reason                                                  |
+| ---------------------------------------- | --------------------- | ------------------------------------------------------- |
+| `app/(admin)/dashboard/*/page.tsx` (all) | Yes                   | All fetch from DB                                       |
+| `app/(public)/page.tsx`                  | No full-grid fallback | Await cached content before returning visible card HTML |
+| `app/(admin)/login/page.tsx`             | No                    | No data fetching                                        |
 
 ---
 
@@ -131,7 +131,22 @@ For pages with multiple independent data sources, use separate `<Suspense>` boun
 
 ### `optimizePackageImports`
 
-Already configured in `next.config.ts` for `lucide-react`, `react-icons`, `@radix-ui/react-icons`. Ensures only used exports are bundled even with barrel file imports.
+Configured in `next.config.ts` for `lucide-react`, `react-icons`, and
+`@radix-ui/react-icons`. Next.js also includes individual `react-icons` packs in
+its defaults. Import optimization alone does not guarantee small client chunks
+when another import needs the complete namespace.
+
+Public portfolio icons use the server-only `DynamicIcon` resolver. Pass rendered
+SVG nodes into interactive clients as props or children; do not import icon packs
+or the catalog manifest into public clients. CMS selections retain access to every
+supported icon without a rebuild. The admin picker can load full packs for search
+and preview. Dependency boundaries enforce this separation.
+
+The public page awaits cached portfolio data before returning its card tree. Keep
+the URL subscription in its own small Suspense boundary; a full-grid fallback
+leaves streamed HTML hidden until a script runs. CMS writes must expire their
+data tags and call `revalidatePath('/')` so the rendered page updates immediately
+alongside the data cache.
 
 ### Rules
 

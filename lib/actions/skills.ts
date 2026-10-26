@@ -45,6 +45,7 @@ async function resolveCustomIcon(
 function updatePublicSkillTags() {
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
+	revalidatePath('/');
 }
 
 export async function createSkill(

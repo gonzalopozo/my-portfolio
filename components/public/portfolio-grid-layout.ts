@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { verticalCompactor, type Layout, type LayoutItem } from 'react-grid-layout';
+import type { CSSProperties, ReactNode } from 'react';
+import { verticalCompactor, type Layout, type LayoutItem } from 'react-grid-layout/core';
 import type { GridItemVariant } from '@/components/public/grid-item';
 import type { PortfolioSection } from '@/components/public/portfolio-sections';
 
@@ -19,6 +19,10 @@ export interface PortfolioGridCard extends PortfolioCardDescriptor {
 	sizeSlot: HomeSlot;
 	cardClassName?: string;
 }
+
+type PortfolioGridStyle = CSSProperties & {
+	[property: `--portfolio-${string}`]: string | number;
+};
 
 export const GRID_COLUMNS_BY_BREAKPOINT: Record<BentoBreakpoint, number> = { lg: 4, md: 4 };
 const HOME_LAYOUTS: SectionLayouts = {
@@ -146,6 +150,61 @@ function mobileAboutCards(cards: PortfolioGridCard[]): PortfolioGridCard[] {
 
 export function isSquarePortfolioCard(card: PortfolioGridCard) {
 	return ['b', 'd', 'e', 'i'].includes(card.sizeSlot);
+}
+
+/** Share layout coordinates with CSS so the first paint needs no viewport measurement. */
+export function createResponsiveGridPresentation(
+	cards: PortfolioGridCard[],
+	section: PortfolioSection | null,
+	layouts: SectionLayouts,
+) {
+	const mobileCards = getSectionCards(cards, section, 'sm');
+	const desktopCards = getSectionCards(cards, section, 'lg');
+	const allCards = [
+		...new Map([...mobileCards, ...desktopCards].map((card) => [card.id, card])).values(),
+	];
+	const mobilePositions = new Map(mobileCards.map((card, index) => [card.id, index]));
+	const positions = {
+		md: new Map(layouts.md.map((item) => [item.i, item])),
+		lg: new Map(layouts.lg.map((item) => [item.i, item])),
+	};
+	const rowStartIds = new Set(
+		section === 'About me'
+			? [
+					'map',
+					'theme',
+					...mobileCards
+						.filter((card) => card.sizeSlot === 'e')
+						.filter((_, index) => index % 2 === 1)
+						.map((card) => card.id),
+				]
+			: [],
+	);
+	const styles = new Map<string, PortfolioGridStyle>();
+	for (const card of allCards) {
+		const mobileIndex = mobilePositions.get(card.id);
+		const style: PortfolioGridStyle = {
+			'--portfolio-mobile-display': mobileIndex === undefined ? 'none' : 'block',
+			'--portfolio-mobile-order': mobileIndex ?? 0,
+			'--portfolio-mobile-column': isSquarePortfolioCard(card)
+				? rowStartIds.has(card.id)
+					? '1'
+					: 'auto'
+				: '1 / -1',
+		};
+		for (const breakpoint of ['md', 'lg'] as const) {
+			const item = positions[breakpoint].get(card.id);
+			style[`--portfolio-${breakpoint}-display`] = item ? 'block' : 'none';
+			style[`--portfolio-${breakpoint}-column`] = item
+				? `${item.x + 1} / span ${item.w}`
+				: 'auto';
+			style[`--portfolio-${breakpoint}-row`] = item
+				? `${item.y + 1} / span ${item.h}`
+				: 'auto';
+		}
+		styles.set(card.id, style);
+	}
+	return { cards: allCards, styles };
 }
 
 export function getSectionCards(

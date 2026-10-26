@@ -48,6 +48,7 @@ export async function createSocialLink(
 	}
 
 	updateTag(PUBLIC_SOCIAL_LINKS_CACHE_TAG);
+	revalidatePath('/');
 	redirect('/dashboard/social-links');
 }
 
@@ -73,6 +74,7 @@ export async function updateSocialLink(
 	}
 
 	updateTag(PUBLIC_SOCIAL_LINKS_CACHE_TAG);
+	revalidatePath('/');
 	redirect('/dashboard/social-links');
 }
 
@@ -85,6 +87,7 @@ export async function deleteSocialLink(id: number) {
 	);
 
 	updateTag(PUBLIC_SOCIAL_LINKS_CACHE_TAG);
+	revalidatePath('/');
 	revalidatePath('/dashboard/social-links');
 }
 
@@ -135,6 +138,7 @@ export async function updateSocialLinkOrder(
 
 	if (name) {
 		updateTag(PUBLIC_SOCIAL_LINKS_CACHE_TAG);
+		revalidatePath('/');
 		revalidatePath('/dashboard/social-links');
 	}
 

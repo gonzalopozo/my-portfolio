@@ -48,6 +48,7 @@ describe('refresh music status', () => {
 		expect(updateTag).toHaveBeenCalledWith('track');
 		expect(getMusicSnapshot).toHaveBeenCalledOnce();
 		expect(revalidatePath).toHaveBeenCalledWith('/dashboard/music-status');
+		expect(revalidatePath).toHaveBeenCalledWith('/');
 		expect(revalidatePath).not.toHaveBeenCalledWith('/dashboard');
 		expect(vi.mocked(requireAdmin).mock.invocationCallOrder[0]).toBeLessThan(
 			vi.mocked(updateTag).mock.invocationCallOrder[0],

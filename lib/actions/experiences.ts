@@ -86,6 +86,7 @@ export async function createExperience(formData: FormData) {
 	);
 
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
+	revalidatePath('/');
 	redirect('/dashboard/experiences');
 }
 
@@ -179,6 +180,7 @@ export async function updateExperience(id: number, formData: FormData) {
 	);
 
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
+	revalidatePath('/');
 	redirect('/dashboard/experiences');
 }
 
@@ -191,5 +193,6 @@ export async function deleteExperience(id: number) {
 	);
 
 	updateTag(PUBLIC_EXPERIENCES_CACHE_TAG);
+	revalidatePath('/');
 	revalidatePath('/dashboard/experiences');
 }

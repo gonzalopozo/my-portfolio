@@ -1,15 +1,21 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { TbHandClick, TbHandFinger } from 'react-icons/tb';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 interface ArroyomolinosMarkerPinProps {
 	shouldJiggle?: boolean;
+	fingerIcon: ReactNode;
+	clickIcon: ReactNode;
 }
 
-export function ArroyomolinosMarkerPin({ shouldJiggle = false }: ArroyomolinosMarkerPinProps) {
+export function ArroyomolinosMarkerPin({
+	shouldJiggle = false,
+	fingerIcon,
+	clickIcon,
+}: ArroyomolinosMarkerPinProps) {
 	return (
 		<div className="group relative flex items-center justify-center">
 			{/* Outer pulse ring */}
@@ -24,14 +30,8 @@ export function ArroyomolinosMarkerPin({ shouldJiggle = false }: ArroyomolinosMa
 						shouldJiggle && 'motion-safe:group-hover/map:animate-map-marker-jiggle',
 					)}
 				>
-					<TbHandFinger
-						aria-hidden="true"
-						className="absolute size-5 transition-[transform,opacity] duration-200 group-hover/map:scale-75 group-hover/map:opacity-0"
-					/>
-					<TbHandClick
-						aria-hidden="true"
-						className="absolute size-5 scale-75 opacity-0 transition-[transform,opacity] duration-200 group-hover/map:scale-100 group-hover/map:opacity-100"
-					/>
+					{fingerIcon}
+					{clickIcon}
 				</span>
 			</span>
 		</div>

@@ -73,7 +73,22 @@ jobs:
                   cache: false
                   run_install: false
             - run: pnpm install --frozen-lockfile --ignore-scripts
-            - run: pnpm exec playwright install --with-deps chromium firefox webkit
+            - name: Configure browser dependency downloads
+              timeout-minutes: 1
+              run: |
+                  # Keep the runner's HTTPS Ubuntu fallbacks without the stalled Azure mirror.
+                  sudo sed -i '\|azure.archive.ubuntu.com|d' /etc/apt/apt-mirrors.txt
+                  printf '%s\n' \
+                    'Acquire::Retries "2";' \
+                    'Acquire::http::Timeout "30";' \
+                    'Acquire::https::Timeout "30";' \
+                    | sudo tee /etc/apt/apt.conf.d/99-playwright-downloads > /dev/null
+            - name: Install Playwright system dependencies
+              timeout-minutes: 8
+              run: pnpm exec playwright install-deps chromium firefox webkit
+            - name: Install Playwright browsers
+              timeout-minutes: 5
+              run: pnpm exec playwright install chromium firefox webkit
             - run: pnpm exec playwright test --config playwright.csp.config.ts
               env:
                   CSP_TEST_BASE_URL: ${{ needs.smoke.outputs.origin }}

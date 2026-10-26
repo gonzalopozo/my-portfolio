@@ -20,7 +20,13 @@ export const test = base.extend<{ networkIsolation: void }>({
 					throw new Error('Preview bypass bootstrap failed.');
 			}
 			if (process.env.APP_ENV === 'test') {
-				const hash = Array.from(testInfo.titlePath.join('/')).reduce(
+				const clientKey = [
+					testInfo.project.name,
+					testInfo.repeatEachIndex,
+					testInfo.retry,
+					...testInfo.titlePath,
+				].join('/');
+				const hash = Array.from(clientKey).reduce(
 					(value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
 					0,
 				);

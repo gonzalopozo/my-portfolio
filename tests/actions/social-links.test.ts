@@ -6,13 +6,14 @@ const mocks = vi.hoisted(() => ({
 	insert: vi.fn(),
 	update: vi.fn(),
 	updateTag: vi.fn(),
+	revalidatePath: vi.fn(),
 	redirect: vi.fn(),
 }));
 
 vi.mock('server-only', () => ({}));
 vi.mock('@/db', () => ({ db: mocks }));
 vi.mock('@/lib/server-session', () => ({ getServerSession: mocks.getServerSession }));
-vi.mock('next/cache', () => ({ updateTag: mocks.updateTag, revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ updateTag: mocks.updateTag, revalidatePath: mocks.revalidatePath }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 
 import { createSocialLink, updateSocialLink } from '@/lib/actions/social-links';
@@ -41,6 +42,7 @@ describe('social link color persistence', () => {
 		expect(result.error).toMatch(/color válido/);
 		expect(mocks.select).not.toHaveBeenCalled();
 		expect(mocks.insert).not.toHaveBeenCalled();
+		expect(mocks.revalidatePath).not.toHaveBeenCalled();
 	});
 
 	it('saves the normalized color when creating a link', async () => {
@@ -55,6 +57,7 @@ describe('social link color persistence', () => {
 			expect.objectContaining({ color: '#a1b2c3', order: 3 }),
 		);
 		expect(mocks.updateTag).toHaveBeenCalled();
+		expect(mocks.revalidatePath).toHaveBeenCalledWith('/');
 	});
 
 	it('saves the selected color when editing a link', async () => {
@@ -67,6 +70,7 @@ describe('social link color persistence', () => {
 		).rejects.toThrow('redirect');
 		expect(set).toHaveBeenCalledWith(expect.objectContaining({ color: '#123abc' }));
 		expect(where).toHaveBeenCalled();
+		expect(mocks.revalidatePath).toHaveBeenCalledWith('/');
 	});
 });
 

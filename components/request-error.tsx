@@ -1,9 +1,20 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { startTransition } from 'react';
 
 /** Show a recovery action without rendering private error details. */
 export function RequestError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+	const router = useRouter();
+
+	function retry() {
+		startTransition(() => {
+			router.refresh();
+			reset();
+		});
+	}
+
 	return (
 		<div
 			role="alert"
@@ -13,7 +24,7 @@ export function RequestError({ reset }: { error: Error & { digest?: string }; re
 			<p className="text-muted-foreground">
 				Please try again. If the problem continues, return later.
 			</p>
-			<Button onClick={reset}>Try again</Button>
+			<Button onClick={retry}>Try again</Button>
 		</div>
 	);
 }

@@ -11,7 +11,7 @@ interface GridItemProps {
 	variant: GridItemVariant;
 	cardClassName?: string;
 	draggable?: boolean;
-	sizing?: 'fixed' | 'natural';
+	sizing?: 'fixed' | 'natural' | 'responsive';
 }
 
 type GridItemComponentProps = ComponentPropsWithRef<'div'> & GridItemProps;
@@ -54,14 +54,20 @@ export function GridItem({
 			{...props}
 		>
 			<Card
+				data-portfolio-card-sizing={sizing}
 				className={cn(
 					'min-h-0 min-w-0 gap-0 overflow-hidden rounded-4xl border-0 bg-card p-0 text-card-foreground',
-					sizing === 'natural' ? 'h-auto w-full' : 'size-full',
+					sizing === 'responsive'
+						? 'w-full md:h-full'
+						: sizing === 'natural'
+							? 'h-auto w-full'
+							: 'size-full',
 					GRID_ITEM_CARD_INTERACTION_CLASS_NAME,
 					{
 						'@container/project-card': variant === 'project',
 						'@container/experience-card': variant === 'experience',
 						'@container-[size]': sizing === 'fixed' && variant !== 'about',
+						'md:@container-[size]': sizing === 'responsive' && variant !== 'about',
 					},
 					cardClassName,
 				)}

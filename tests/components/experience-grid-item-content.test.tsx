@@ -2,6 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ExperienceGridItemContent } from '@/components/public/experience-grid-item-content';
+import { PortfolioSectionProvider } from '@/components/public/portfolio-section-provider';
 import type { ExperienceData } from '@/lib/types';
 
 vi.mock('@/components/public/dynamic-icon', () => ({ DynamicIcon: () => null }));
@@ -28,7 +29,9 @@ describe('experience card content', () => {
 	it('renders the record, ongoing dates, company link, and related skills', () => {
 		render(
 			<NuqsTestingAdapter>
-				<ExperienceGridItemContent experience={experience} />
+				<PortfolioSectionProvider>
+					<ExperienceGridItemContent experience={experience} />
+				</PortfolioSectionProvider>
 			</NuqsTestingAdapter>,
 		);
 		expect(screen.getByRole('heading', { name: 'Frontend Engineer' })).toBeTruthy();
@@ -43,16 +46,18 @@ describe('experience card content', () => {
 	it('omits missing metadata and keeps the description available in category views', () => {
 		render(
 			<NuqsTestingAdapter searchParams="?section=Experience">
-				<ExperienceGridItemContent
-					experience={{
-						...experience,
-						startDate: null,
-						endDate: null,
-						location: null,
-						companyUrl: null,
-						experienceSkills: [],
-					}}
-				/>
+				<PortfolioSectionProvider>
+					<ExperienceGridItemContent
+						experience={{
+							...experience,
+							startDate: null,
+							endDate: null,
+							location: null,
+							companyUrl: null,
+							experienceSkills: [],
+						}}
+					/>
+				</PortfolioSectionProvider>
 			</NuqsTestingAdapter>,
 		);
 		expect(screen.queryByRole('link')).toBeNull();

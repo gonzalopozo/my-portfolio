@@ -2,20 +2,21 @@
 'use no memo';
 
 import { LazyMotion, domAnimation, m, useReducedMotion } from 'motion/react';
-import { useQueryState } from 'nuqs';
 import { GridLayout, verticalCompactor, useContainerWidth, type Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PortfolioNavigation } from '@/components/public/portfolio-navigation';
 import { GridItem } from '@/components/public/grid-item';
 import { InfoGridItemContent } from '@/components/public/info-grid-item-content';
-import { MapGridItemContent } from '@/components/public/map-grid-item-content';
 import { LastTrackGridItemContent } from '@/components/public/last-track-grid-item-content';
-import { HobbiesGridItemContent } from '@/components/public/hobbies-grid-item-content';
 import { BB8ThemeSwitcher } from '@/components/public/bb8-theme-switcher';
-import { portfolioSectionParser } from '@/components/public/portfolio-sections';
+import {
+	PortfolioSectionProvider,
+	usePortfolioSection,
+} from '@/components/public/portfolio-section-provider';
 import {
 	createCollectionCards,
+	createResponsiveGridPresentation,
 	createSectionLayouts,
 	getSectionCards,
 	isSquarePortfolioCard,
@@ -29,7 +30,6 @@ import {
 import { usePortfolioTransition } from '@/components/public/use-portfolio-transition';
 import { usePortfolioMedia } from '@/components/public/use-portfolio-media';
 import { type Settings, type Track } from '@/lib/types';
-import { cn } from '@/lib/utils';
 
 interface PortfolioGridProps {
 	infoAboutMe: Omit<Settings, 'id' | 'updatedAt'> | undefined;
@@ -38,6 +38,8 @@ interface PortfolioGridProps {
 	experienceOverviewCard: ReactNode;
 	socialLinkCards: PortfolioCardDescriptor[];
 	lastTrack: Track | null;
+	mapCard: ReactNode;
+	hobbiesCard: ReactNode;
 }
 
 const DRAG_CANCEL_SELECTORS =
@@ -46,17 +48,26 @@ const GRID_MAX_WIDTH_PX = 1308.6;
 const GRID_ROW_HEIGHT_PX = 34.5;
 const GRID_ITEM_MARGIN: [number, number] = [16, 16];
 
-export function PortfolioGrid({
+export function PortfolioGrid(props: PortfolioGridProps) {
+	return (
+		<PortfolioSectionProvider>
+			<PortfolioGridContent {...props} />
+		</PortfolioSectionProvider>
+	);
+}
+
+function PortfolioGridContent({
 	infoAboutMe,
 	projectCards,
 	experienceCards,
 	experienceOverviewCard,
 	socialLinkCards,
 	lastTrack,
+	mapCard,
+	hobbiesCard,
 }: PortfolioGridProps) {
-	const [section, setSection] = useQueryState('section', portfolioSectionParser);
+	const { section, setSection } = usePortfolioSection();
 	const shouldReduceMotion = useReducedMotion();
-	const [isGridEntering, setIsGridEntering] = useState(true);
 	const [savedLayouts, setSavedLayouts] = useState<
 		Partial<Record<string, Partial<SectionLayouts>>>
 	>({});
@@ -104,7 +115,7 @@ export function PortfolioGrid({
 				homeSlot: 'b',
 				sizeSlot: 'b',
 				cardClassName: 'group/map',
-				content: <MapGridItemContent />,
+				content: mapCard,
 			},
 			{
 				id: 'music',
@@ -124,11 +135,8 @@ export function PortfolioGrid({
 				variant: 'about',
 				homeSlot: 'j',
 				sizeSlot: 'j',
-				cardClassName: cn(
-					'group/hobby @container/hobby-card isolate',
-					currentBreakpoint !== 'sm' && '@container-[size]',
-				),
-				content: <HobbiesGridItemContent />,
+				cardClassName: 'group/hobby @container/hobby-card isolate md:@container-[size]',
+				content: hobbiesCard,
 			},
 			{
 				id: 'theme',
@@ -158,6 +166,8 @@ export function PortfolioGrid({
 			socialLinkCards,
 			lastTrack,
 			currentBreakpoint,
+			mapCard,
+			hobbiesCard,
 		],
 	);
 
@@ -181,22 +191,32 @@ export function PortfolioGrid({
 				const second = positions.get(b.id)!;
 				return first.y - second.y || first.x - second.x;
 			});
-	const mobileAboutRowStartIds = new Set(
-		isMobile && displayedSection === 'About me'
-			? [
-					'map',
-					'theme',
-					...orderedCards
-						.filter((card) => card.sizeSlot === 'e')
-						.filter((_, index) => index % 2 === 1)
-						.map((card) => card.id),
-				]
-			: [],
+	const presentation = createResponsiveGridPresentation(cards, displayedSection, gridLayouts);
+	const renderedCards = mounted ? orderedCards : presentation.cards;
+	const layoutIds = new Set(gridLayouts[bentoBreakpoint].map((item) => item.i));
+	const layoutBottom = Math.max(
+		0,
+		...gridLayouts[bentoBreakpoint].map((item) => item.y + item.h),
 	);
+	// Mobile-only cards share the same elements during hydration. CSS places them
+	// independently; supplementary items stay below the bento layout until measured.
+	const renderedLayout = [
+		...gridLayouts[bentoBreakpoint],
+		...renderedCards
+			.filter((card) => !layoutIds.has(card.id))
+			.map((card, index) => ({
+				i: card.id,
+				x: 0,
+				y: layoutBottom + index,
+				w: 1,
+				h: 1,
+				static: true,
+			})),
+	];
 	const exitingIdSet = new Set(exitingIds);
 	const isChangingSection = exitingIdSet.size > 0;
 	const matchingCount = cards.filter((card) => matchesSection(card, section)).length;
-	const canDrag = currentBreakpoint === 'lg' && hasDragPointer && !isChangingSection;
+	const canDrag = mounted && currentBreakpoint === 'lg' && hasDragPointer && !isChangingSection;
 
 	function handleDragStop(layout: Layout) {
 		if (!canDrag) return;
@@ -209,13 +229,7 @@ export function PortfolioGrid({
 		}));
 	}
 
-	const gridEntranceInitial = shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 32 };
-	const gridEntranceAnimate = shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 };
-	const gridEntranceTransition = {
-		duration: shouldReduceMotion ? 0.12 : 0.36,
-		ease: 'easeOut' as const,
-	};
-	const gridCards = orderedCards.map((card) => {
+	const gridCards = renderedCards.map((card) => {
 		const isExiting = exitingIdSet.has(card.id);
 		const isSquare = isSquarePortfolioCard(card);
 		return (
@@ -226,16 +240,13 @@ export function PortfolioGrid({
 				data-shape={isSquare ? 'square' : 'rectangle'}
 				data-muted={!matchesSection(card, section)}
 				data-exiting={isExiting}
-				className={cn(
-					'min-w-0 focus-within:z-20 hover:z-20',
-					isMobile && (isSquare ? 'col-span-1 aspect-square' : 'col-span-2'),
-					mobileAboutRowStartIds.has(card.id) && 'col-start-1',
-				)}
+				className="min-w-0 focus-within:z-20 hover:z-20"
+				style={presentation.styles.get(card.id)}
 				inert={isExiting || undefined}
 			>
 				<m.div
-					className={isMobile && !isSquare ? 'w-full' : 'size-full'}
-					initial={isGridEntering || shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+					className={isSquare ? 'size-full' : 'w-full md:h-full'}
+					initial={generation === 0 || shouldReduceMotion ? false : { opacity: 0, y: 12 }}
 					animate={isExiting ? 'exit' : 'visible'}
 					variants={{ exit: { opacity: 0, y: 0 }, visible: { opacity: 1, y: 0 } }}
 					transition={{
@@ -249,10 +260,10 @@ export function PortfolioGrid({
 					<GridItem
 						variant={card.variant}
 						draggable={canDrag}
-						sizing={isMobile && !isSquare ? 'natural' : 'fixed'}
+						sizing="responsive"
 						cardClassName={card.cardClassName}
 						data-portfolio-surface
-						className={isMobile && !isSquare ? 'w-full' : 'size-full'}
+						className={isSquare ? 'size-full' : 'w-full md:h-full'}
 					>
 						{card.content}
 					</GridItem>
@@ -274,7 +285,6 @@ export function PortfolioGrid({
 				{section ? `${section}: ${matchingCount} cards` : 'All portfolio highlights'}
 			</p>
 			<div
-				ref={containerRef}
 				className="mx-auto px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:px-[3.5vw] md:pb-48"
 				style={{ maxWidth: GRID_MAX_WIDTH_PX }}
 			>
@@ -292,53 +302,43 @@ export function PortfolioGrid({
 							No {section.toLowerCase()} to show yet.
 						</p>
 					) : null}
-					{mounted && (
-						<m.div
-							data-portfolio-grid
-							data-layout={isMobile ? 'mobile' : 'bento'}
-							initial={gridEntranceInitial}
-							animate={gridEntranceAnimate}
-							transition={gridEntranceTransition}
-							onAnimationComplete={() => setIsGridEntering(false)}
-							onClickCapture={(event) => {
-								if (
-									event.target instanceof Element &&
-									event.target.closest('[data-portfolio-section-link]')
-								) {
-									focusSectionRef.current = true;
-								}
+					<div
+						ref={containerRef}
+						data-portfolio-grid
+						data-layout={isMobile ? 'mobile' : 'bento'}
+						data-grid-ready={mounted}
+						data-grid-animated={generation > 0 || Object.keys(savedLayouts).length > 0}
+						onClickCapture={(event) => {
+							if (
+								event.target instanceof Element &&
+								event.target.closest('[data-portfolio-section-link]')
+							) {
+								focusSectionRef.current = true;
+							}
+						}}
+					>
+						<GridLayout
+							layout={renderedLayout}
+							width={width}
+							gridConfig={{
+								cols: GRID_COLUMNS_BY_BREAKPOINT[bentoBreakpoint],
+								rowHeight: GRID_ROW_HEIGHT_PX,
+								margin: GRID_ITEM_MARGIN,
+								containerPadding: [0, 0],
 							}}
+							compactor={verticalCompactor}
+							resizeConfig={{ enabled: false, handles: [] }}
+							dragConfig={{
+								enabled: canDrag,
+								bounded: true,
+								threshold: 3,
+								cancel: DRAG_CANCEL_SELECTORS,
+							}}
+							onDragStop={handleDragStop}
 						>
-							{isMobile ? (
-								<div className="grid grid-cols-2 items-start gap-4">
-									{gridCards}
-								</div>
-							) : (
-								<GridLayout
-									className={cn(isGridEntering && 'portfolio-grid-entering')}
-									layout={gridLayouts[bentoBreakpoint]}
-									width={width}
-									gridConfig={{
-										cols: GRID_COLUMNS_BY_BREAKPOINT[bentoBreakpoint],
-										rowHeight: GRID_ROW_HEIGHT_PX,
-										margin: GRID_ITEM_MARGIN,
-										containerPadding: [0, 0],
-									}}
-									compactor={verticalCompactor}
-									resizeConfig={{ enabled: false, handles: [] }}
-									dragConfig={{
-										enabled: canDrag,
-										bounded: true,
-										threshold: 3,
-										cancel: DRAG_CANCEL_SELECTORS,
-									}}
-									onDragStop={handleDragStop}
-								>
-									{gridCards}
-								</GridLayout>
-							)}
-						</m.div>
-					)}
+							{gridCards}
+						</GridLayout>
+					</div>
 				</section>
 			</div>
 		</LazyMotion>
