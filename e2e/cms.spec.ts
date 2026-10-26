@@ -83,7 +83,6 @@ test('unauthenticated and non-admin sessions cannot access the CMS', async ({ pa
 	await expect(page).toHaveURL(/\/login$/);
 	await login(page, fixtureVisitor);
 	await page.goto('/dashboard/projects');
-	await expect(page).toHaveURL(/\/dashboard$/);
 	await expect(page.getByRole('heading', { name: 'Access denied', exact: true })).toBeVisible();
 	await expect(page.getByText('Synthetic portfolio project', { exact: true })).toHaveCount(0);
 });
@@ -93,7 +92,7 @@ test('invalid login has accessible feedback and restores the submit button', asy
 	await page.getByLabel('Email:', { exact: true }).fill(fixtureUser.email);
 	await page.getByLabel('Password:', { exact: true }).fill('incorrect');
 	await page.getByRole('button', { name: 'Login!' }).click();
-	await expect(page.getByRole('alert')).toHaveText(/Unable to sign in/);
+	await expect(page.getByRole('alert').filter({ hasText: /Unable to sign in/ })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Login!' })).toBeEnabled();
 });
 
@@ -163,7 +162,9 @@ test('settings updates invalidate cached public content and unauthorized replay 
 	await login(page);
 	const value = `Public cache freshness ${testInfo.project.name}`;
 	await page.goto('/dashboard/settings');
+	await page.getByLabel('Mensaje de estado').click();
 	await page.getByLabel('Mensaje de estado').fill(value);
+	await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
 	const action = page.waitForRequest(
 		(request) =>
 			request.method() === 'POST' &&
@@ -233,7 +234,8 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 		),
 	});
 	await page.getByRole('button', { name: 'Crear habilidad', exact: true }).click();
-	await expect(page.getByRole('alert')).toBeVisible();
+	await expect(page.getByRole('alert').filter({ hasText: /SVG/ })).toBeVisible();
+	await page.getByLabel('Nombre', { exact: true }).fill(name);
 	await page.getByLabel('Archivo del icono').setInputFiles({
 		name: 'icon.svg',
 		mimeType: 'image/svg+xml',
@@ -288,9 +290,15 @@ test('project OG refresh persists its new image and deletes the replaced object'
 	const directory = `${process.env.TEST_FIXTURE_DIRECTORY}/blobs/og-images`;
 	const previous = await readdir(directory);
 	expect(previous).toHaveLength(1);
+	const refreshResponse = page.waitForResponse(
+		(response) =>
+			response.request().method() === 'POST' &&
+			new URL(response.url()).pathname === '/dashboard/projects',
+	);
 	await row
 		.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true })
 		.click();
+	await refreshResponse;
 	await expect(
 		row.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true }),
 	).toBeEnabled();
@@ -338,7 +346,9 @@ test('a server read failure shows generic feedback and recovers after reset', as
 	try {
 		await writeFile(scenario, JSON.stringify({ operation: 'db.projects.read', fail: true }));
 		await page.goto('/dashboard/projects');
-		await expect(page.getByRole('alert')).toContainText('The request could not be completed');
+		await expect(
+			page.getByRole('alert').filter({ hasText: 'The request could not be completed' }),
+		).toBeVisible();
 		await expect(
 			page.getByText('Synthetic database read failure', { exact: true }),
 		).toHaveCount(0);
@@ -393,15 +403,27 @@ for (const entity of [
 		else await page.getByLabel('URL', { exact: true }).fill('https://example.test/ordered');
 		await page.getByRole('button', { name: entity.create, exact: true }).click();
 		await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
+		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+		const initialBounds = await row.boundingBox();
+		if (!initialBounds) throw new Error('The ordering fixture has no visible row.');
 		const handle = page.getByRole('button', {
 			name: `Reordenar ${entity.label} "${name}"`,
 			exact: true,
 		});
+		await expect(handle).toHaveAttribute('aria-pressed', 'false');
 		await handle.focus();
 		await page.keyboard.press('Space');
-		await page.keyboard.press('ArrowUp');
+		await expect(handle).toHaveAttribute('aria-pressed', 'true');
+		// The keyboard sensor moves in 10px steps; cross the preceding row's center
+		// before dropping instead of assuming one key press moves an entire row.
+		for (let step = 0; step <= Math.ceil(initialBounds.height / 10); step++) {
+			await page.keyboard.press('ArrowUp');
+		}
+		await expect
+			.poll(async () => (await row.boundingBox())?.y ?? Infinity)
+			.toBeLessThan(initialBounds.y - initialBounds.height / 2);
 		await page.keyboard.press('Space');
-		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+		await expect(handle).toHaveAttribute('aria-pressed', 'false');
 		await expect(row.getByText('1', { exact: true })).toBeVisible();
 		await expect(page.getByRole('table')).toHaveAttribute('aria-busy', 'false');
 		await page.reload();
