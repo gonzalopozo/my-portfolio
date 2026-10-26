@@ -129,6 +129,7 @@ export default defineConfig([
 	globalIgnores([
 		'.next/**',
 		'.ci/**',
+		'.tmp/**',
 		'.specstory/**',
 		'.claude/**',
 		'.agents/**',

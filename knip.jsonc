@@ -10,6 +10,8 @@
 	],
 	// Include repo-local TypeScript modules so Knip follows admin/public components behind route imports.
 	"project": ["**/*.{js,jsx,ts,tsx,mts}"],
+	// Local build traces (gitignored) must not enter the module graph.
+	"ignore": [".tmp/**"],
 	// Retained shadcn/admin/map/testing packages and CSS-only imports that Knip cannot prove from the current graph.
 	"ignoreDependencies": [
 		"@commitlint/config-conventional",
