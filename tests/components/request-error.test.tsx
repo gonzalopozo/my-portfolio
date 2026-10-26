@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RequestError } from '@/components/request-error';
 
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => router }));
+
 describe('safe error recovery', () => {
 	it('does not render private error details and offers a usable reset', async () => {
 		const reset = vi.fn();
@@ -10,6 +13,7 @@ describe('safe error recovery', () => {
 		expect(screen.getByRole('alert')).not.toHaveTextContent('private database credentials');
 		await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
 		expect(reset).toHaveBeenCalledOnce();
+		expect(router.refresh).toHaveBeenCalledOnce();
 	});
 	it('does not render private server error details or its digest', () => {
 		const error = Object.assign(new Error('private server error'), {
