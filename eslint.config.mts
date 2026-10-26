@@ -4,7 +4,6 @@ import nextVitals from 'eslint-config-next/core-web-vitals';
 import nextTs from 'eslint-config-next/typescript';
 import betterTailwindcss from 'eslint-plugin-better-tailwindcss';
 import vitest from '@vitest/eslint-plugin';
-import reactCompiler from 'eslint-plugin-react-compiler';
 import globals from 'globals';
 
 /**
@@ -17,27 +16,9 @@ import globals from 'globals';
  * @see https://nextjs.org/docs/app/api-reference/config/eslint
  */
 export default defineConfig([
+	// Next includes the recommended React Hooks rules, including React Compiler diagnostics.
 	...nextVitals,
 	...nextTs,
-
-	// Aligns with `reactCompiler: true` in next.config.ts — catches Rules of React issues the compiler cares about.
-	// MapLibre integration intentionally disables some hook rules; the compiler skips those files anyway.
-	{
-		name: 'portfolio/react-compiler',
-		files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
-		ignores: [
-			'**/*.config.{js,mjs,cjs,ts,mts}',
-			'scripts/**',
-			'e2e/**',
-			'components/ui/map.tsx',
-		],
-		plugins: {
-			'react-compiler': reactCompiler,
-		},
-		rules: {
-			'react-compiler/react-compiler': 'error',
-		},
-	},
 
 	// Lightweight TS style rules (no type-aware project service — keeps lint fast).
 	{
