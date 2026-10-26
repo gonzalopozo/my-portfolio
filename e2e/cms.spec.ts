@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, Response } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { fixtureUser, fixtureVisitor } from '../tests/fixtures/database';
 import { readFile, writeFile, readdir } from 'node:fs/promises';
@@ -10,6 +10,73 @@ async function login(page: Page, user = fixtureUser) {
 	await page.getByRole('button', { name: 'Login!' }).click();
 	await expect(page).toHaveURL(/\/dashboard$/);
 }
+
+test('CMS icon changes render publicly without loading icon catalogs in the browser', async ({
+	page,
+	context,
+}, testInfo) => {
+	await login(page);
+	const name = `CMS icon selection ${testInfo.project.name}`;
+	const publicPage = await context.newPage();
+	let editUrl = '';
+
+	try {
+		for (const [index, iconName] of ['TbAbacus', 'BiAlarm'].entries()) {
+			await page.goto(index === 0 ? '/dashboard/social-links/new' : editUrl);
+			if (index === 0) {
+				await page.getByLabel('Nombre', { exact: true }).fill(name);
+				await page.getByLabel('URL', { exact: true }).fill('https://example.test/cms-icon');
+			}
+			await page.getByRole('combobox', { name: /Select an icon|Selected icon:/ }).click();
+			await page.getByPlaceholder('Search icons…').fill(iconName);
+			const option = page.getByRole('option', { name: new RegExp(`^${iconName}\\b`) });
+			await expect(option.locator('svg')).toHaveCount(1);
+			const expectedSvg = await option.locator('svg').evaluate((svg) => svg.innerHTML);
+			await option.click();
+			await page
+				.getByRole('button', {
+					name: index === 0 ? 'Crear enlace' : 'Guardar cambios',
+					exact: true,
+				})
+				.click();
+			await expect(page).toHaveURL(/\/dashboard\/social-links$/);
+			const row = page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) });
+			editUrl = (await row
+				.getByRole('link', { name: 'Editar', exact: true })
+				.getAttribute('href'))!;
+
+			const scripts: Promise<string>[] = [];
+			const collectScript = (response: Response) => {
+				if (response.request().resourceType() === 'script') scripts.push(response.text());
+			};
+			publicPage.on('response', collectScript);
+			await publicPage.goto('/?section=About+me');
+			const card = publicPage.locator('[data-portfolio-card]').filter({
+				has: publicPage.getByRole('link', { name: `Visit ${name}`, exact: true }),
+			});
+			const icon = card.locator('svg').first();
+			await expect(icon).toBeVisible();
+			await expect.poll(() => icon.evaluate((svg) => svg.innerHTML)).toBe(expectedSvg);
+			publicPage.off('response', collectScript);
+			const source = (await Promise.all(scripts)).join('\n');
+			// Full react-icons packs export their catalogs by name, even in minified chunks.
+			expect(source).not.toMatch(/\bTbAbacus\b|\bBiAlarm\b|Selected icon:|Search icons…/);
+		}
+	} finally {
+		await publicPage.close();
+		if (editUrl) {
+			await page.goto('/dashboard/social-links');
+			const row = page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) });
+			page.once('dialog', (dialog) => dialog.accept());
+			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
+			await expect(row).toHaveCount(0);
+		}
+	}
+});
 
 test('unauthenticated and non-admin sessions cannot access the CMS', async ({ page }) => {
 	await page.goto('/dashboard/projects');

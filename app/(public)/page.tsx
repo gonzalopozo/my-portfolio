@@ -14,6 +14,8 @@ import { getPublicSocialLinks } from '@/lib/queries/social-links';
 import { getPublicProjects } from '@/lib/queries/projects';
 import { getPublicUsedSkills } from '@/lib/queries/skills';
 import { getTrack } from '@/lib/queries/last-fm';
+import { HobbiesGridItemContent } from '@/components/public/hobbies-grid-item-content';
+import { MapGridItem } from '@/components/public/map-grid-item';
 
 export const metadata: Metadata = {
 	title: 'Gonzalo Pozo - Full Stack Developer',
@@ -66,6 +68,8 @@ async function PortfolioContent() {
 
 	return (
 		<PortfolioGrid
+			hobbiesCard={<HobbiesGridItemContent />}
+			mapCard={<MapGridItem />}
 			infoAboutMe={aboutMe}
 			projectCards={projectCards}
 			experienceCards={experienceCards}

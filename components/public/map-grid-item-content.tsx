@@ -1,13 +1,19 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { Map, MapMarker, MarkerContent } from '@/components/ui/map';
 import { ArroyomolinosMarkerPin, ArroyomolinosPopup } from '@/components/public/map-marker-content';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { usePortfolioMedia } from '@/components/public/use-portfolio-media';
 
-export function MapGridItemContent() {
+export function MapGridItemContent({
+	fingerIcon,
+	clickIcon,
+}: {
+	fingerIcon: ReactNode;
+	clickIcon: ReactNode;
+}) {
 	const { isMobile, hasDragPointer } = usePortfolioMedia();
 	const markerElementRef = useRef<HTMLElement | null>(null);
 	const shouldReduceMotion = useReducedMotion();
@@ -75,6 +81,8 @@ export function MapGridItemContent() {
 				>
 					<MarkerContent>
 						<ArroyomolinosMarkerPin
+							fingerIcon={fingerIcon}
+							clickIcon={clickIcon}
 							shouldJiggle={canMapMarkerJiggle && !isMapPopupOpen}
 						/>
 					</MarkerContent>

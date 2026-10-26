@@ -1,3 +1,4 @@
+import 'server-only';
 import { createElement, type CSSProperties, type ReactNode } from 'react';
 import type { IconType } from 'react-icons';
 import { cacheLife, cacheTag } from 'next/cache';

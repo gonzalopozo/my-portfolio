@@ -80,6 +80,8 @@ function setup(searchParams = '', empty = false) {
 			onUrlUpdate={onUrlUpdate}
 		>
 			<PortfolioGrid
+				mapCard={<span>Map</span>}
+				hobbiesCard={<span>Hobbies</span>}
 				infoAboutMe={undefined}
 				experienceOverviewCard={<ExperienceOverviewGridItemContent skills={[]} />}
 				lastTrack={null}

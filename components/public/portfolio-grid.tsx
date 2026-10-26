@@ -8,9 +8,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PortfolioNavigation } from '@/components/public/portfolio-navigation';
 import { GridItem } from '@/components/public/grid-item';
 import { InfoGridItemContent } from '@/components/public/info-grid-item-content';
-import { MapGridItemContent } from '@/components/public/map-grid-item-content';
 import { LastTrackGridItemContent } from '@/components/public/last-track-grid-item-content';
-import { HobbiesGridItemContent } from '@/components/public/hobbies-grid-item-content';
 import { BB8ThemeSwitcher } from '@/components/public/bb8-theme-switcher';
 import {
 	PortfolioSectionProvider,
@@ -40,6 +38,8 @@ interface PortfolioGridProps {
 	experienceOverviewCard: ReactNode;
 	socialLinkCards: PortfolioCardDescriptor[];
 	lastTrack: Track | null;
+	mapCard: ReactNode;
+	hobbiesCard: ReactNode;
 }
 
 const DRAG_CANCEL_SELECTORS =
@@ -63,6 +63,8 @@ function PortfolioGridContent({
 	experienceOverviewCard,
 	socialLinkCards,
 	lastTrack,
+	mapCard,
+	hobbiesCard,
 }: PortfolioGridProps) {
 	const { section, setSection } = usePortfolioSection();
 	const shouldReduceMotion = useReducedMotion();
@@ -114,7 +116,7 @@ function PortfolioGridContent({
 				homeSlot: 'b',
 				sizeSlot: 'b',
 				cardClassName: 'group/map',
-				content: <MapGridItemContent />,
+				content: mapCard,
 			},
 			{
 				id: 'music',
@@ -138,7 +140,7 @@ function PortfolioGridContent({
 					'group/hobby @container/hobby-card isolate',
 					currentBreakpoint !== 'sm' && '@container-[size]',
 				),
-				content: <HobbiesGridItemContent />,
+				content: hobbiesCard,
 			},
 			{
 				id: 'theme',
@@ -168,6 +170,8 @@ function PortfolioGridContent({
 			socialLinkCards,
 			lastTrack,
 			currentBreakpoint,
+			mapCard,
+			hobbiesCard,
 		],
 	);
 
