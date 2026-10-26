@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { request as httpsRequest } from 'node:https';
-import { writeFile, rm } from 'node:fs/promises';
+import { readFile, writeFile, rm } from 'node:fs/promises';
 import { once } from 'node:events';
 import { temporaryDatabase, fixtureUser } from '../tests/fixtures/database';
 
@@ -93,6 +93,7 @@ try {
 		'-addext',
 		'subjectAltName=DNS:localhost',
 	]);
+	const certificate = await readFile(`${database.directory}/cert.pem`);
 	// Fresh output only; never restore build artifacts or .next/cache.
 	await rm('.next', { recursive: true, force: true });
 	await run('pnpm', ['build']);
@@ -125,9 +126,10 @@ try {
 		if (application.exitCode !== null)
 			throw new Error('Production server exited before readiness.');
 		ready = await new Promise<boolean>((resolve) => {
+			// Trust this harness's certificate while preserving TLS and hostname validation.
 			const probe = httpsRequest(
 				`${baseURL}/api/health`,
-				{ rejectUnauthorized: false },
+				{ ca: certificate, rejectUnauthorized: true },
 				(response) => {
 					response.resume();
 					resolve(response.statusCode === 200);
