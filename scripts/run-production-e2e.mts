@@ -38,6 +38,8 @@ const environment: NodeJS.ProcessEnv = {
 	CSP_TEST_ADMIN_EMAIL: fixtureUser.email,
 	CSP_TEST_ADMIN_PASSWORD: fixtureUser.password,
 	TEST_FIXTURE_DIRECTORY: database.directory,
+	// Next.js follows Server Action redirects over this harness's HTTPS origin.
+	NODE_EXTRA_CA_CERTS: `${database.directory}/cert.pem`,
 };
 
 async function run(command: string, arguments_: string[]) {
