@@ -41,6 +41,7 @@ redirecciones
 styledata
 unclustered
 Unclustered
+webglcontextlost
 
 # Node / DNS
 ESOCKETNODATA

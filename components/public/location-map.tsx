@@ -8,19 +8,8 @@ interface LocationMapProps {
 	onError: () => void;
 }
 
-function LocationMapStatus({ onReady, onError }: LocationMapProps) {
-	const { map, isLoaded } = useMap();
-
-	useEffect(() => {
-		if (!map) return;
-		map.on('error', onError);
-		const canvas = map.getCanvas();
-		canvas.addEventListener('webglcontextlost', onError);
-		return () => {
-			map.off('error', onError);
-			canvas.removeEventListener('webglcontextlost', onError);
-		};
-	}, [map, onError]);
+function LocationMapStatus({ onReady }: Pick<LocationMapProps, 'onReady'>) {
+	const { isLoaded } = useMap();
 
 	useEffect(() => {
 		if (isLoaded) onReady();
@@ -37,8 +26,9 @@ export default function LocationMap(props: LocationMapProps) {
 			zoom={13}
 			attributionControl={false}
 			interactive={false}
+			onError={props.onError}
 		>
-			<LocationMapStatus {...props} />
+			<LocationMapStatus onReady={props.onReady} />
 		</Map>
 	);
 }
