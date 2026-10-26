@@ -163,7 +163,7 @@ for (const entity of [
 		await expect(row).toBeVisible();
 		await expectDashboardToFitViewport(page);
 		await row.getByRole('link', { name: 'Editar', exact: true }).click();
-		await page.getByLabel(entity.field, { exact: true }).fill(`${name} edited`);
+		await page.getByRole('textbox', { name: entity.field }).fill(`${name} edited`);
 		await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
 		const edited = page
 			.getByRole('row')
@@ -275,13 +275,19 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 	expect(before).toHaveLength(1);
 	expect(await readFile(`${directory}/${before[0]}`, 'utf8')).not.toContain('fill="red"');
 	await row.getByRole('link', { name: 'Editar', exact: true }).click();
-	await page.getByLabel('Archivo del icono').setInputFiles({
-		name: 'replacement.svg',
-		mimeType: 'image/svg+xml',
-		buffer: Buffer.from(
-			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>',
-		),
-	});
+	await expect(
+		page.getByRole('heading', { name: 'Editar Habilidad', exact: true }),
+	).toBeVisible();
+	await page
+		.getByLabel('Archivo del icono')
+		.filter({ visible: true })
+		.setInputFiles({
+			name: 'replacement.svg',
+			mimeType: 'image/svg+xml',
+			buffer: Buffer.from(
+				'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>',
+			),
+		});
 	await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
 	await expect(page).toHaveURL(/\/dashboard\/skills$/);
 	await expectDashboardToFitViewport(page);
@@ -293,7 +299,7 @@ test('custom SVG uploads are normalized, replaced and cleaned after deletion', a
 		.filter({ has: page.getByText(name, { exact: true }) })
 		.getByRole('button', { name: 'Eliminar', exact: true })
 		.click();
-	await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+	await expect(row).toHaveCount(0);
 	await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
 });
 
