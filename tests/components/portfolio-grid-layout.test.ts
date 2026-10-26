@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	createCollectionCards,
+	createResponsiveGridPresentation,
 	createSectionLayouts,
 	getSectionCards,
 	isSquarePortfolioCard,
@@ -33,6 +34,45 @@ const cards: PortfolioGridCard[] = [
 const breakpoints: BentoBreakpoint[] = ['lg', 'md'];
 
 describe('portfolio section layouts', () => {
+	it('provides one card tree with independent mobile and bento presentation before hydration', () => {
+		const layouts = createSectionLayouts(cards, null);
+		const presentation = createResponsiveGridPresentation(cards, null, layouts);
+		expect(new Set(presentation.cards.map(({ id }) => id)).size).toBe(
+			presentation.cards.length,
+		);
+		expect(presentation.styles.get('experience:0')).toMatchObject({
+			'--portfolio-mobile-display': 'block',
+			'--portfolio-mobile-order': 1,
+			'--portfolio-lg-display': 'none',
+		});
+		expect(presentation.styles.get('project:2')).toMatchObject({
+			'--portfolio-mobile-display': 'none',
+			'--portfolio-lg-display': 'block',
+		});
+		for (const breakpoint of ['md', 'lg'] as const) {
+			for (const item of layouts[breakpoint]) {
+				expect(presentation.styles.get(item.i)).toMatchObject({
+					[`--portfolio-${breakpoint}-column`]: `${item.x + 1} / span ${item.w}`,
+					[`--portfolio-${breakpoint}-row`]: `${item.y + 1} / span ${item.h}`,
+				});
+			}
+		}
+	});
+
+	it('keeps mobile section cards visible and unrelated bento cards hidden before hydration', () => {
+		const presentation = createResponsiveGridPresentation(
+			cards,
+			'Projects',
+			createSectionLayouts(cards, 'Projects'),
+		);
+		expect(presentation.styles.get('info')?.['--portfolio-mobile-display']).toBe('none');
+		for (let index = 0; index < 6; index++) {
+			expect(
+				presentation.styles.get(`project:${index}`)?.['--portfolio-mobile-display'],
+			).toBe('block');
+		}
+	});
+
 	it('keeps the home limits and shows each matching record exactly once', () => {
 		const home = getSectionCards(cards, null, 'lg');
 		expect(home).toHaveLength(10);

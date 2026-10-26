@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { ExperienceOverviewGridItemContent } from '@/components/public/experience-overview-grid-item-content';
 import { ExperienceGridItemContent } from '@/components/public/experience-grid-item-content';
 import { PortfolioGrid } from '@/components/public/portfolio-grid';
-import { PortfolioGridSkeleton } from '@/components/loading/portfolio-grid-skeleton';
 import { ProjectGridItemContent } from '@/components/public/project-grid-item-content';
 import { getPublicInfoAboutMe } from '@/lib/queries/about-me';
 import { SocialLinkGridItemContent } from '@/components/public/social-link-grid-item-content';
@@ -80,10 +78,6 @@ async function PortfolioContent() {
 	);
 }
 
-export default function PublicPage() {
-	return (
-		<Suspense fallback={<PortfolioGridSkeleton />}>
-			<PortfolioContent />
-		</Suspense>
-	);
+export default async function PublicPage() {
+	return await PortfolioContent();
 }

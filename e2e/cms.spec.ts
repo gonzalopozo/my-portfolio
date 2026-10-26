@@ -214,7 +214,7 @@ test('settings updates invalidate cached public content and unauthorized replay 
 	}
 	await page.goto('/');
 	await page.getByRole('button', { name: 'About Me', exact: true }).first().click();
-	await expect(page.getByText(value, { exact: true })).toBeVisible();
+	await expect(page.getByRole('status').filter({ hasText: value })).toBeVisible();
 });
 
 test('custom SVG uploads are normalized, replaced and cleaned after deletion', async ({
@@ -302,7 +302,7 @@ test('project OG refresh persists its new image and deletes the replaced object'
 	expect(await readdir(directory)).toEqual([]);
 });
 
-test('a delayed cache miss streams the public loading state before real project data', async ({
+test('a delayed cache miss returns public card HTML before hydration', async ({
 	page,
 }, testInfo) => {
 	await login(page);
@@ -315,20 +315,20 @@ test('a delayed cache miss streams the public loading state before real project 
 		await writeFile(scenario, JSON.stringify({ operation: 'db.projects.read', delayMs: 2000 }));
 		await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
 		await expect(page).toHaveURL(/\/dashboard\/projects$/);
-		await page.goto('/', { waitUntil: 'commit' });
-		await expect(
-			page.getByRole('status').filter({ hasText: 'Loading portfolio' }),
-		).toBeVisible();
-		await expect(page.getByText(name, { exact: true })).toBeAttached();
-		await expect(page.getByRole('status').filter({ hasText: 'Loading portfolio' })).toHaveCount(
-			0,
-		);
+		const response = await page.request.get('/');
+		expect(response.status()).toBe(200);
+		const html = await response.text();
+		expect(html).toContain('data-portfolio-grid="true"');
+		expect(html).toContain(name);
+		await page.goto('/?section=Projects');
+		await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
 	} finally {
 		await writeFile(scenario, '{}');
 		await page.goto('/dashboard/projects');
 		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
 		page.once('dialog', (dialog) => dialog.accept());
 		await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
+		await expect(row).toHaveCount(0);
 	}
 });
 

@@ -12,6 +12,7 @@ vi.mock('@/components/public/dynamic-icon', () => ({ DynamicIcon: () => null }))
 
 const grid = vi.hoisted(() => ({
 	layout: undefined as Layout | undefined,
+	mounted: true,
 	width: 1200,
 	isMobile: false,
 	hasDragPointer: true,
@@ -25,7 +26,7 @@ vi.mock('react-grid-layout', async (importOriginal) => {
 	const actual = await importOriginal<typeof ReactGridLayoutModule>();
 	return {
 		...actual,
-		useContainerWidth: () => ({ width: grid.width, mounted: true, containerRef: null }),
+		useContainerWidth: () => ({ width: grid.width, mounted: grid.mounted, containerRef: null }),
 		GridLayout: (props: ReactGridLayoutModule.GridLayoutProps) => {
 			grid.layout = props.layout;
 			grid.onDragStop = props.onDragStop as (layout: Layout) => void;
@@ -41,14 +42,8 @@ vi.mock('motion/react', async (importOriginal) => ({
 	...(await importOriginal<typeof MotionModule>()),
 	useReducedMotion: () => true,
 }));
-vi.mock('@/components/public/map-grid-item-content', () => ({
-	MapGridItemContent: () => <span>Map</span>,
-}));
 vi.mock('@/components/public/last-track-grid-item-content', () => ({
 	LastTrackGridItemContent: () => <span>Music</span>,
-}));
-vi.mock('@/components/public/hobbies-grid-item-content', () => ({
-	HobbiesGridItemContent: () => <span>Hobbies</span>,
 }));
 vi.mock('@/components/public/bb8-theme-switcher', () => ({
 	BB8ThemeSwitcher: () => <input aria-label="Theme control" type="checkbox" />,
@@ -64,6 +59,7 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	grid.width = 1200;
+	grid.mounted = true;
 	grid.isMobile = false;
 	grid.hasDragPointer = true;
 	grid.renderActual = false;
@@ -72,7 +68,7 @@ afterEach(() => {
 
 function setup(searchParams = '', empty = false) {
 	const onUrlUpdate = vi.fn();
-	const view = render(
+	const renderContent = () => (
 		<NuqsTestingAdapter
 			searchParams={searchParams}
 			hasMemory
@@ -110,9 +106,10 @@ function setup(searchParams = '', empty = false) {
 							}))
 				}
 			/>
-		</NuqsTestingAdapter>,
+		</NuqsTestingAdapter>
 	);
-	return { ...view, onUrlUpdate };
+	const view = render(renderContent());
+	return { ...view, onUrlUpdate, refresh: () => view.rerender(renderContent()) };
 }
 
 function select(label: string) {
@@ -125,6 +122,30 @@ function cardIds(container: HTMLElement) {
 }
 
 describe('portfolio navigation', () => {
+	it('renders content before measurement and preserves controls when dragging becomes available', () => {
+		grid.mounted = false;
+		grid.renderActual = true;
+		const { container, refresh } = setup();
+		const portfolio = container.querySelector('[data-portfolio-grid]');
+		const info = container.querySelector('[data-portfolio-card="info"]');
+		const theme = screen.getByRole('checkbox', { name: 'Theme control' });
+		expect(portfolio).toHaveAttribute('data-grid-ready', 'false');
+		expect(info).toBeInTheDocument();
+		expect(screen.getByText('Project 0')).toBeInTheDocument();
+		expect(screen.getByText('Experience 0')).toBeInTheDocument();
+		fireEvent.click(theme);
+		theme.focus();
+
+		grid.mounted = true;
+		refresh();
+		expect(portfolio).toHaveAttribute('data-grid-ready', 'true');
+		expect(container.querySelector('[data-portfolio-card="info"]')).toBe(info);
+		expect(screen.getByRole('checkbox', { name: 'Theme control' })).toBe(theme);
+		expect(theme).toBeChecked();
+		expect(theme).toHaveFocus();
+		expect(screen.queryByText('Experience 0')).toBeNull();
+	});
+
 	it('reveals every project and preserves home card instances and controls', async () => {
 		const { container, onUrlUpdate } = setup();
 		const theme = screen.getByRole('checkbox', { name: 'Theme control' });
@@ -307,7 +328,7 @@ describe('portfolio navigation', () => {
 		grid.width = 1200;
 		select('All');
 		await waitFor(() => expect(cardIds(container)).toHaveLength(10));
-		expect(container.querySelector('[data-portfolio-card="info"]')).not.toBe(info);
+		expect(container.querySelector('[data-portfolio-card="info"]')).toBe(info);
 		expect(error).not.toHaveBeenCalled();
 	});
 

@@ -43,5 +43,6 @@ export async function updateSiteSettings(formData: FormData) {
 	);
 
 	updateTag(PUBLIC_SETTINGS_CACHE_TAG);
+	revalidatePath('/');
 	revalidatePath('/dashboard/settings');
 }

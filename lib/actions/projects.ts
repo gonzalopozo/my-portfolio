@@ -124,6 +124,7 @@ export async function createProject(formData: FormData) {
 		: undefined;
 
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
+	revalidatePath('/');
 	redirect(
 		getOgImageWarningRedirect(
 			imageIssue
@@ -241,6 +242,7 @@ export async function updateProject(id: number, formData: FormData) {
 	}
 
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
+	revalidatePath('/');
 	redirect(
 		getOgImageWarningRedirect(
 			imageIssue ? { projectId: id, operation: 'update', error: imageIssue } : undefined,
@@ -267,6 +269,7 @@ export async function deleteProject(id: number): Promise<ProjectImageActionResul
 		: ({ ok: true } as const);
 
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
+	revalidatePath('/');
 	revalidatePath('/dashboard/projects');
 	return cleanup.ok ? { ok: true } : { ok: true, warning: cleanup.error };
 }
@@ -304,6 +307,7 @@ export async function updateProjectOrder(projectId: number, newOrder: number): P
 	if (!title) return '';
 
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
+	revalidatePath('/');
 	revalidatePath('/dashboard/projects');
 
 	return title;
@@ -335,6 +339,7 @@ export async function refreshProjectOgImage(projectId: number): Promise<ProjectI
 	if (!result.ok) return result;
 
 	updateTag(PUBLIC_PROJECTS_CACHE_TAG);
+	revalidatePath('/');
 	revalidatePath('/dashboard/projects');
 	return result;
 }

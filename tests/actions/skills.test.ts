@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	uploadSkillIcon: vi.fn(),
 	deleteSkillIcon: vi.fn(),
 	updateTag: vi.fn(),
+	revalidatePath: vi.fn(),
 	redirect: vi.fn(),
 }));
 
@@ -20,7 +21,7 @@ vi.mock('@/lib/skill-icons/storage', () => ({
 	deleteSkillIcon: mocks.deleteSkillIcon,
 }));
 vi.mock('server-only', () => ({}));
-vi.mock('next/cache', () => ({ updateTag: mocks.updateTag, revalidatePath: vi.fn() }));
+vi.mock('next/cache', () => ({ updateTag: mocks.updateTag, revalidatePath: mocks.revalidatePath }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 
 import { createSkill, updateSkill, deleteSkill } from '@/lib/actions/skills';
@@ -69,6 +70,7 @@ describe('skill color persistence', () => {
 		);
 		expect(mocks.updateTag).toHaveBeenCalledWith(PUBLIC_PROJECTS_CACHE_TAG);
 		expect(mocks.updateTag).toHaveBeenCalledWith(PUBLIC_EXPERIENCES_CACHE_TAG);
+		expect(mocks.revalidatePath).toHaveBeenCalledWith('/');
 	});
 
 	it('disables color without replacing an existing saved HEX', async () => {

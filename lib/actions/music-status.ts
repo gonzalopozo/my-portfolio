@@ -15,6 +15,7 @@ export async function refreshMusicStatus(): Promise<MusicRefreshState> {
 	try {
 		updateTag(MUSIC_CACHE_TAG);
 		const snapshot = await getMusicSnapshot();
+		revalidatePath('/');
 		revalidatePath('/dashboard/music-status');
 		return {
 			error: null,

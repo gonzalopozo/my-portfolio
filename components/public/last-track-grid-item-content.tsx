@@ -1,3 +1,6 @@
+'use client';
+
+import { useSyncExternalStore } from 'react';
 import { safeWebUrl } from '@/lib/security/urls';
 import Image from 'next/image';
 import { Clock, Music } from 'lucide-react';
@@ -246,6 +249,12 @@ function ActivityBadge({
 	playedAtLabel: string | null;
 	onArtwork: boolean;
 }) {
+	const relativeTime = useSyncExternalStore(
+		subscribeRelativeTime,
+		() => formatRelative(playedAtUnix, playedAtLabel),
+		() => playedAtLabel ?? '—',
+	);
+
 	return (
 		<span
 			className={cn(
@@ -268,7 +277,7 @@ function ActivityBadge({
 			) : (
 				<>
 					<Clock className="size-3" aria-hidden="true" />
-					<span>{formatRelative(playedAtUnix, playedAtLabel)}</span>
+					<span>{relativeTime}</span>
 				</>
 			)}
 		</span>
@@ -375,6 +384,11 @@ function NowPlayingEqualiser({ onArtwork }: { onArtwork: boolean }) {
 			<span className={cn(barClass, 'motion-safe:animate-eq-bar-4')} />
 		</span>
 	);
+}
+
+function subscribeRelativeTime(onChange: () => void) {
+	const interval = setInterval(onChange, 60_000);
+	return () => clearInterval(interval);
 }
 
 function formatRelative(unix: number | null, fallback: string | null): string {
