@@ -143,6 +143,16 @@ Review each finding before choosing a targeted remediation. Gitleaks excludes
 boundary. Native GitHub scanning has its own scope; the owner handles its
 historical alerts. Do not add a broad false-positive baseline or ignore all history.
 
+Reviewed historical false positives are recorded in [`.gitleaksignore`](../../.gitleaksignore)
+using exact commit, file, rule, and line fingerprints. The current entries cover
+Pencil document UUID metadata and the same dummy verification value in two bundled
+Playwright guides. The UUID metadata matches Pencil's
+[public design examples](https://docs.pencil.dev/core-concepts/build-a-design-system);
+the guides use intercepted endpoints that return fixture data. These exceptions
+apply only to the listed historical findings. New findings in those files remain
+subject to scanning. Review the original commit and document the reason before
+adding an exception; never include credential values in the ignore file.
+
 Dependabot's ecosystem key is `npm` for pnpm manifests. **pnpm 12 compatibility is
 an activation prerequisite**: the official supported-version matrix inspected for
 this work did not establish pnpm 12 support (it listed pnpm through 10). Verify a
