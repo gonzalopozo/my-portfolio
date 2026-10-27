@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { put, PutBlobResult } from '@vercel/blob';
 
@@ -11,10 +11,14 @@ function fixturePath(pathname: string) {
 		process.env.APP_ENV !== 'test' ||
 		process.env.VERCEL ||
 		!directory.startsWith(`${resolve('.ci')}/database-`) ||
-		!/^(?:skill-icons|og-images)\/[a-zA-Z0-9.-]+$/.test(pathname)
+		!/^(?:skill-icons|og-images)\/[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(pathname)
 	)
 		throw new Error('Unsafe Blob fixture operation.');
-	return resolve(directory, 'blobs', pathname);
+	const root = resolve(directory, 'blobs');
+	const file = resolve(root, pathname);
+	// Check the normalized path with a separator so sibling prefixes cannot match.
+	if (!file.startsWith(`${root}${sep}`)) throw new Error('Unsafe Blob fixture operation.');
+	return file;
 }
 
 export async function putFixture(
