@@ -1,3 +1,6 @@
+const projectImagePath =
+	/^\/og-images\/([0-9]+)-[0-9]+(?:-[A-Za-z0-9]+)?\.(?:png|jpg|jpeg|webp|gif|avif)$/;
+
 /** A deletion is restricted to an exact configured store and a project-owned managed path. */
 export function isProjectImageUrl(
 	value: string,
@@ -8,6 +11,7 @@ export function isProjectImageUrl(
 	try {
 		const configured = new URL(origin);
 		const url = new URL(value);
+		const imagePath = projectImagePath.exec(url.pathname);
 		return (
 			configured.protocol === 'https:' &&
 			configured.hostname.endsWith('.public.blob.vercel-storage.com') &&
@@ -21,9 +25,7 @@ export function isProjectImageUrl(
 			!url.password &&
 			!url.search &&
 			!url.hash &&
-			new RegExp(
-				`^/og-images/${projectId}-[0-9]+(?:-[A-Za-z0-9]+)?\\.(?:png|jpg|jpeg|webp|gif|avif)$`,
-			).test(url.pathname)
+			imagePath?.[1] === String(projectId)
 		);
 	} catch {
 		return false;
