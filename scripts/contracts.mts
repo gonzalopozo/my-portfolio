@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
@@ -16,9 +16,18 @@ const organization = required('TURSO_NONPRODUCTION_ORG');
 const group = required('TURSO_NONPRODUCTION_GROUP');
 if (!/^[a-z0-9-]+$/.test(organization) || !/^ci-[a-z0-9-]+$/.test(group))
 	throw new Error('Contracts require a dedicated ci-* database group.');
-const name = `ci-${required('GITHUB_RUN_ID')}-${randomUUID().slice(0, 8)}`;
+const run = required('GITHUB_RUN_ID');
+const name = `ci-${run}-${randomUUID().slice(0, 8)}`;
 if (!/^ci-[0-9]+-[a-f0-9]{8}$/.test(name)) throw new Error('Invalid owned test database name.');
 const base = `https://api.turso.tech/v1/organizations/${organization}/databases`;
+
+/** Persist a bounded fingerprint for ownership checks, never opaque response data. */
+function databaseIdentity(id: unknown) {
+	if (typeof id !== 'string' || id.length === 0 || id.length > 128 || /[^A-Za-z0-9_-]/.test(id))
+		throw new Error('Invalid contract database identifier.');
+	return createHash('sha256').update(id).digest('hex');
+}
+
 async function request<T>(suffix: string, method: string, body?: unknown): Promise<T> {
 	const response = await fetch(`${base}${suffix}`, {
 		method,
@@ -46,28 +55,34 @@ if (process.argv[2] === 'cleanup') {
 		name: string;
 		group: string;
 		organization: string;
-		id: string;
+		idSha256: string;
+		run: string;
 		deleted?: boolean;
 	} | null;
 	if (record && !record.deleted) {
 		if (
-			!record.name.startsWith(`ci-${required('GITHUB_RUN_ID')}-`) ||
+			!record.name.startsWith(`ci-${run}-`) ||
 			!/^ci-[0-9]+-[a-f0-9]{8}$/.test(record.name) ||
 			record.group !== group ||
-			record.organization !== organization
+			record.organization !== organization ||
+			record.run !== run ||
+			typeof record.idSha256 !== 'string' ||
+			!/^[a-f0-9]{64}$/.test(record.idSha256)
 		)
 			throw new Error('Cleanup ownership is unproven.');
 		const current = await request<{ database: { DbId: string; Name: string } }>(
 			`/${record.name}`,
 			'GET',
 		);
-		if (current.database.DbId !== record.id || current.database.Name !== record.name)
+		if (
+			databaseIdentity(current.database.DbId) !== record.idSha256 ||
+			current.database.Name !== record.name
+		)
 			throw new Error('Cleanup database identity changed.');
 		await request(`/${record.name}`, 'DELETE');
 		await writeFile('.ci/contract-resource.json', JSON.stringify({ ...record, deleted: true }));
 	}
 } else {
-	let owned = false;
 	let identity: string | undefined;
 	try {
 		const result = await request<{
@@ -78,8 +93,7 @@ if (process.argv[2] === 'cleanup') {
 			!/^[a-z0-9.-]+\.turso\.io$/.test(result.database.Hostname)
 		)
 			throw new Error('Unexpected contract database identity.');
-		owned = true;
-		identity = result.database.DbId;
+		identity = databaseIdentity(result.database.DbId);
 		await mkdir('.ci', { recursive: true });
 		await writeFile(
 			'.ci/contract-resource.json',
@@ -87,8 +101,8 @@ if (process.argv[2] === 'cleanup') {
 				name,
 				group,
 				organization,
-				id: result.database.DbId,
-				run: process.env.GITHUB_RUN_ID,
+				idSha256: identity,
+				run,
 			}),
 		);
 		const token = await request<{ jwt: string }>(
@@ -114,7 +128,7 @@ if (process.argv[2] === 'cleanup') {
 		if (code !== 0) throw new Error('Remote service contracts failed.');
 	} finally {
 		// Delete only the resource created successfully by this exact invocation.
-		if (owned) {
+		if (identity) {
 			await request(`/${name}`, 'DELETE');
 			await writeFile(
 				'.ci/contract-resource.json',
@@ -122,8 +136,8 @@ if (process.argv[2] === 'cleanup') {
 					name,
 					group,
 					organization,
-					id: identity,
-					run: process.env.GITHUB_RUN_ID,
+					idSha256: identity,
+					run,
 					deleted: true,
 				}),
 			);
