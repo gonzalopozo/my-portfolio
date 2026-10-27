@@ -1,0 +1,13 @@
+# Reviewed historical false positives only. Keep each exception scoped to its
+# exact commit, file, rule, and line; review new findings independently.
+
+# Pencil document UUID in top-level fileToken metadata, consistent with the
+# vendor's public design examples. The application does not consume this field.
+# Reference: https://docs.pencil.dev/core-concepts/build-a-design-system
+a47734bdd8c1f447e08367d48262bc5eba1b3025:designs/about-me-button-hover.pen:generic-api-key:3994
+
+# The same fixed dummy verification value in two bundled Playwright guides.
+# Both occurrences belong to the "Fully Mocked Verification" example, where
+# page.route intercepts registration and verification and returns fixture data.
+dfc7022851da641e6b336b206de97971c865421b:.claude/skills/playwright-best-practices/advanced/authentication-flows.md:generic-api-key:54
+19b5f0570f8566ba0b2af26814dc3347e3b037c9:.agents/skills/playwright-best-practices/advanced/authentication-flows.md:generic-api-key:54
