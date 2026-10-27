@@ -133,9 +133,14 @@ In **Settings → Advanced Security** (or **Code security / Secret protection**)
   or rewriting Git history alone does not revoke a secret. Never paste a secret in
   an issue, log, test artifact, or incident document.
 
-Gitleaks adds a fully redacted PR-range scan and scheduled full-history scan. It
-excludes `.specstory` before content collection, in accordance with the owner's
-agent boundary. Native GitHub scanning has its own scope; the owner handles its
+Gitleaks scans the PR commit range on pull requests and all available Git history
+on pushes, scheduled runs, and manual runs. Findings include the file, line, rule,
+and commit in the job log, with detected secret values fully redacted. These scans
+inspect Git content; they do not inspect environment variables stored in Vercel.
+Rotating a credential revokes access but does not remove historical scan findings.
+Review each finding before choosing a targeted remediation. Gitleaks excludes
+`.specstory` before content collection, in accordance with the owner's agent
+boundary. Native GitHub scanning has its own scope; the owner handles its
 historical alerts. Do not add a broad false-positive baseline or ignore all history.
 
 Dependabot's ecosystem key is `npm` for pnpm manifests. **pnpm 12 compatibility is

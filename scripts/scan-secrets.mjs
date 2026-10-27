@@ -11,11 +11,20 @@ try {
 	// Exclude legacy history before collection; never inspect .specstory content.
 	const result = spawnSync(
 		tool.binary,
-		['git', '--redact=100', '--no-banner', `--log-opts=${range} -- . :(exclude).specstory`],
+		[
+			'git',
+			'--redact=100',
+			'--verbose',
+			'--no-color',
+			'--no-banner',
+			`--log-opts=${range} -- . :(exclude).specstory`,
+		],
 		{ stdio: 'inherit' },
 	);
 	if (result.status !== 0)
-		throw new Error('Secret scan failed. Rotate any exposed credential before remediation.');
+		throw new Error(
+			'Secret scan failed. Review the redacted findings or scanner errors above; rotate any exposed credential before remediation.',
+		);
 } finally {
 	await tool.close();
 }
