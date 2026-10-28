@@ -18,7 +18,9 @@ concurrency:
 jobs:
     smoke:
         name: Preview / Smoke
-        if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview')
+        # Environment policies evaluate the workflow ref before checkout runs.
+        # Inspect branch Previews by dispatching the trusted controller from main.
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview'))
         environment: preview-checks
         runs-on: ubuntu-24.04
         timeout-minutes: 10
