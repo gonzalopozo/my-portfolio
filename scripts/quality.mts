@@ -1,4 +1,12 @@
 import { spawnSync } from 'node:child_process';
+import vitestPackage from 'vitest/package.json' with { type: 'json' };
+import coveragePackage from '@vitest/coverage-v8/package.json' with { type: 'json' };
+
+if (vitestPackage.version !== coveragePackage.version) {
+	throw new Error(
+		`Vitest (${vitestPackage.version}) and @vitest/coverage-v8 (${coveragePackage.version}) must use the same installed version. Update both packages and the lockfile together.`,
+	);
+}
 
 for (const command of ['format:check', 'lint', 'typecheck', 'spellcheck', 'knip']) {
 	const result = spawnSync('pnpm', [command], { stdio: 'inherit' });
