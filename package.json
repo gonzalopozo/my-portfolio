@@ -70,7 +70,7 @@
 		"@radix-ui/react-select": "^2.2.6",
 		"@radix-ui/react-slot": "^1.2.4",
 		"@radix-ui/react-switch": "^1.2.6",
-		"@radix-ui/react-tooltip": "^1.2.16",
+		"@radix-ui/react-tooltip": "^1.4.1",
 		"@teritorio/openmaptiles-gl-language": "^1.5.4",
 		"@vercel/blob": "^2.3.2",
 		"better-auth": "^1.7.10",
