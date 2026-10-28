@@ -185,7 +185,20 @@ See [environment branch policies](https://docs.github.com/en/actions/reference/w
 and [deployment status events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#deployment_status).
 
 Weekly version updates are grouped for React, Next, Vitest, minor development
-updates, and Actions. Security updates remain urgent. No bot receives an automatic
-merge exemption. A critical framework patch goes through a focused PR, a reviewed
-version-specific release-age exception if necessary, complete required checks, and
-an approved staged release. Never automate `pnpm audit --fix` on main.
+updates, and Actions. The Vitest group contains only `vitest` and
+`@vitest/coverage-v8`; the ESLint and Vite plugins have independent release versions
+and follow the other applicable update rules.
+
+Dependabot groups available updates but cannot require both packages to have an
+update before opening a PR. `CI / Quality` checks the installed Vitest and coverage
+provider versions before running the quality tools and fails if they differ. Review
+the manifest and lockfile together so both resolve to the same release; a PR that
+bumps only the runner while leaving an older coverage provider is incomplete.
+After this configuration reaches the default branch, recreate the existing Vitest
+group PR and inspect its diff. Group membership alone does not prove both packages
+were updated. See [Dependabot grouping options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#groups).
+
+Security updates remain urgent. No bot receives an automatic merge exemption. A
+critical framework patch goes through a focused PR, a reviewed version-specific
+release-age exception if necessary, complete required checks, and an approved staged
+release. Never automate `pnpm audit --fix` on main.

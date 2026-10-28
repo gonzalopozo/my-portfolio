@@ -16,7 +16,9 @@ updates:
           next:
               patterns: [next, eslint-config-next]
           vitest:
-              patterns: [vitest, '@vitest/*', '@vitejs/*']
+              # Core and coverage must use the same version; plugins release independently.
+              # Dependabot grouping is best effort; CI rejects mismatched installed versions.
+              patterns: [vitest, '@vitest/coverage-v8']
           development-minor:
               dependency-type: development
               update-types: [minor, patch]
