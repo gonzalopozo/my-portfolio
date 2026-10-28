@@ -89,7 +89,10 @@ In **Settings → Rules → Rulesets → New branch ruleset**:
 
 1. Name: `Production main`. Enforcement: **Active**. Target branch: exact `main`.
 2. Do not add routine bypass actors or applications.
-3. Enable **Restrict deletions** and **Block force pushes**.
+3. Enable **Restrict deletions** and **Block force pushes**. Leave **Restrict
+   creations** and **Restrict updates** off. With no bypass actors, **Restrict
+   updates** blocks updates through PR merges too; use the PR and required-check
+   rules below to protect normal changes.
 4. Enable **Require a pull request before merging**. The approved solo workflow uses
    **0 required independent approvals**, with deliberate owner review before merge.
    A sole author cannot provide an independent PR approval. Increase this when a
@@ -104,9 +107,12 @@ In **Settings → Rules → Rulesets → New branch ruleset**:
     - `Security / CodeQL JS`
     - `Security / CodeQL Actions`
 
-8. Do not require Preview checks, release jobs, scheduled-only checks, or every
-   internal CI job separately. The aggregate required job already requires all four
-   correctness gates and fails on failed, cancelled, or skipped dependencies.
+8. Do not require `Vercel`, `Preview / Smoke`, `Preview / Acceptance`, release jobs,
+   scheduled-only checks, or every internal CI job separately. Leave **Require
+   deployments to succeed before merging** off: a PR without an approved Vercel
+   deployment still needs to be mergeable after all required validation passes.
+   The aggregate required job already requires all four correctness gates and
+   fails on failed, cancelled, or skipped dependencies.
 9. If available, add **Require code scanning results** with CodeQL, errors and
    high/critical security alerts. The SARIF severity gate also makes the CodeQL
    status fail on high/critical/error findings; analysis completion alone is not
@@ -161,6 +167,22 @@ cannot generate this lockfile, keep alerts/Actions updates enabled, stop broken
 manifest-only PRs, and use reviewed manual pnpm update PRs until support arrives.
 Do not downgrade pnpm or relax the release-age policy to make the bot green.
 See [Dependabot ecosystems](https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories).
+
+Dependabot PRs must pass the same required CI and security checks as other PRs;
+they do not need a Vercel deployment. Keep `preview-checks` and
+`preview-acceptance` restricted to `main`, and do not copy their credentials into
+Dependabot secrets or allow bot branches into those environments.
+
+GitHub evaluates environment branch policies against the workflow's `GITHUB_REF`.
+A `deployment_status` run uses the deployed branch; `checkout` with `ref: main`
+does not change that. The Preview smoke job therefore skips events from other
+refs, including Dependabot and feature branches. To inspect an approved branch
+Preview, open **Actions → Preview checks → Run workflow**, select **main**, enter
+the Vercel deployment ID and leave **acceptance** false for smoke only. Authenticated
+acceptance additionally requires the protected environment approval and synthetic
+Preview account. Never widen the environment branch policy to repair this failure.
+See [environment branch policies](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#deployment-branches-and-tags)
+and [deployment status events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#deployment_status).
 
 Weekly version updates are grouped for React, Next, Vitest, minor development
 updates, and Actions. Security updates remain urgent. No bot receives an automatic
