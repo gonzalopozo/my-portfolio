@@ -64,8 +64,7 @@ export type OgImageResult = { ok: true } | { ok: false; error: OgImageError };
 export type OgImageUploadResult = { ok: true; url: string } | { ok: false; error: OgImageError };
 
 export type ProjectImageActionResult =
-	| { ok: true; warning?: OgImageError }
-	| { ok: false; error: OgImageError };
+	{ ok: true; warning?: OgImageError } | { ok: false; error: OgImageError };
 
 export interface ProjectImageFeedback {
 	projectId: number;

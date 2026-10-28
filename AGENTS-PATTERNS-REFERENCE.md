@@ -671,9 +671,7 @@ export async function getProjectsWithSkills() {
 	'use cache';
 	cacheLife('minutes');
 
-	return db.query.projects.findMany({
-		/* ... */
-	});
+	return db.query.projects.findMany({/* ... */});
 }
 ```
 

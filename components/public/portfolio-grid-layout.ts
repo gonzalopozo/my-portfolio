@@ -73,29 +73,23 @@ export function createCollectionCards({
 }): PortfolioGridCard[] {
 	const projectSlots: HomeSlot[] = ['c', 'f', 'h'];
 	return [
-		...projects.map(
-			(card, index): PortfolioGridCard => ({
-				...card,
-				variant: 'project',
-				homeSlot: projectSlots[index],
-				sizeSlot: projectSlots[index] ?? 'c',
-			}),
-		),
-		...experiences.map(
-			(card): PortfolioGridCard => ({
-				...card,
-				variant: 'experience',
-				sizeSlot: 'g',
-			}),
-		),
-		...socialLinks.map(
-			(card, index): PortfolioGridCard => ({
-				...card,
-				variant: 'about',
-				homeSlot: index === 0 ? 'e' : undefined,
-				sizeSlot: 'e',
-			}),
-		),
+		...projects.map((card, index): PortfolioGridCard => ({
+			...card,
+			variant: 'project',
+			homeSlot: projectSlots[index],
+			sizeSlot: projectSlots[index] ?? 'c',
+		})),
+		...experiences.map((card): PortfolioGridCard => ({
+			...card,
+			variant: 'experience',
+			sizeSlot: 'g',
+		})),
+		...socialLinks.map((card, index): PortfolioGridCard => ({
+			...card,
+			variant: 'about',
+			homeSlot: index === 0 ? 'e' : undefined,
+			sizeSlot: 'e',
+		})),
 	];
 }
 
