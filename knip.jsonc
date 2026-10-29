@@ -1,11 +1,7 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
 	// Extra entry points not covered by the Next.js plugin (see https://knip.dev/explanations/entry-files)
-	"entry": [
-		"components/ui/**/*.{ts,tsx}",
-		"lib/queries/**/*.ts",
-		"scripts/**/*.{mts,ts,mjs}",
-	],
+	"entry": ["components/ui/**/*.{ts,tsx}", "lib/queries/**/*.ts", "scripts/**/*.{mts,ts,mjs}"],
 	// Include CSS imports and keep disposable build traces outside the project scope.
 	"project": ["**/*.{js,jsx,ts,tsx,mts,css}", "!.tmp/**"],
 	// Retained shadcn/admin/map/testing packages and CSS-only imports that Knip cannot prove from the current graph.
