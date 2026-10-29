@@ -2,19 +2,14 @@
 	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
 	// Extra entry points not covered by the Next.js plugin (see https://knip.dev/explanations/entry-files)
 	"entry": [
-		"commitlint.config.mts",
-		"playwright.csp.config.ts",
 		"components/ui/**/*.{ts,tsx}",
 		"lib/queries/**/*.ts",
 		"scripts/**/*.{mts,ts,mjs}",
 	],
-	// Include repo-local TypeScript modules so Knip follows admin/public components behind route imports.
-	"project": ["**/*.{js,jsx,ts,tsx,mts}"],
-	// Local build traces (gitignored) must not enter the module graph.
-	"ignore": [".tmp/**"],
+	// Include CSS imports and keep disposable build traces outside the project scope.
+	"project": ["**/*.{js,jsx,ts,tsx,mts,css}", "!.tmp/**"],
 	// Retained shadcn/admin/map/testing packages and CSS-only imports that Knip cannot prove from the current graph.
 	"ignoreDependencies": [
-		"@commitlint/config-conventional",
 		"@dnd-kit/helpers",
 		"@number-flow/react",
 		"@radix-ui/react-alert-dialog",
