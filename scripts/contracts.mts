@@ -12,10 +12,16 @@ if (
 	process.env.APP_ENV !== 'contract'
 )
 	throw new Error('Remote contracts require the protected main workflow.');
-const organization = required('TURSO_NONPRODUCTION_ORG');
-const group = required('TURSO_NONPRODUCTION_GROUP');
-if (!/^[a-z0-9-]+$/.test(organization) || !/^ci-[a-z0-9-]+$/.test(group))
-	throw new Error('Contracts require a dedicated ci-* database group.');
+const organization = required('TURSO_NONPRODUCTION_ORG').trim();
+const group = required('TURSO_NONPRODUCTION_GROUP').trim();
+if (!/^[a-z0-9-]+$/.test(organization))
+	throw new Error(
+		'TURSO_NONPRODUCTION_ORG must be the lowercase Turso account or organization slug (letters, digits and hyphens).',
+	);
+if (!/^ci-[a-z0-9-]+$/.test(group))
+	throw new Error(
+		'TURSO_NONPRODUCTION_GROUP must be a group name starting with ci- (for example ci-contracts).',
+	);
 const run = required('GITHUB_RUN_ID');
 const name = `ci-${run}-${randomUUID().slice(0, 8)}`;
 if (!/^ci-[0-9]+-[a-f0-9]{8}$/.test(name)) throw new Error('Invalid owned test database name.');
