@@ -66,8 +66,8 @@ export function GridItem({
 					{
 						'@container/project-card': variant === 'project',
 						'@container/experience-card': variant === 'experience',
-						'@container-[size]': sizing === 'fixed' && variant !== 'about',
-						'md:@container-[size]': sizing === 'responsive' && variant !== 'about',
+						'@container-size': sizing === 'fixed' && variant !== 'about',
+						'md:@container-size': sizing === 'responsive' && variant !== 'about',
 					},
 					cardClassName,
 				)}
