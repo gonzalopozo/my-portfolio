@@ -31,10 +31,10 @@ jobs:
               env:
                   APP_ENV: contract
                   TURSO_API_TOKEN: ${{ secrets.TURSO_API_TOKEN }}
-                  TURSO_NONPRODUCTION_ORG: ${{ vars.TURSO_NONPRODUCTION_ORG }}
-                  TURSO_NONPRODUCTION_GROUP: ${{ vars.TURSO_NONPRODUCTION_GROUP }}
-                  CONTRACT_BLOB_ORIGIN: ${{ vars.CONTRACT_BLOB_ORIGIN }}
-                  PRODUCTION_BLOB_ORIGIN: ${{ vars.PRODUCTION_BLOB_ORIGIN }}
+                  TURSO_NONPRODUCTION_ORG: ${{ vars.TURSO_NONPRODUCTION_ORG || secrets.TURSO_NONPRODUCTION_ORG }}
+                  TURSO_NONPRODUCTION_GROUP: ${{ vars.TURSO_NONPRODUCTION_GROUP || secrets.TURSO_NONPRODUCTION_GROUP }}
+                  CONTRACT_BLOB_ORIGIN: ${{ vars.CONTRACT_BLOB_ORIGIN || secrets.CONTRACT_BLOB_ORIGIN }}
+                  PRODUCTION_BLOB_ORIGIN: ${{ vars.PRODUCTION_BLOB_ORIGIN || secrets.PRODUCTION_BLOB_ORIGIN }}
                   BLOB_READ_WRITE_TOKEN: ${{ secrets.NONPRODUCTION_BLOB_TOKEN }}
             - name: Clean an interrupted owned database
               if: always()
@@ -42,5 +42,5 @@ jobs:
               env:
                   APP_ENV: contract
                   TURSO_API_TOKEN: ${{ secrets.TURSO_API_TOKEN }}
-                  TURSO_NONPRODUCTION_ORG: ${{ vars.TURSO_NONPRODUCTION_ORG }}
-                  TURSO_NONPRODUCTION_GROUP: ${{ vars.TURSO_NONPRODUCTION_GROUP }}
+                  TURSO_NONPRODUCTION_ORG: ${{ vars.TURSO_NONPRODUCTION_ORG || secrets.TURSO_NONPRODUCTION_ORG }}
+                  TURSO_NONPRODUCTION_GROUP: ${{ vars.TURSO_NONPRODUCTION_GROUP || secrets.TURSO_NONPRODUCTION_GROUP }}
