@@ -58,6 +58,17 @@ Branch: `main`**, with no wildcard and no tag policy.
 | `preview-checks`        | Main-only controller                 | `VERCEL_TOKEN`, `VERCEL_AUTOMATION_BYPASS_SECRET`                                      | Project/team variables                                                                                                |
 | `preview-acceptance`    | Owner required                       | `VERCEL_AUTOMATION_BYPASS_SECRET`, `PREVIEW_ADMIN_EMAIL`, `PREVIEW_ADMIN_PASSWORD`     | Synthetic Preview deployment only                                                                                     |
 
+For `service-contracts`, store the four nonsecret settings under **Environment
+variables**. The workflow also accepts same-named **Environment secrets**, with
+variables taking precedence when both exist. `TURSO_API_TOKEN` and
+`NONPRODUCTION_BLOB_TOKEN` must remain secrets.
+
+`TURSO_NONPRODUCTION_ORG` is the Turso account or organization slug that owns the
+contract group. For a personal account, use your Turso username: the API represents
+personal accounts as organizations too. The slug identifies the owner; the
+[nonproduction credential isolation requirements](./services.md#turso-and-drizzle)
+still apply. See [Turso's organization model](https://turso.tech/blog/organization-api-platform-saga-part-3).
+
 For the two production environments:
 
 1. Add your GitHub account under **Required reviewers**.
