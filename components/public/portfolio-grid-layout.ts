@@ -6,7 +6,7 @@ import type { PortfolioSection } from '@/components/public/portfolio-sections';
 export type GridBreakpoint = 'lg' | 'md' | 'sm';
 export type BentoBreakpoint = Exclude<GridBreakpoint, 'sm'>;
 export type SectionLayouts = Record<BentoBreakpoint, Layout>;
-export type HomeSlot = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j';
+type HomeSlot = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j';
 
 export interface PortfolioCardDescriptor {
 	id: string;

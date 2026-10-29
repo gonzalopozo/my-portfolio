@@ -12,7 +12,7 @@ import { spotifySearchResultSchema } from '@/lib/schemas/music';
 const SPOTIFY_SEARCH_SCRAPE_TIMEOUT_MS = 8_000;
 const SPOTIFY_BROWSER_CLEANUP_TIMEOUT_MS = 2_000;
 
-export interface SpotifySearchScrapeCandidate {
+interface SpotifySearchScrapeCandidate {
 	href: string;
 	text: string;
 }
