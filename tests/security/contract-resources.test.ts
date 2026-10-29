@@ -60,6 +60,57 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
+describe('contract resource configuration', () => {
+	it.each([
+		['TURSO_NONPRODUCTION_ORG', 'https://turso.tech/fixture'],
+		['TURSO_NONPRODUCTION_GROUP', 'preview-database'],
+	])('identifies invalid %s before accessing Turso', async (variable, value) => {
+		vi.stubEnv(variable, value);
+		await expect(import('../../scripts/contracts.mjs')).rejects.toThrow(variable);
+		expect(fetch).not.toHaveBeenCalled();
+		expect(fixture.writeFile).not.toHaveBeenCalled();
+		expect(fixture.spawn).not.toHaveBeenCalled();
+	});
+
+	it('trims copied owner and group whitespace before creating its own database', async () => {
+		vi.stubEnv('TURSO_NONPRODUCTION_ORG', ' fixture\r\n');
+		vi.stubEnv('TURSO_NONPRODUCTION_GROUP', '\tci-contracts\n');
+		fetch
+			.mockResolvedValueOnce(
+				Response.json({ database: { Name: name, DbId: id, Hostname: 'fixture.turso.io' } }),
+			)
+			.mockResolvedValueOnce(Response.json({ jwt: 'synthetic-database-token' }));
+		await import('../../scripts/contracts.mjs');
+		expect(fetch).toHaveBeenNthCalledWith(
+			1,
+			'https://api.turso.tech/v1/organizations/fixture/databases',
+			expect.objectContaining({
+				method: 'POST',
+				body: JSON.stringify({ name, group: 'ci-contracts' }),
+			}),
+		);
+		expect(fixture.writeFile).toHaveBeenLastCalledWith(
+			'.ci/contract-resource.json',
+			JSON.stringify({ ...record, deleted: true }),
+		);
+	});
+
+	it('trims copied owner and group whitespace before checking cleanup ownership', async () => {
+		process.argv.push('cleanup');
+		vi.stubEnv('TURSO_NONPRODUCTION_ORG', ' fixture\r\n');
+		vi.stubEnv('TURSO_NONPRODUCTION_GROUP', '\tci-contracts\n');
+		await import('../../scripts/contracts.mjs');
+		expect(fetch).toHaveBeenLastCalledWith(
+			`https://api.turso.tech/v1/organizations/fixture/databases/${name}`,
+			expect.objectContaining({ method: 'DELETE' }),
+		);
+		expect(fixture.writeFile).toHaveBeenCalledWith(
+			'.ci/contract-resource.json',
+			JSON.stringify({ ...record, deleted: true }),
+		);
+	});
+});
+
 describe('contract resource ownership records', () => {
 	it('persists only the identity fingerprint for creation and deletion', async () => {
 		fetch

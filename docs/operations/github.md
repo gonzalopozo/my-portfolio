@@ -69,6 +69,12 @@ personal accounts as organizations too. The slug identifies the owner; the
 [nonproduction credential isolation requirements](./services.md#turso-and-drizzle)
 still apply. See [Turso's organization model](https://turso.tech/blog/organization-api-platform-saga-part-3).
 
+`TURSO_NONPRODUCTION_GROUP` is the exact group name, such as `ci-contracts`.
+The existing Preview database can keep its own name. Each contract run creates
+and deletes a separate `ci-<run>-<suffix>` database in that group. Enter the owner
+and group as plain slugs without quotes or URLs; surrounding whitespace is trimmed.
+Configuration errors identify the invalid setting without printing its value.
+
 For the two production environments:
 
 1. Add your GitHub account under **Required reviewers**.
