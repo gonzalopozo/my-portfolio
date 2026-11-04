@@ -65,6 +65,14 @@ jobs:
     contracts:
         needs: preflight
         uses: ./.github/workflows/services-contracts.yml
+        # Named passing enables the callee's environment secrets without inheriting all secrets.
+        secrets:
+            TURSO_API_TOKEN: ${{ secrets.TURSO_API_TOKEN }}
+            NONPRODUCTION_BLOB_TOKEN: ${{ secrets.NONPRODUCTION_BLOB_TOKEN }}
+            TURSO_NONPRODUCTION_ORG: ${{ secrets.TURSO_NONPRODUCTION_ORG }}
+            TURSO_NONPRODUCTION_GROUP: ${{ secrets.TURSO_NONPRODUCTION_GROUP }}
+            CONTRACT_BLOB_ORIGIN: ${{ secrets.CONTRACT_BLOB_ORIGIN }}
+            PRODUCTION_BLOB_ORIGIN: ${{ secrets.PRODUCTION_BLOB_ORIGIN }}
         permissions:
             contents: read
     migrations:

@@ -1,6 +1,19 @@
 name: Service contracts
 on:
     workflow_call:
+        secrets:
+            TURSO_API_TOKEN:
+                required: true
+            NONPRODUCTION_BLOB_TOKEN:
+                required: true
+            TURSO_NONPRODUCTION_ORG:
+                required: false
+            TURSO_NONPRODUCTION_GROUP:
+                required: false
+            CONTRACT_BLOB_ORIGIN:
+                required: false
+            PRODUCTION_BLOB_ORIGIN:
+                required: false
     workflow_dispatch:
 permissions: {}
 jobs:
