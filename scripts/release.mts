@@ -10,7 +10,7 @@ import {
 	verifiedSource,
 	type Deployment,
 } from './platform.mjs';
-import { smoke } from './smoke.mjs';
+import { smoke, waitForCanonicalHealth } from './smoke.mjs';
 import { requireApprovalEnvironment } from './approval.mjs';
 
 type Run = {
@@ -226,6 +226,7 @@ if (operation === 'preflight') {
 			origin.hash
 		)
 			throw new Error('Invalid production origin.');
+		await waitForCanonicalHealth(origin.origin, sha);
 		await smoke(origin.origin, sha, false);
 		await api('github', `/repos/${repository}/deployments/${record.id}/statuses`, 'POST', {
 			state: 'success',
@@ -297,6 +298,7 @@ if (operation === 'preflight') {
 			autoAssignCustomDomains: false,
 		});
 		await waitForLive(id);
+		await waitForCanonicalHealth(required('PRODUCTION_ORIGIN'), sha);
 		await smoke(required('PRODUCTION_ORIGIN'), sha, false);
 		await api('github', `/repos/${repository}/deployments/${record.id}/statuses`, 'POST', {
 			state: 'success',
