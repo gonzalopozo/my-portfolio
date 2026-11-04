@@ -5,6 +5,10 @@ const context = vi.hoisted(() => ({
 	reviewers: true,
 	branches: ['main'],
 	history: true,
+	environmentId: 123 as number | undefined,
+	approvalEnvironmentId: 123 as number | undefined,
+	environmentName: 'production',
+	approvalEnvironmentName: 'production',
 }));
 vi.mock('../../scripts/platform.mjs', () => ({
 	required: (name: string) => (name === 'GITHUB_REPOSITORY' ? 'owner/repository' : '123'),
@@ -16,11 +20,18 @@ vi.mock('../../scripts/platform.mjs', () => ({
 				? [
 						{
 							state: context.approved ? 'approved' : 'rejected',
-							environments: [{ name: 'production' }],
+							environments: [
+								{
+									id: context.approvalEnvironmentId,
+									name: context.approvalEnvironmentName,
+								},
+							],
 						},
 					]
 				: [];
 		return {
+			id: context.environmentId,
+			name: context.environmentName,
 			protection_rules: context.reviewers
 				? [{ type: 'required_reviewers', prevent_self_review: false, reviewers: [{}] }]
 				: [],
@@ -31,12 +42,50 @@ vi.mock('../../scripts/platform.mjs', () => ({
 import { requireApprovalEnvironment } from '../../scripts/approval.mjs';
 
 beforeEach(() =>
-	Object.assign(context, { approved: true, reviewers: true, branches: ['main'], history: true }),
+	Object.assign(context, {
+		approved: true,
+		reviewers: true,
+		branches: ['main'],
+		history: true,
+		environmentId: 123,
+		approvalEnvironmentId: 123,
+		environmentName: 'production',
+		approvalEnvironmentName: 'production',
+	}),
 );
 describe('explicit human approval', () => {
 	it('accepts a protected environment and recorded approval', async () => {
 		await expect(requireApprovalEnvironment('production', true)).resolves.toBeUndefined();
 	});
+	it.each(['Production', 'PRODUCTION'])(
+		'accepts approval for the same environment ID when its display name is %s',
+		async (name) => {
+			context.environmentName = name;
+			context.approvalEnvironmentName = name;
+			await expect(requireApprovalEnvironment('production', true)).resolves.toBeUndefined();
+		},
+	);
+	it('rejects an approval for another environment ID even when the name matches', async () => {
+		context.approvalEnvironmentId = 456;
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
+			'No recorded human approval',
+		);
+	});
+	it('rejects an approval without an environment ID', async () => {
+		context.approvalEnvironmentId = undefined;
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
+			'No recorded human approval',
+		);
+	});
+	it.each([undefined, 0, -1, 1.5, Number.NaN])(
+		'rejects an unproven environment identity (%s)',
+		async (id) => {
+			context.environmentId = id;
+			await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
+				'Environment identity is unproven',
+			);
+		},
+	);
 	it('rejects an environment created without reviewers', async () => {
 		context.reviewers = false;
 		await expect(requireApprovalEnvironment('production')).rejects.toThrow('owner approval');

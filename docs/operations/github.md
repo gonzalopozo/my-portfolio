@@ -94,6 +94,14 @@ For the two production environments:
 4. Save the exact main-only branch policy. The controller checks reviewer presence,
    the policy, and review history. Bypass prohibition still needs dashboard review.
 
+GitHub environment names are case insensitive and can retain a display name such
+as `Production` when the workflow requests `production`. The approval controller
+resolves that name to GitHub's environment ID and matches the current run's
+approved review to the same ID. Missing IDs, approvals for a different environment,
+and missing or rejected reviews block the operation. See [GitHub environment
+names](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments#creating-an-environment)
+and [workflow approval history](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run).
+
 Repository **Settings → Secrets and variables → Actions → Variables**:
 
 - `VERCEL_PROJECT_ID`, optional `VERCEL_TEAM_ID`.
