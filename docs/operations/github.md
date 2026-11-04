@@ -63,6 +63,16 @@ variables**. The workflow also accepts same-named **Environment secrets**, with
 variables taking precedence when both exist. `TURSO_API_TOKEN` and
 `NONPRODUCTION_BLOB_TOKEN` must remain secrets.
 
+When Release calls Service contracts, the caller explicitly passes those two
+tokens and the four optional configuration secrets. GitHub requires secrets to
+be passed even when they exist only in the called job's environment. The called
+job declares `environment: service-contracts` and receives that environment's
+values. The token declarations are required; configuration secret declarations
+are optional because the same settings can be supplied as Variables.
+Keep the six names aligned in both workflows and keep credentials in their
+documented environments. See [GitHub's reusable workflow secret
+rules](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows#using-inputs-and-secrets-in-a-reusable-workflow).
+
 `TURSO_NONPRODUCTION_ORG` is the Turso account or organization slug that owns the
 contract group. For a personal account, use your Turso username: the API represents
 personal accounts as organizations too. The slug identifies the owner; the
