@@ -6,10 +6,7 @@ const sha = 'a'.repeat(40);
 const fetch = vi.fn<typeof globalThis.fetch>();
 
 function healthyResponse(release = sha) {
-	return Response.json(
-		{ status: 'ok', release },
-		{ headers: { 'cache-control': 'no-store' } },
-	);
+	return Response.json({ status: 'ok', release }, { headers: { 'cache-control': 'no-store' } });
 }
 
 beforeEach(() => {
@@ -29,9 +26,10 @@ describe('canonical production health convergence', () => {
 		fetch
 			.mockResolvedValueOnce(new Response(null, { status: 404 }))
 			.mockResolvedValueOnce(healthyResponse());
-		const assertion = expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined();
-		await vi.runAllTimersAsync();
-		await assertion;
+		await Promise.all([
+			expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined(),
+			vi.runAllTimersAsync(),
+		]);
 		expect(fetch).toHaveBeenCalledTimes(2);
 	});
 
@@ -39,9 +37,10 @@ describe('canonical production health convergence', () => {
 		fetch
 			.mockResolvedValueOnce(healthyResponse('b'.repeat(40)))
 			.mockResolvedValueOnce(healthyResponse());
-		const assertion = expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined();
-		await vi.runAllTimersAsync();
-		await assertion;
+		await Promise.all([
+			expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined(),
+			vi.runAllTimersAsync(),
+		]);
 		expect(fetch).toHaveBeenCalledTimes(2);
 	});
 
@@ -49,9 +48,10 @@ describe('canonical production health convergence', () => {
 		fetch
 			.mockResolvedValueOnce(Response.json({ status: 'ok', release: sha }))
 			.mockResolvedValueOnce(healthyResponse());
-		const assertion = expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined();
-		await vi.runAllTimersAsync();
-		await assertion;
+		await Promise.all([
+			expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined(),
+			vi.runAllTimersAsync(),
+		]);
 		expect(fetch).toHaveBeenCalledTimes(2);
 	});
 
@@ -59,18 +59,20 @@ describe('canonical production health convergence', () => {
 		fetch
 			.mockRejectedValueOnce(new TypeError('Synthetic connection failure'))
 			.mockResolvedValueOnce(healthyResponse());
-		const assertion = expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined();
-		await vi.runAllTimersAsync();
-		await assertion;
+		await Promise.all([
+			expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined(),
+			vi.runAllTimersAsync(),
+		]);
 	});
 
 	it('fails after two minutes if the expected release never becomes available', async () => {
 		fetch.mockImplementation(async () => healthyResponse('b'.repeat(40)));
-		const assertion = expect(waitForCanonicalHealth(origin, sha)).rejects.toThrow(
-			'Canonical production health did not converge to the expected release.',
-		);
-		await vi.advanceTimersByTimeAsync(120000);
-		await assertion;
+		await Promise.all([
+			expect(waitForCanonicalHealth(origin, sha)).rejects.toThrow(
+				'Canonical production health did not converge to the expected release.',
+			),
+			vi.advanceTimersByTimeAsync(120000),
+		]);
 	});
 
 	it('keeps redirects on the configured origin and sends no protected credentials', async () => {
@@ -84,9 +86,10 @@ describe('canonical production health convergence', () => {
 				}),
 			)
 			.mockResolvedValueOnce(healthyResponse());
-		const assertion = expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined();
-		await vi.runAllTimersAsync();
-		await assertion;
+		await Promise.all([
+			expect(waitForCanonicalHealth(origin, sha)).resolves.toBeUndefined(),
+			vi.runAllTimersAsync(),
+		]);
 		for (const [url, options] of fetch.mock.calls) {
 			expect(String(url)).toBe(`${origin}/api/health`);
 			expect(options).toMatchObject({ redirect: 'manual', cache: 'no-store' });
