@@ -45,8 +45,10 @@ A failed, skipped, cancelled or missing required gate is not success.
     reviewer configuration/history, candidate age, prior live identity and smoke
     behavior. A changed main/production state or expired candidate blocks promotion.
 11. Promotion uses **the same deployment ID** with no rebuild. The controller restores
-    disabled domain assignment, waits for live identity, verifies the canonical
-    origin and writes a successful GitHub deployment record only after smoke passes.
+    disabled domain assignment and waits for the production target to match. It
+    then waits up to two minutes for the canonical `/api/health` endpoint to return
+    an uncached successful response with the exact release SHA. Full canonical
+    smoke checks must pass before it writes a successful GitHub deployment record.
 12. Inspect Vercel Runtime Logs, action failures, operation durations and service
     usage for regressions. Use representative requests when traffic is low.
     Record the release and previous known-good IDs for incident recovery.
@@ -87,7 +89,8 @@ production response bodies, storage state, database files or `.env` files to inc
    ID and its full commit SHA. The SHA intentionally differs from current main.
 4. Approve the `production` environment. The controller checks recorded successful
    evidence and the current deployment's parent, tests the target with readonly
-   probes, invokes Vercel rollback, waits for the target and verifies canonical SHA.
+   probes, invokes Vercel rollback, waits for the target and canonical health to
+   converge, and verifies the canonical site with full smoke checks.
 5. Verify public content, health, authentication availability and monitoring. Perform
    protected account checks privately if necessary; do not mutate real CMS content.
 6. Document symptom, timeline, release IDs, SQL state, recovery action and follow-up.

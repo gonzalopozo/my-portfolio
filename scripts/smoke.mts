@@ -36,6 +36,58 @@ async function json<T>(response: Response): Promise<T> {
 	}
 }
 
+async function hasExpectedHealth(response: Response, sha: string) {
+	const health = await json<{ status?: string; release?: string }>(response);
+	return (
+		health.status === 'ok' &&
+		health.release === sha &&
+		response.headers.get('cache-control')?.includes('no-store') === true
+	);
+}
+
+/**
+ * Wait for public routing to serve this release after promotion or rollback.
+ * The project's production target can update before the canonical domain does.
+ */
+export async function waitForCanonicalHealth(origin: string, sha: string) {
+	let target: URL;
+	try {
+		target = new URL(origin);
+	} catch {
+		throw new Error('Invalid production origin.');
+	}
+	if (
+		target.protocol !== 'https:' ||
+		target.username ||
+		target.password ||
+		target.port ||
+		target.pathname !== '/' ||
+		target.search ||
+		target.hash
+	)
+		throw new Error('Invalid production origin.');
+	const deadline = Date.now() + 120000;
+	while (Date.now() < deadline) {
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) break;
+		const response = await fetch(new URL('/api/health', target), {
+			cache: 'no-store',
+			redirect: 'manual',
+			signal: AbortSignal.timeout(Math.min(6000, remaining)),
+		}).catch(() => undefined);
+		if (response) {
+			if (response.status === 200) {
+				if (await hasExpectedHealth(response, sha).catch(() => false)) return;
+			} else {
+				await response.body?.cancel().catch(() => {});
+			}
+		}
+		const delay = Math.min(4000, deadline - Date.now());
+		if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+	}
+	throw new Error('Canonical production health did not converge to the expected release.');
+}
+
 /** Tokens are attached only to a verified exact deployment origin; redirects never carry them. */
 export async function smoke(
 	origin: string,
@@ -75,12 +127,7 @@ export async function smoke(
 		if (response.status !== 200)
 			throw new Error(`Smoke request failed for ${path} (${response.status}).`);
 		if (path === '/api/health') {
-			const health = await json<{ status?: string; release?: string }>(response);
-			if (
-				health.status !== 'ok' ||
-				health.release !== sha ||
-				!response.headers.get('cache-control')?.includes('no-store')
-			)
+			if (!(await hasExpectedHealth(response, sha)))
 				throw new Error('Deployment identity or uncached health check mismatch.');
 		} else if (path === '/') {
 			const content = await body(response);
