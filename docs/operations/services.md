@@ -16,7 +16,7 @@ minutes to affect another cached session. This is an acknowledged security trade
    nonproduction Turso organization if its API token otherwise grants production
    management access. Group tokens can cover more than one DB; choose database-
    scoped application tokens and do not reuse production group credentials.
-3. Grant the `service-contracts` environment only that nonproduction organization's
+3. Grant the `service-contracts` CircleCI context only that nonproduction organization's
    API token. The controller creates a fresh empty `ci-<run>-<suffix>` DB, applies
    committed migrations, runs transport/constraint tests and deletes only its owned
    DB. It never forks production data. Check database count/quota before activation.
@@ -108,10 +108,10 @@ existing password. It prints `ADMIN_USER_IDS=<new-user-id>` without printing the
 password or database token.
 
 Copy the printed ID to **Vercel → project → Settings → Environment Variables →
-Preview → `ADMIN_USER_IDS`**, then create a new Preview deployment. For automated
-Preview acceptance, copy this test email and password to **GitHub → repository →
-Settings → Environments → `preview-acceptance` → Environment secrets** as
-`PREVIEW_ADMIN_EMAIL` and `PREVIEW_ADMIN_PASSWORD`. Store those credentials privately.
+Preview → `ADMIN_USER_IDS`**, then create a new Preview deployment. For local hosted
+Preview acceptance, retain this test email/password privately as
+`PREVIEW_ADMIN_EMAIL` and `PREVIEW_ADMIN_PASSWORD`. Keep them outside CircleCI;
+see [local acceptance](./testing.md#hosted-preview-acceptance).
 
 The login account is created in Turso; the Vercel allowlist grants its CMS access.
 Public registration remains disabled. See [Better Auth user and account
@@ -131,7 +131,7 @@ Connect the nonproduction store to Vercel Preview using
 `BLOB_PREVIEW_PUBLIC_HOSTNAME`. Keep `BLOB_READ_WRITE_TOKEN` and
 `BLOB_PUBLIC_HOSTNAME` scoped to Production. Application storage, image loading,
 CSP and ownership checks select the Preview pair on Preview deployments, with no
-fallback to the production pair. The protected service-contract workflow still
+fallback to the production pair. The trusted main CircleCI service-contract workflow still
 passes its separate `NONPRODUCTION_BLOB_TOKEN` explicitly through its own
 `BLOB_READ_WRITE_TOKEN`; it does not use application environment selection.
 

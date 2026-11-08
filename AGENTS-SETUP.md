@@ -62,7 +62,7 @@ First-time setup, environment configuration, and development prerequisites.
 ## Prerequisites
 
 - Node.js 24.x; `.nvmrc` follows the maintained major, including security patches.
-- pnpm 12.14.0 via the repo's `packageManager` field; CI pins the same version.
+- pnpm 12.18.0 via the repo's `packageManager` field; CI pins the same version.
 - Turso CLI (optional, for local DB management)
 
 ## Environment Variables

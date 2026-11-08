@@ -46,7 +46,7 @@ records and absence of cache invalidation after failed writes.
 No database URLs/tokens are loaded from real `.env.local` for the production runner.
 External tests use a separate Vitest config and protected main workflow, with owned
 resources created/deleted by `scripts/contracts.mts`. Do not add remote tests to the
-normal suite or put production credentials in Actions PR environments.
+normal suite or put deployment credentials in CircleCI PR jobs.
 
 ## E2E and auth
 
@@ -63,7 +63,8 @@ traces, screenshots and video off. Missing required configuration is a failure.
 
 ## CI source of truth
 
-The committed `.github/workflows/` files replace the former tutorial workflow YAML.
+The committed `.circleci/` files own cloud workflows. Local Husky hooks own all
+Playwright execution; CircleCI builds and performs HTTP smoke without browsers.
 [Operations](./docs/operations/README.md) describes their triggers, check names,
 permissions, release approval, manual settings, and recovery. Do not copy cached
 build workflows or push-to-production examples from unrelated guides.

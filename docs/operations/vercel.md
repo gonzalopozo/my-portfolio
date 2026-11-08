@@ -2,7 +2,7 @@
 
 Use the existing Vercel project and official Git integration. These settings are
 not enabled by repository files. Do not turn on production releases until the
-GitHub environment reviewer gate and the database recovery procedure are working.
+CircleCI owner approval gates and the database recovery procedure are working.
 
 ## 1. Freeze automatic production exposure
 
@@ -21,7 +21,7 @@ GitHub environment reviewer gate and the database recovery procedure are working
 5. Change **Settings → Git → Production Branch** to `main` only after the baseline
    PR has preserved existing history and main contains the new workflows.
 
-This is one managed deployment service: Vercel builds the candidate. Actions
+This is one managed deployment service: Vercel builds the candidate. CircleCI
 orchestrates checks and approval; it does not upload/rebuild artifacts for promotion.
 The controller passes the immutable Git SHA and checks the returned deployment.
 See [staged deployments](https://vercel.com/docs/deployments/managing-deployments#staged-deployments),
@@ -34,7 +34,7 @@ In **Settings → Build and Deployment**:
 
 - Framework: Next.js. Root directory: repository root. Node.js version: **24.x**.
 - Use the committed install/build commands from `vercel.json`; remove conflicting
-  dashboard overrides. They bootstrap verified pnpm 12.14.0 natively on Linux x64.
+  dashboard overrides. They bootstrap verified pnpm 12.18.0 natively on Linux x64.
 - Do not set `CI` test fixtures, `APP_ENV=test`, or `TEST_FIXTURE_DIRECTORY` on Vercel.
 - In **Environment Variables**, enable **Enable access to System Environment Variables**
   so the application receives Vercel's deployment hostname and environment metadata.
@@ -113,10 +113,11 @@ copy production database or Blob credentials into all environments.
 1. Enable **Deployment Protection → Vercel Authentication / Standard Protection**
    for Preview and generated deployment URLs, as available on Hobby.
 2. Require owner approval for deployments from forks/untrusted contributions. Do not
-   approve code before review to run with Preview credentials. Secret-free Actions
-   tests remain mandatory for every PR and do not depend on a Preview deployment.
+   approve code before review to run with Preview credentials. Secret-free CircleCI
+   validation remains mandatory for same-repository PRs and do not depend on a Preview deployment.
 3. Create an automation bypass secret under **Deployment Protection → Protection
-   Bypass for Automation**; store it only in protected GitHub environments. Verify
+   Bypass for Automation**; store it only in the scoped CircleCI production contexts, isolated Preview
+   controller project and private local Preview acceptance environment. Verify
    its current scope in the Vercel dashboard. Do not add it to `NEXT_PUBLIC_*` values.
 4. **Scope limitation:** Vercel automation bypass secrets apply across a project,
    and Vercel can expose a selected secret as `VERCEL_AUTOMATION_BYPASS_SECRET` to
@@ -124,7 +125,8 @@ copy production database or Blob credentials into all environments.
    environment exposure for untrusted builds if supported by your configuration;
    never describe the bypass as isolated production data access. If you cannot
    prevent exposure, do not run untrusted source in that credentialed project.
-   Keep fork previews unapproved and use secret-free local production E2E instead.
+   Keep fork previews unapproved and excluded from CI. Local production E2E
+   uses synthetic fixtures only.
    A separate nonproduction Vercel project would be required if automatic untrusted
    fork previews with project-level credential isolation become a requirement.
 5. Disable the Preview toolbar for the CSP acceptance candidate unless its exact
@@ -139,8 +141,8 @@ See [automation bypass](https://vercel.com/docs/deployment-protection/methods-to
 ## 5. Production release and rollback
 
 Follow [releases](./releases.md). Candidate creation must leave the canonical domain
-on the old deployment. Review the protected candidate and GitHub evidence, then
-approve **Release / Promote**. Promotion uses the same deployment ID and never
+on the old deployment. Review the protected candidate and CircleCI/GitHub deployment evidence, then
+approve the CircleCI **approve-production** hold. Promotion uses the same deployment ID and never
 rebuilds the release. The controller resets automatic domain assignment to false
 because promotion can re-enable it, then verifies canonical identity and behavior.
 

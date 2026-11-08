@@ -2,57 +2,123 @@
 
 Authorized local verification on 2026-10-20 passed all 606 Vitest tests across
 61 files and all configured coverage thresholds, with 82.5% overall line coverage.
-Migration replay and the isolated production build also passed. Browser journeys
-and remote service contracts still require their first run. All original 49 Vitest
+Migration replay and the isolated production build also passed. At that baseline,
+browser journeys and remote service contracts still required their first run. All original 49 Vitest
 test source files, including the seven colocated files, are retained. Only the
 unrelated external Playwright example was removed.
 
-These results describe the 2026-10-20 baseline; subsequent changes require their
-own authorized verification.
+These results describe the 2026-10-20 baseline. On 2026-11-08, an explicit commit
+request authorized fresh CircleCI-migration verification: the dedicated subagent
+passed all nine root checks, including 798 Vitest tests across 74 files and the
+production build. Implementation commit `fc23790` also passed the complete local
+production Playwright gate: 180 tests across API, desktop and mobile projects,
+with no retries. Hosted CircleCI, Preview, remote contracts and release acceptance
+remain separate unproven obligations in the migration checklist.
+
+## Developer setup
+
+Run these setup steps in your local clone, using Node 24 and pnpm 12.18.0:
+
+```sh
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm hooks:install
+pnpm exec playwright install --with-deps chromium firefox webkit
+```
+
+Install OpenSSL through your operating system as well. Linux system-library
+installation may require sudo; it belongs to setup, never a commit/push hook.
+Repeat the browser install when the pinned Playwright version changes. Local
+browser installations are reused; no browser is installed or cached in CircleCI.
+Husky must be installed explicitly in each clone/worktree because lifecycle
+scripts are disabled. These instructions do not authorize agents to run checks
+on implementation approval.
+
+The pre-commit hook runs lint-staged first, then `pnpm test:e2e:local`. Pre-push
+runs the same complete suite again. There is no previous-result reuse,
+documentation-only exemption or browser subset at either hook. Missing browsers,
+ports, certificates or a failed test blocks the Git operation. Do not work around
+failures with `HUSKY=0` or `--no-verify`. GitHub web edits/bot-created commits do
+not invoke local hooks; arrange local verification during owner review.
 
 ## Execution and infrastructure
 
-| Command                 | Scope / infrastructure                                                                     | Execution context                                               |
-| ----------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| `pnpm test`             | Vitest watch; existing developer behavior retained                                         | Human development; agents require explicit commit authorization |
-| `pnpm test:run`         | One-shot unit, component and integration projects                                          | CI or authorized pre-commit work                                |
-| `pnpm test:unit`        | Node utilities, schemas, mocked action/security tests; colocated lib tests retained        | Same restriction                                                |
-| `pnpm test:component`   | jsdom + RTL, user-event and jest-dom; hooks, clients and colocated component/theme tests   | Same restriction                                                |
-| `pnpm test:integration` | Real migrated local libSQL; complete schema, real queries/mutations/auth                   | Same restriction                                                |
-| `pnpm test:coverage`    | All Vitest projects, V8, HTML/LCOV/JSON summaries, risk gates                              | CI Tests job                                                    |
-| `pnpm test:e2e`         | Existing development server or configured base URL; nondestructive public tests by default | Human use or authorized verification                            |
-| `pnpm test:e2e:prod`    | Fresh build, `next start`, HTTPS harness, all browsers/API and synthetic DB                | Secret-free isolated CI process                                 |
-| `pnpm test:api`         | Same production runner, API project only; not duplicated in full CI                        | Targeted authorized diagnosis                                   |
-| `pnpm test:contract`    | External Turso/Blob fidelity, separate configuration                                       | Protected service-contract workflow only                        |
-| `pnpm migrate:check`    | All migration prefixes, latest replay/idempotency, schema generation drift                 | CI Migrations job                                               |
+- `pnpm test` remains Vitest watch mode. `test:run`, `test:unit`, `test:component`,
+  `test:integration` and `test:coverage` retain their project/coverage scope.
+  CircleCI uses one-shot coverage plus JUnit results; agents run local checks only
+  under the root explicit-commit policy.
+- `pnpm test:e2e:local` builds once, probes production HTTP, then runs every
+  configured API/desktop/mobile/CSP project through local HTTPS. It runs at every
+  commit and push. `test:e2e:prod` remains a local compatibility alias.
+- `pnpm test:api` uses that local production runner with only the API project for
+  explicitly authorized diagnosis; neither hook uses that subset.
+- `pnpm test:e2e` remains the local public development test entry point. It does
+  not replace complete production verification before commit/push.
+- `pnpm ci:build` runs the same synthetic build/HTTP/HTTPS lifecycle without
+  Playwright, only in automated CI or explicitly authorized verification.
+- `pnpm migrate:check` replays migration prefixes and schema drift in CircleCI.
+  `pnpm test:contract` stays opt-in behind the trusted main contract controller;
+  ordinary tests never use remote provider credentials.
 
-CI has no caches. Browser binaries are installed fresh. A single worker starts with
-Chromium, Firefox, WebKit and mobile Chromium. One retry gathers diagnostics;
-`failOnFlakyTests` makes a recovered flaky failure block CI. Fix causes rather than
-raising retries. No required CSP/auth test silently skips missing prerequisites.
+CircleCI has no restore caches and no browser execution/downloads. The complete
+local browser suite retains Chromium, Firefox, WebKit, mobile Chromium and the
+API project, one worker, one diagnostic retry and `failOnFlakyTests`. Missing
+required auth/CSP prerequisites fail; do not add skips or retries to hide failures.
 
-Every integration fixture owns a temporary file DB, applies committed migrations,
-seeds synthetic records/users with real better-auth password hashing, enables foreign
-keys, and closes/removes its connection/files. No production token is available.
-Remote contracts create empty disposable Turso databases in a separate `ci-*` group;
-local SQLite fidelity is not assumed to prove remote behavior.
+The shared harness uses `.ci/next-production` instead of deleting `.next`, restores
+`next-env.d.ts`, and removes its owned database/build/lock on normal success,
+failure or handled interruption. It serializes local harnesses with
+`.ci/production-harness.lock` and records the owner PID there. Ports 3001 and 3443
+must be available. After a hard kill, confirm that recorded process and its owned
+servers have stopped before removing a stale lock; never remove a live run's lock
+or kill an unrelated service. A failed `finally`/machine interruption may require
+manual cleanup of only that invocation's resources.
 
-The production runner supplies an explicit safe environment to both build/runtime,
-smoke-tests `next start` on loopback, then starts the same production output in a
-small HTTPS harness with the correct external origin and a one-day certificate.
-The installed CLI has no production HTTPS flag; preserving the real request origin
-avoids weakening the application's existing CSRF checks for a reverse proxy.
-Only that local browser/probe accepts its self-signed certificate; no global TLS
-validation is disabled. Next/font can download public fonts at build time; provider
-calls during application tests are fixtures. Runtime fixture activation requires
-`CI=true`, `APP_ENV=test`, an owned `.ci/database-*` directory, and no Vercel runtime.
-There is no test HTTP endpoint, authentication bypass or weakened SSRF validation.
+Each integration fixture owns a temporary migrated file DB, synthetic users with
+real better-auth hashing and foreign keys. Build/runtime receive explicit fixture
+settings, not production credentials. The local runner sets `CI=true` internally
+for deterministic fixture guards, plus `APP_ENV=test`, an owned `.ci/database-*`
+directory and no Vercel runtime. Cloud build uses the same safe guards.
 
-Last.fm errors/latency and Blob writes use deterministic filesystem fixtures.
-Successful OG acquisition retains real public-DNS/SSRF validation for an explicit
-`example.com` fixture URL; HTTP content is deterministic. Carto style responses are
-synthetic in browsers; unexpected external browser/application requests fail tests.
-Untrusted PRs never receive remote contracts, Preview credentials or production data.
+The harness probes `next start`, then starts the same build with a local one-day
+certificate at the correct HTTPS origin. Only the local probe/browser trusts that
+certificate; TLS/CSRF/SSRF protections are not disabled. Public font downloads may
+occur during build; application providers use deterministic fixtures. No test
+endpoint or public authentication bypass is added.
+
+The isolated HTTPS server keeps the performance epoch aligned with the host wall
+clock. Next's cache handlers mix those clocks; a host clock correction can otherwise
+leave invalidated entries temporarily fresh. The monotonic duration clock and the
+application's wall clock retain their normal behavior. This adjustment is confined
+to the guarded synthetic server and does not change deployed caching.
+
+Last.fm/Blob fixtures, synthetic Carto responses, real public-DNS/SSRF validation
+for the explicit example URL and unexpected-network failures remain intact.
+Remote contracts create empty owned nonproduction Turso resources and Blob objects;
+SQLite fixtures do not establish remote transport fidelity.
+
+## Hosted Preview acceptance
+
+Run authenticated hosted acceptance locally against a disposable synthetic Preview.
+Load the documented Preview/controller credentials from a private ignored env file
+or credential manager. The owner-operated Node 24 entry point can load that file:
+
+```sh
+pnpm exec tsx --env-file=.env.preview-acceptance scripts/preview-acceptance.mts
+```
+
+Alternatively, export those values privately and run `pnpm test:preview`. Required
+values are `DEPLOYMENT_ID`, `GITHUB_REPOSITORY`, `GITHUB_REPOSITORY_ID`, a read-only
+`GITHUB_TOKEN`, `VERCEL_PROJECT_ID`, optional `VERCEL_TEAM_ID`, `VERCEL_TOKEN`,
+`VERCEL_AUTOMATION_BYPASS_SECRET`, `PREVIEW_ADMIN_EMAIL` and
+`PREVIEW_ADMIN_PASSWORD`. Never point it at production or place credentials in
+pipeline parameters or shell history.
+
+The wrapper verifies Vercel repository/project/source/age and current owned branch
+identity before passing its exact origin to `playwright.csp.config.ts`. Existing
+fixtures bootstrap an origin-bound bypass cookie with redirects disabled, never
+global bypass headers. Traces, screenshots and video remain off. Do not publish
+local authenticated reports or browser state. Automatic cloud Preview validation
+performs only bounded HTTP smoke; it never receives administrator credentials.
 
 ## Risk and coverage matrix
 
@@ -101,10 +167,10 @@ Project OG image acquisition and skill SVG file uploads are applicable and teste
 - Measured query/storage coverage must be reviewed alongside E2E evidence. Browser
   RSC coverage is not fabricated as a Vitest line percentage. Missing high-risk
   branches are blockers for follow-up coverage; do not lower gates just to pass.
-- New production tests need their first actual run. Streaming timing, keyboard drag
-  behavior, strict CSP, font downloads and platform API schema assumptions are not
-  proven by code review alone. Failures require fixes, not skips or retries.
-- CI local fixtures do not establish hosted Vercel CDN/nonce behavior,
+- The passing local production suite covers streaming, keyboard drag, CSP and
+  browser journeys for the tested fixture state. It does not establish hosted
+  platform API behavior. Later failures require fixes, not skips or retries.
+- Synthetic build/local fixtures do not establish hosted Vercel CDN/nonce behavior,
   Turso replication consistency or real Blob limits. Protected
   contracts, Preview acceptance and owner release drills supply that evidence.
 - Remote contracts exercise essential SQL/SDK transport operations, not a complete

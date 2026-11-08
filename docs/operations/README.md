@@ -1,150 +1,109 @@
 # Portfolio operations
 
-The combined implementation passed authorized local pre-commit verification on
-2026-10-20 using Node.js 24.18.0 and pnpm 12.14.0. The owner explicitly requested
-commits and waived the dedicated verification subagent for this pass. The standing
-agent policy remains unchanged. External setup and hosted release acceptance below
-remain the owner's responsibility.
+Custom CI/CD runs in CircleCI. All Playwright tests run locally before every
+commit and push. Vercel remains the managed Preview/production hosting service;
+Turso and Blob remain separate production/nonproduction resources.
+
+The migration is implemented in repository source but account setup, local
+verification, CircleCI acceptance and production activation require their own
+recorded evidence. Start with the [active migration checklist](./ci-cd-todo.md).
+The [previous Actions rollout](./ci-cd-github-actions-history.md) retains its exact
+historical checkmarks and evidence; none establishes CircleCI completion.
 
 ## Start here
 
-The service guide includes the [Preview administrator setup command](./services.md#create-the-preview-administrator).
-Record platform setup, validation, release and recovery evidence privately as you
-work through these operational guides.
-
-Perform these steps in order:
-
-1. Freeze automatic production promotion in the existing Vercel project before
-   changing production branches. Record the current live deployment and recovery
-   options. See [Vercel](./vercel.md).
-2. Provision separate nonproduction Turso resources and Blob store. Review the
-   existing production database ledger and recovery window. See [services](./services.md).
-3. Configure GitHub environments, environment-scoped credentials, and required
-   reviewers **before enabling release operations**. See [GitHub](./github.md).
-4. Complete the history-preserving `restructure` → `main` baseline PR and change
-   the default/production branches. Run all required checks on the merged SHA.
-5. Run protected service contracts and Preview acceptance. Baseline an existing
-   production database only after exact schema comparison and recovery preparation.
-6. Exercise a staged release, rejection, stale-release rejection, smoke failure,
-   and rollback drill. Retain evidence before considering the system operational.
-
-Do not treat a written workflow as proof that any of these settings are enabled.
+1. Record the live production deployment and recovery option. Keep automatic
+   production Git deployments and domain assignment disabled. See [Vercel](./vercel.md).
+2. Follow [CircleCI setup](./circleci.md) from account creation through project
+   isolation, scoped credentials, triggers and owner approval identity.
+3. Install the [local browser hooks](./testing.md#developer-setup) in each clone.
+   Prove both operations block on a failed complete production suite.
+4. Run CircleCI validation on the migration PR and coordinate the
+   [GitHub ruleset switch](./github.md) before removing old Actions requirements.
+5. Prove the actual merged-main checks, automatic Preview smoke, service contracts,
+   scoped approvals and recovery before deliberately enabling releases.
+6. Follow the [release/incident runbook](./releases.md), retaining evidence and
+   [service isolation](./services.md) throughout.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    F[Short-lived feature branch] --> P[Pull request to main]
-    P --> C[GitHub Actions: quality, tests, migrations, production E2E, security]
-    C --> R[Owner review and required checks]
+    F[Feature branch] --> L[Local full production Playwright]
+    L --> G[Commit and push hooks]
+    G --> P[Same-repository PR to main]
+    P --> C[CircleCI quality, tests, migrations, build, security]
+    C --> R[Owner review and GitHub required checks]
     R --> M[Merge to main]
-    M --> V[Validate actual merged SHA]
-    P --> PV[Vercel Git Preview with isolated resources]
-    V --> D[Manual Release dispatch for immutable SHA]
-    D --> SC[Protected nonproduction service contracts]
-    SC --> MA[Human migration approval and recovery reference]
+    M --> V[CircleCI validates actual merged SHA]
+    P --> PV[Vercel Preview with isolated resources]
+    PV --> WH[Deployment-status webhook]
+    WH --> PS[Separate fixed-main CircleCI Preview smoke]
+    V --> D[Manual CircleCI release dispatch]
+    D --> SC[Nonproduction service contracts]
+    SC --> MA[Owner migration approval and recovery reference]
     MA --> EX[Compatible expand migrations]
-    EX --> VC[Vercel managed production candidate build]
-    VC --> DC[Controller deployment checks and candidate smoke tests]
-    DC --> A[Explicit production environment approval]
-    A --> RE[Recheck SHA, approvals, CI, findings and candidate identity]
+    EX --> VC[Vercel managed production candidate]
+    VC --> CS[Candidate identity, health and readiness probes]
+    CS --> A[Owner production approval]
+    A --> RE[Recheck main, checks, approval and candidate]
     RE --> PR[Promote the same deployment ID]
-    PR --> O[Canonical smoke tests, runtime logs and service usage]
+    PR --> O[Canonical smoke, durable deployment record, monitoring]
     O --> RB{Regression?}
-    RB -->|Yes: owner approves| RO[Rollback to recorded previous deployment]
+    RB -->|Owner approves| RO[Rollback recorded previous deployment]
     RO --> O
 ```
 
-Vercel's native GitHub Deployment Checks are deliberately not enabled. Native
-checks and automatic domain assignment do not supply the independent human gate
-required here. This implementation uses GitHub's protected environment approval
-and an API controller around Vercel's managed build/promotion service. Git Preview
-builds remain Vercel-managed; Actions does not upload a second production build.
-See [staged deployments](https://vercel.com/docs/deployments/managing-deployments#staged-deployments)
-and [GitHub environment protection](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments).
+CircleCI's production serial group spans both approval waits. Read-only API
+metadata verifies who approved the current workflow; automation cannot approve
+itself. GitHub environments retain deployment history and do not supply these new
+execution approval gates. Vercel native Deployment Checks remain disabled.
 
-## Files and responsibilities
+## Source and execution ownership
 
-| Area                      | Repository implementation                                               | External prerequisite                              |
-| ------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------- |
-| PR/merged validation      | `.github/workflows/ci.yml`                                              | Ruleset and Actions policy                         |
-| Dependency/secret checks  | `security.yml`, Dependabot, pinned Gitleaks bootstrap                   | Alerts, updates, push protection                   |
-| Code scanning             | `codeql.yml`, SARIF severity gate                                       | Advanced configuration enabled; default setup off  |
-| Preview                   | `preview-checks.yml`, bounded origin verification                       | Git integration and isolated Preview configuration |
-| Real service fidelity     | `services-contracts.yml`, `scripts/contracts.mts`                       | Dedicated Turso group and nonproduction Blob token |
-| Controlled release        | `release.yml`, `scripts/release.mts`, approval checks                   | Protected environments and Vercel settings         |
-| SQL evolution             | committed migrations, policy hashes, guarded migration/baseline tooling | Backup/recovery and existing-ledger reconciliation |
-| Error/performance signals | classified JSON operation logs and safe error boundaries                | Vercel Runtime Logs access                         |
-| Liveness/readiness        | `/api/health`, `/api/ready`                                             | Readiness credential in protected GitHub jobs      |
+- `.circleci/config.yml`: PR/main validation, security, contracts, release,
+  rollback and baseline. No Playwright invocation or browser installation.
+- `.circleci/preview.yml`: isolated fixed-main automatic HTTP Preview probes.
+- `scripts/production-harness.mts`: synthetic build/start/HTTPS lifecycle;
+  `ci:build` uses it without browsers and local E2E adds the full browser suite.
+- Release/approval/validation controllers: exact SHA, current-workflow owner
+  approval, fresh provider results and backward-compatible deployment records.
+- [Testing](./testing.md): coverage inventory, hook setup and hosted local acceptance.
+- [CircleCI](./circleci.md): owner settings, credential matrix, schedules and costs.
+- [GitHub](./github.md): source protections, native security and Dependabot.
 
-## Runtime and package policy
+## Runtime, tooling and privacy
 
-`.nvmrc` follows Node 24's maintained major; GitHub and Vercel must both use 24.x.
-This accepts security patches without routinely rewriting three patch pins.
-`packageManager` pins pnpm 12.14.0; the lockfile is committed. Engines reject another
-Node major or pnpm major. CI installs with `--frozen-lockfile --ignore-scripts`.
+Use Node 24 and pnpm 12.18.0 with frozen lockfile and ignored lifecycle scripts.
+Husky installation remains explicit because the package policy disables scripts.
+CircleCI uses the pinned image and transient checksum-verified pnpm/Gitleaks/CodeQL
+archives. Weekly owner review maintains those pins. This migration adds no
+application/package dependencies or local Docker prerequisite.
 
-`ignoreScripts: true` is in `pnpm-workspace.yaml`, where pnpm 12 policy belongs.
-Existing `allowBuilds`, `minimumReleaseAge`, explicit exceptions and security
-overrides are retained. Do not globally enable lifecycle scripts to fix a package.
-Husky installation remains an explicit developer action. No Corepack prerequisite
-is introduced. CI uses the pinned pnpm Action; Vercel uses native pnpm verified by checksum
-bootstraps because its documented automatic pnpm provisioning does not establish
-support for this exact pnpm 12 version.
+No dependency/browser/build/Docker-layer cache is restored in CI. Public Cache
+Components, ISR/data caches and CDN behavior remain intentional application
+features. Vercel still requires `VERCEL_FORCE_NO_BUILD_CACHE=1` for candidate builds.
 
-There are no dependency download caches, browser caches, build artifact caches,
-`.next/cache` restores, or Turbopack build cache persistence in Actions. Vercel
-requires `VERCEL_FORCE_NO_BUILD_CACHE=1`; provider-internal images/download layers
-cannot all be controlled by repository files. Next.js runtime Cache Components,
-ISR/data caches and CDN caching remain application behavior and are preserved.
+Ordinary PR jobs receive no deployment context. Fork PRs are outside CI scope.
+Cloud build fixtures and local browser fixtures contain synthetic data only.
+Remote contracts use an empty owned nonproduction DB and Blob objects. Production
+smoke probes never mutate CMS content or retain authenticated browser recordings.
 
-## Added dependencies
+Upload only explicitly selected diagnostics and identity metadata. Never upload
+all `.ci`, environment files, databases, TLS private keys or browser storage state.
+CircleCI diagnostics are short-lived; deployment records and the private evidence
+archive satisfy durable release retention. Review classified logs and provider
+quotas independently of a green pipeline.
 
-| Addition                             | Necessity and maintenance                          | Existing alternative considered                                               |
-| ------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `@vitest/coverage-v8@4.1.12`         | Match Vitest exactly; V8 coverage and risk gates   | Vitest requires a coverage provider; no second test runner                    |
-| `@testing-library/user-event@14.6.1` | Realistic pending/form interactions                | Keep `fireEvent` for low-level submissions, not as an interaction replacement |
-| `@testing-library/jest-dom@6.9.1`    | Accessible, readable DOM assertions                | Existing RTL renders components but does not provide these matchers           |
-| `@axe-core/playwright@4.11.1`        | Automated WCAG checks in real browsers             | Manual accessibility review remains necessary                                 |
-| `@types/geojson@7946.0.16`           | Declare the map component's GeoJSON types directly | Transitive package visibility is not guaranteed by pnpm                       |
+## Verification evidence
 
-Pinned native Gitleaks and pnpm archives are tools, not runtime packages.
-Their URLs/checksums in `tooling/binaries.json` need reviewed
-updates. No Docker, Vercel CLI dependency, MSW, or hosted browser service was added.
-
-Initial dependency resolution reported deprecation and peer advisories. The
-authorized frozen installation completed without warnings; this does not establish
-that upstream deprecations are resolved. Review them when updating dependencies.
-Never run `audit:fix` in CI or against protected branches.
-
-## Local verification evidence
-
-The following commands passed on the combined change set on 2026-10-20. This
-historical evidence does not verify subsequent changes:
-
-- `git status --short` and `git diff --check`: reviewed file scope and whitespace.
-- `pnpm install --frozen-lockfile --ignore-scripts`: reproducible local installation.
-- `pnpm format:check`, `pnpm lint`, and `pnpm exec tsc --noEmit`.
-- `pnpm exec vitest run`: 606 tests across 61 files.
-- `pnpm exec vitest run --coverage`: all configured risk thresholds passed;
-  overall line coverage was 82.5%.
-- `pnpm spellcheck`, `pnpm knip`, and `pnpm depcruise`.
-- Explicit CSpell validation of all eight `.github` workflow/configuration files,
-  which the regular spelling command's default file discovery skips.
-- `pnpm migrate:check`: clean schema and every migration prefix replayed.
-- `pnpm dlx react-doctor@latest . --verbose --scope changed --base HEAD`:
-  no diagnostics across 34 changed files; heuristic score 65/100.
-- `pnpm build`: production output built against an owned synthetic database with
-  local credential values cleared for the child process.
-
-The Next.js **No build cache found** advisory is expected under the explicit
-no-build-cache requirement; it is not a missing correctness prerequisite. Full
-document navigation after login/logout intentionally discards session-dependent
-router state, with narrowly documented lint exceptions at those two calls.
-Runtime-generated CI fixture paths opt out of deployment file tracing.
-
-Production browser journeys, hosted service contracts, GitHub security workflows,
-and platform approval/recovery drills were not run locally.
-See [testing inventory](./testing.md) for coverage limits and the
-[release runbook](./releases.md) for external acceptance. Hosted deployment readiness
-remains unproven until those checks and platform drills succeed.
+The authorized 2026-10-20 local baseline is historical evidence for that version,
+not for this migration. The explicitly authorized 2026-11-08 pre-commit pass
+completed all nine root checks, including 798 Vitest tests across 74 files and
+the production build. Implementation commit `fc23790` passed all 180 local
+production Playwright tests without retries. See [testing evidence](./testing.md).
+No local checks are authorized by implementation approval alone.
+The dedicated nine-check pre-commit subagent policy remains in force; an explicit
+push request additionally authorizes the mandatory local Playwright gate.
+External settings and release drills stay open in the migration checklist until
+there is actual account/run/deployment evidence.

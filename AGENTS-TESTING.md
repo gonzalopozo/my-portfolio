@@ -1,8 +1,9 @@
 # Testing
 
 The root local-verification restriction applies to every command in this guide.
-Agents run checks only after an explicit request to commit, through the unchanged
-pre-commit process. GitHub Actions runs them automatically in its separate context.
+Agents run the nine checks only after an explicit request to commit, through the
+unchanged pre-commit process. An explicit push request additionally authorizes the
+full local Playwright gate. CircleCI runs browser-free checks in its separate context.
 
 Read `.claude/skills/vitest/SKILL.md` before writing Vitest tests and
 `.claude/skills/playwright-best-practices/SKILL.md` before writing Playwright tests.
@@ -18,8 +19,10 @@ Current configuration/source takes precedence over older skill version examples.
   coverage, infrastructure, expected failures, risk targets and limitations.
 - [Reference](./AGENTS-TESTING-REFERENCE.md): implementation patterns and entry points.
 
-Preserve colocated tests as well as `tests/`. `pnpm test` stays watch mode. CI uses
-one-shot commands and production-mode E2E, never just `next dev`.
+Preserve colocated tests as well as `tests/`. `pnpm test` stays watch mode. CircleCI uses
+one-shot commands and a browser-free synthetic production build/smoke harness.
+The complete production Playwright suite is local at both commit and push hooks,
+never just `next dev` and never cloud browser execution.
 
 ## Required levels
 
@@ -50,7 +53,7 @@ Unit tests may mock database/auth/Next boundaries. Integration tests use
 Do not mock Drizzle in a test claiming database integration. Close clients and clean
 owned fixtures even on failure. Public cached reads must not acquire auth state.
 
-Production E2E requires `CI=true`, an owned temporary database, safe build/runtime
+Local production E2E internally sets `CI=true` and requires an owned temporary database, safe build/runtime
 environment, local HTTPS and no Vercel runtime. The runner initializes these. Test
 fixtures must never add public test endpoints, disable auth/CSRF/SSRF, accept arbitrary
 runtime hosts, or write to production Turso/Blob. The real SQL and better-auth paths
