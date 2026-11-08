@@ -1,0 +1,2 @@
+# A fresh complete production browser run is required for every push.
+pnpm test:e2e:local

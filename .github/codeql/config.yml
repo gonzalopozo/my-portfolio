@@ -1,6 +1,0 @@
-name: Portfolio CodeQL
-paths-ignore:
-    - '.specstory/**'
-    - '.agents/**'
-    - '.claude/**'
-    - 'public/**'

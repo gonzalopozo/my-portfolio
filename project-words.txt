@@ -163,3 +163,13 @@ sarif
 # Dependency updater API keys and weekday values
 cooldown
 monday
+CircleCI
+circleci
+CIRCLECI
+cimg
+PKCE
+zstd
+checkmarks
+codescanning
+cutover
+worktree

@@ -3,9 +3,18 @@ import { buildCsp, getCspHeaderName, getCspMode } from './lib/security/csp';
 import { getBlobPublicHostname } from './lib/blob-environment';
 
 const nextConfig: NextConfig = {
+	distDir:
+		process.env.PORTFOLIO_TEST_BUILD === 'true' &&
+		process.env.CI === 'true' &&
+		process.env.APP_ENV === 'test'
+			? '.ci/next-production'
+			: '.next',
 	env: {
 		NEXT_PUBLIC_RELEASE_SHA:
-			process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? 'local',
+			process.env.VERCEL_GIT_COMMIT_SHA ??
+			process.env.RELEASE_SHA ??
+			process.env.CIRCLE_SHA1 ??
+			'local',
 	},
 	reactCompiler: true,
 	cacheComponents: true,

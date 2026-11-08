@@ -7,7 +7,7 @@ test('liveness is uncached and correlates the built release', async ({ request }
 	expect(response.headers()['cache-control']).toContain('no-store');
 	expect(await response.json()).toEqual({
 		status: 'ok',
-		release: process.env.GITHUB_SHA ?? 'local',
+		release: process.env.RELEASE_SHA ?? 'local',
 	});
 });
 

@@ -49,6 +49,16 @@ describe('release trust boundaries', () => {
 		await expect(api('vercel', 'https://attacker.invalid/path')).rejects.toThrow('origin');
 		expect(fetch).not.toHaveBeenCalled();
 	});
+	it('never approves jobs or sends CircleCI credentials to another endpoint', async () => {
+		const fetch = vi.fn();
+		vi.stubGlobal('fetch', fetch);
+		vi.stubEnv('CIRCLECI_READ_TOKEN', 'synthetic-read-token');
+		await expect(api('circleci', '/api/v2/workflow/fixture/approve', 'POST')).rejects.toThrow(
+			'only read',
+		);
+		await expect(api('circleci', '/other')).rejects.toThrow('only read');
+		expect(fetch).not.toHaveBeenCalled();
+	});
 	it('refuses redirects and omits upstream error bodies', async () => {
 		const fetch = vi.fn<typeof globalThis.fetch>(
 			async () => new Response('private upstream token', { status: 403 }),

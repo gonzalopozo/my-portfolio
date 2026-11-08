@@ -1,4 +1,4 @@
-import { appendFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 export function required(name: string) {
 	const value = process.env[name];
@@ -15,14 +15,21 @@ export function deploymentId(value: string) {
 }
 
 export async function api<T>(
-	platform: 'github' | 'vercel',
+	platform: 'github' | 'vercel' | 'circleci',
 	path: string,
 	method = 'GET',
 	body?: unknown,
 ): Promise<T> {
-	const base = platform === 'github' ? 'https://api.github.com' : 'https://api.vercel.com';
+	const bases = {
+		github: 'https://api.github.com',
+		vercel: 'https://api.vercel.com',
+		circleci: 'https://circleci.com',
+	};
+	const base = bases[platform];
 	const url = new URL(path, base);
 	if (url.origin !== base) throw new Error('Unexpected platform origin.');
+	if (platform === 'circleci' && (method !== 'GET' || !url.pathname.startsWith('/api/v2/')))
+		throw new Error('CircleCI automation may only read workflow metadata.');
 	if (platform === 'vercel' && process.env.VERCEL_TEAM_ID)
 		url.searchParams.set('teamId', process.env.VERCEL_TEAM_ID);
 	const response = await fetch(url, {
@@ -30,7 +37,13 @@ export async function api<T>(
 		redirect: 'error',
 		signal: AbortSignal.timeout(30000),
 		headers: {
-			authorization: `Bearer ${required(platform === 'github' ? 'GITHUB_TOKEN' : 'VERCEL_TOKEN')}`,
+			authorization: `Bearer ${required(
+				platform === 'github'
+					? 'GITHUB_TOKEN'
+					: platform === 'vercel'
+						? 'VERCEL_TOKEN'
+						: 'CIRCLECI_READ_TOKEN',
+			)}`,
 			'content-type': 'application/json',
 			accept: 'application/json',
 			'x-github-api-version': '2022-11-28',
@@ -107,8 +120,23 @@ export function verifiedOrigin(deployment: Deployment) {
 	return url.origin;
 }
 
-export async function output(name: string, value: string) {
+type OutputStage = 'preflight' | 'candidate' | 'preview';
+
+export async function output(stage: OutputStage, name: string, value: string) {
 	if (!/^[a-z_]+$/.test(name) || /[\r\n]/.test(value)) throw new Error('Unsafe workflow output.');
-	if (process.env.GITHUB_OUTPUT)
-		await appendFile(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+	await mkdir('.ci/outputs', { recursive: true });
+	const path = `.ci/outputs/${stage}.json`;
+	const values = JSON.parse(await readFile(path, 'utf8').catch(() => '{}'));
+	await writeFile(path, `${JSON.stringify({ ...values, [name]: value })}\n`);
+}
+
+export async function readOutput(stage: OutputStage, name: string) {
+	const values = JSON.parse(await readFile(`.ci/outputs/${stage}.json`, 'utf8')) as Record<
+		string,
+		unknown
+	>;
+	const value = values[name];
+	if (typeof value !== 'string' || !value || /[\r\n]/.test(value))
+		throw new Error('Missing or invalid workflow handoff.');
+	return value;
 }

@@ -9,7 +9,7 @@ import manifest from '../tooling/binaries.json' with { type: 'json' };
 export async function nativeTool(name) {
 	if (process.platform !== 'linux' || process.arch !== 'x64')
 		throw new Error('This bootstrap supports Linux x64 only.');
-	if (name !== 'pnpm' && name !== 'gitleaks') throw new Error('Unsupported native tool.');
+	if (!['pnpm', 'gitleaks', 'codeql'].includes(name)) throw new Error('Unsupported native tool.');
 	const entry = manifest[name];
 	if (
 		!entry ||
@@ -20,7 +20,9 @@ export async function nativeTool(name) {
 	const url =
 		name === 'pnpm'
 			? `https://github.com/pnpm/pnpm/releases/download/v${entry.version}/pnpm-linux-x64.tar.gz`
-			: `https://github.com/gitleaks/gitleaks/releases/download/v${entry.version}/gitleaks_${entry.version}_linux_x64.tar.gz`;
+			: name === 'gitleaks'
+				? `https://github.com/gitleaks/gitleaks/releases/download/v${entry.version}/gitleaks_${entry.version}_linux_x64.tar.gz`
+				: `https://github.com/github/codeql-action/releases/download/codeql-bundle-v${entry.version}/codeql-bundle-javascript-linux64.tar.zst`;
 	if (entry.url !== url) throw new Error('Unexpected tool release URL.');
 	const signal = AbortSignal.timeout(120000);
 	let response = await fetch(url, { redirect: 'manual', signal });
@@ -46,7 +48,14 @@ export async function nativeTool(name) {
 		// Only checksum-verified bytes reach tar; no downloaded archive is saved to disk.
 		const extraction = spawnSync(
 			'tar',
-			['-xzf', '-', '-C', directory, '--no-same-owner', '--no-same-permissions'],
+			[
+				...(name === 'codeql' ? ['--zstd', '-xf'] : ['-xzf']),
+				'-',
+				'-C',
+				directory,
+				'--no-same-owner',
+				'--no-same-permissions',
+			],
 			{ input: archive, stdio: ['pipe', 'inherit', 'inherit'] },
 		);
 		if (extraction.status !== 0) throw new Error('Tool extraction failed.');

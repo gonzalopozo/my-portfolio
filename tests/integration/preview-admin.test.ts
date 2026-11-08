@@ -52,6 +52,7 @@ beforeEach(async () => {
 	vi.stubEnv('APP_ENV', 'preview');
 	vi.stubEnv('VERCEL', undefined);
 	vi.stubEnv('GITHUB_ACTIONS', undefined);
+	vi.stubEnv('CIRCLECI', undefined);
 	vi.stubEnv('TURSO_DATABASE_URL', `libsql://${hostname}`);
 	vi.stubEnv('TURSO_AUTH_TOKEN', 'synthetic-preview-database-token');
 	vi.stubEnv('PREVIEW_ADMIN_EMAIL', 'preview-admin@example.test');
@@ -131,6 +132,7 @@ describe('Preview administrator provisioning', () => {
 		['APP_ENV', 'production'],
 		['VERCEL', '1'],
 		['GITHUB_ACTIONS', 'true'],
+		['CIRCLECI', 'true'],
 		['TURSO_DATABASE_URL', 'https://unrelated.example.test'],
 		['TURSO_AUTH_TOKEN', ''],
 		['PREVIEW_ADMIN_EMAIL', 'owner@real-domain.com'],

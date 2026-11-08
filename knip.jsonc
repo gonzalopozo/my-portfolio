@@ -23,4 +23,8 @@
 	"drizzle": {
 		"config": ["db/drizzle.config.ts"],
 	},
+	// Hosted Preview acceptance passes this config through the programmatic runner.
+	"playwright": {
+		"config": ["playwright.config.ts", "playwright.csp.config.ts"],
+	},
 }

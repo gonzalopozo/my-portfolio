@@ -45,6 +45,10 @@
 		"test:integration": "vitest run --project integration",
 		"test:coverage": "vitest run --coverage",
 		"test:e2e": "playwright test",
+		"test:e2e:local": "tsx scripts/run-production-e2e.mts",
+		"test:preview": "tsx scripts/preview-acceptance.mts",
+		"ci:build": "tsx scripts/build-production.mts",
+		"ci:codeql": "tsx scripts/codeql.mts",
 		"test:e2e:prod": "tsx scripts/run-production-e2e.mts",
 		"test:api": "tsx scripts/run-production-e2e.mts --project api",
 		"test:contract": "vitest run --config vitest.contract.config.mts",
@@ -141,5 +145,5 @@
 		"vite-tsconfig-paths": "^6.1.1",
 		"vitest": "^5.0.5"
 	},
-	"packageManager": "pnpm@12.14.0"
+	"packageManager": "pnpm@12.18.0"
 }

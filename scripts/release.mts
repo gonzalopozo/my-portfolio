@@ -6,95 +6,32 @@ import {
 	required,
 	project,
 	output,
+	readOutput,
 	verifiedOrigin,
 	verifiedSource,
 	type Deployment,
 } from './platform.mjs';
 import { smoke, waitForCanonicalHealth } from './smoke.mjs';
 import { requireApprovalEnvironment } from './approval.mjs';
+import { ciIdentity, mainWorkflow } from './ci-context.mjs';
+import { validateRelease } from './validate-release.mjs';
 
-type Run = {
-	id: number;
-	conclusion: string;
-	head_sha: string;
-	head_branch: string;
-	event: string;
-	updated_at: string;
-};
 type ReleaseRecord = {
 	id: number;
 	sha: string;
 	payload?: { vercelDeploymentId?: string; previousDeploymentId?: string } | null;
 };
 const repository = required('GITHUB_REPOSITORY');
-if (
-	!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ||
-	process.env.GITHUB_ACTIONS !== 'true' ||
-	process.env.GITHUB_REF !== 'refs/heads/main'
-)
-	throw new Error('Releases run only from the trusted main workflow.');
+const operation = process.argv[2];
+await mainWorkflow(operation === 'rollback' ? ['rollback'] : ['release']);
 const sha = commit(required('EXPECTED_SHA'));
-
-async function validateCommit() {
-	const branch = await api<{ object: { sha: string } }>(
-		'github',
-		`/repos/${repository}/git/ref/heads/main`,
-	);
-	if (branch.object.sha !== sha) throw new Error('Release is stale: main has changed.');
-	for (const workflow of ['ci.yml', 'security.yml', 'codeql.yml']) {
-		const result = await api<{ workflow_runs: Run[] }>(
-			'github',
-			`/repos/${repository}/actions/workflows/${workflow}/runs?head_sha=${sha}&branch=main&event=push&per_page=1`,
-		);
-		const run = result.workflow_runs[0];
-		const fresh = (value: Run | undefined) =>
-			value &&
-			Number.isFinite(Date.parse(value.updated_at)) &&
-			Date.now() - Date.parse(value.updated_at) >= -300000 &&
-			Date.now() - Date.parse(value.updated_at) < 86400000;
-		if (
-			!run ||
-			run.conclusion !== 'success' ||
-			run.head_sha !== sha ||
-			run.head_branch !== 'main' ||
-			run.event !== 'push' ||
-			!fresh(run)
-		)
-			throw new Error(`Missing fresh merged-commit validation: ${workflow}`);
-		const latest = await api<{ workflow_runs: Run[] }>(
-			'github',
-			`/repos/${repository}/actions/workflows/${workflow}/runs?head_sha=${sha}&branch=main&per_page=1`,
-		);
-		const current = latest.workflow_runs[0];
-		if (
-			!current ||
-			current.head_sha !== sha ||
-			current.head_branch !== 'main' ||
-			current.conclusion !== 'success' ||
-			!fresh(current)
-		)
-			throw new Error(
-				`The latest validation or scheduled scan is not successful: ${workflow}`,
-			);
-	}
-	for (let page = 1; page <= 100; page++) {
-		const alerts = await api<
-			{ rule: { severity: string; security_severity_level?: string } }[]
-		>(
-			'github',
-			`/repos/${repository}/code-scanning/alerts?state=open&ref=refs/heads/main&per_page=100&page=${page}`,
-		);
-		if (
-			alerts.some(
-				(alert) =>
-					['high', 'critical'].includes(alert.rule.security_severity_level ?? '') ||
-					alert.rule.severity === 'error',
-			)
-		)
-			throw new Error('Open blocking code scanning findings.');
-		if (alerts.length < 100) return;
-	}
-	throw new Error('Code scanning result pagination exceeded its bound.');
+if (operation !== 'rollback' && sha !== required('CIRCLE_SHA1'))
+	throw new Error('Release checkout differs from the requested main SHA.');
+const validateCommit = () => validateRelease(sha);
+if (operation === 'create' || operation === 'promote') {
+	process.env.PREVIOUS_DEPLOYMENT_ID = deploymentId(await readOutput('preflight', 'previous'));
+	if (operation === 'promote')
+		process.env.DEPLOYMENT_ID = deploymentId(await readOutput('candidate', 'deployment'));
 }
 
 async function candidate(id: string) {
@@ -113,14 +50,10 @@ async function candidate(id: string) {
 }
 
 async function evidence(data: object) {
-	await mkdir('.ci', { recursive: true });
+	await mkdir('.ci/evidence', { recursive: true });
 	await writeFile(
-		'.ci/release-evidence.json',
-		JSON.stringify(
-			{ ...data, sha, runId: process.env.GITHUB_RUN_ID, at: new Date().toISOString() },
-			null,
-			2,
-		),
+		`.ci/evidence/${operation}.json`,
+		JSON.stringify({ ...data, sha, ci: ciIdentity(), at: new Date().toISOString() }, null, 2),
 	);
 }
 
@@ -132,7 +65,6 @@ async function waitForLive(id: string) {
 	throw new Error('Production alias did not converge to the requested deployment.');
 }
 
-const operation = process.argv[2];
 const configuration = await project();
 if (operation === 'preflight') {
 	await requireApprovalEnvironment('production');
@@ -145,8 +77,9 @@ if (operation === 'preflight') {
 		throw new Error(
 			'Record an existing production deployment before enabling automated releases.',
 		);
-	await output('previous', deploymentId(previous));
+	await output('preflight', 'previous', deploymentId(previous));
 } else if (operation === 'create') {
+	const migrationApproval = await requireApprovalEnvironment('production-migrations', true);
 	await validateCommit();
 	if (configuration.autoAssignCustomDomains !== false)
 		throw new Error('Automatic domain assignment would bypass human approval.');
@@ -157,6 +90,7 @@ if (operation === 'preflight') {
 		gitSource: { type: 'github', repoId: configuration.link!.repoId, ref: 'main', sha },
 	});
 	const id = deploymentId(created.id);
+	await evidence({ candidate: id, state: 'candidate-created' });
 	let deployment: Deployment | undefined;
 	for (let index = 0; index < 240; index++) {
 		const state = await api<Deployment>('vercel', `/v13/deployments/${id}`);
@@ -173,15 +107,35 @@ if (operation === 'preflight') {
 	if (current.targets?.production?.id !== required('PREVIOUS_DEPLOYMENT_ID'))
 		throw new Error('Production changed during candidate creation.');
 	await smoke(verifiedOrigin(deployment), sha, true);
-	await output('deployment', id);
-	await output('origin', verifiedOrigin(deployment));
+	await output('candidate', 'deployment', id);
+	await output('candidate', 'origin', verifiedOrigin(deployment));
+	const record = await api<{ id: number }>('github', `/repos/${repository}/deployments`, 'POST', {
+		ref: sha,
+		environment: 'release-candidate',
+		auto_merge: false,
+		required_contexts: [],
+		production_environment: false,
+		transient_environment: true,
+		payload: {
+			vercelDeploymentId: id,
+			previousDeploymentId: required('PREVIOUS_DEPLOYMENT_ID'),
+			ci: ciIdentity(),
+			migrationApproval,
+			at: new Date().toISOString(),
+		},
+	});
+	await api('github', `/repos/${repository}/deployments/${record.id}/statuses`, 'POST', {
+		state: 'success',
+		environment_url: verifiedOrigin(deployment),
+		description: 'Candidate smoke verified; production approval pending.',
+	});
 	await evidence({
 		candidate: id,
 		previous: required('PREVIOUS_DEPLOYMENT_ID'),
 		state: 'candidate-verified',
 	});
 } else if (operation === 'promote') {
-	await requireApprovalEnvironment('production', true);
+	const approval = await requireApprovalEnvironment('production', true);
 	await validateCommit();
 	const deployment = await candidate(required('DEPLOYMENT_ID'));
 	if (
@@ -202,6 +156,9 @@ if (operation === 'preflight') {
 		payload: {
 			vercelDeploymentId: deployment.id,
 			previousDeploymentId: required('PREVIOUS_DEPLOYMENT_ID'),
+			ci: ciIdentity(),
+			approval,
+			at: new Date().toISOString(),
 		},
 	});
 	try {
@@ -252,7 +209,7 @@ if (operation === 'preflight') {
 		throw error;
 	}
 } else if (operation === 'rollback') {
-	await requireApprovalEnvironment('production', true);
+	const approval = await requireApprovalEnvironment('production', true);
 	const id = deploymentId(required('DEPLOYMENT_ID'));
 	const records = await api<ReleaseRecord[]>(
 		'github',
@@ -290,6 +247,9 @@ if (operation === 'preflight') {
 			vercelDeploymentId: id,
 			previousDeploymentId: configuration.targets?.production?.id,
 			operation: 'rollback',
+			ci: ciIdentity(),
+			approval,
+			at: new Date().toISOString(),
 		},
 	});
 	try {

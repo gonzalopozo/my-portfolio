@@ -1,108 +1,84 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as Context from '../../scripts/ci-context.mjs';
 
-const context = vi.hoisted(() => ({
-	approved: true,
-	reviewers: true,
-	branches: ['main'],
-	history: true,
-	environmentId: 123 as number | undefined,
-	approvalEnvironmentId: 123 as number | undefined,
-	environmentName: 'production',
-	approvalEnvironmentName: 'production',
-}));
-vi.mock('../../scripts/platform.mjs', () => ({
-	required: (name: string) => (name === 'GITHUB_REPOSITORY' ? 'owner/repository' : '123'),
-	api: async (_platform: string, path: string) => {
-		if (path.endsWith('/deployment-branch-policies'))
-			return { branch_policies: context.branches.map((name) => ({ name, type: 'branch' })) };
-		if (path.endsWith('/approvals'))
-			return context.history
-				? [
-						{
-							state: context.approved ? 'approved' : 'rejected',
-							environments: [
-								{
-									id: context.approvalEnvironmentId,
-									name: context.approvalEnvironmentName,
-								},
-							],
-						},
-					]
-				: [];
-		return {
-			id: context.environmentId,
-			name: context.environmentName,
-			protection_rules: context.reviewers
-				? [{ type: 'required_reviewers', prevent_self_review: false, reviewers: [{}] }]
-				: [],
-			deployment_branch_policy: { custom_branch_policies: true },
-		};
-	},
+const fixture = vi.hoisted(() => ({ mainWorkflow: vi.fn() }));
+vi.mock('../../scripts/ci-context.mjs', async (importOriginal) => ({
+	...(await importOriginal<typeof Context>()),
+	mainWorkflow: fixture.mainWorkflow,
 }));
 import { requireApprovalEnvironment } from '../../scripts/approval.mjs';
 
-beforeEach(() =>
-	Object.assign(context, {
-		approved: true,
-		reviewers: true,
-		branches: ['main'],
-		history: true,
-		environmentId: 123,
-		approvalEnvironmentId: 123,
-		environmentName: 'production',
-		approvalEnvironmentName: 'production',
-	}),
-);
-describe('explicit human approval', () => {
-	it('accepts a protected environment and recorded approval', async () => {
-		await expect(requireApprovalEnvironment('production', true)).resolves.toBeUndefined();
+const owner = '11111111-1111-4111-8111-111111111111';
+const workflowId = '22222222-2222-4222-8222-222222222222';
+const jobId = '33333333-3333-4333-8333-333333333333';
+const fetch = vi.fn<typeof globalThis.fetch>();
+let job: Record<string, unknown>;
+
+beforeEach(() => {
+	vi.resetAllMocks();
+	vi.stubEnv('CIRCLECI_APPROVER_ID', owner);
+	vi.stubEnv('CIRCLECI_READ_TOKEN', 'synthetic-read-only-token');
+	vi.stubGlobal('fetch', fetch);
+	fixture.mainWorkflow.mockResolvedValue({
+		id: workflowId,
+		created_at: new Date(Date.now() - 60000).toISOString(),
 	});
-	it.each(['Production', 'PRODUCTION'])(
-		'accepts approval for the same environment ID when its display name is %s',
-		async (name) => {
-			context.environmentName = name;
-			context.approvalEnvironmentName = name;
-			await expect(requireApprovalEnvironment('production', true)).resolves.toBeUndefined();
+	job = {
+		id: jobId,
+		name: 'release-flow.approve-production',
+		type: 'approval',
+		status: 'success',
+		approved_by: owner,
+		stopped_at: new Date(Date.now() - 1000).toISOString(),
+	};
+	fetch.mockImplementation(async () => Response.json({ items: [job] }));
+});
+afterEach(() => {
+	vi.unstubAllEnvs();
+	vi.unstubAllGlobals();
+});
+
+describe('CircleCI human approval', () => {
+	it('returns owner and hold identity for the current production workflow', async () => {
+		await expect(requireApprovalEnvironment('production', true)).resolves.toMatchObject({
+			jobId,
+			approvedBy: owner,
+		});
+		expect(fixture.mainWorkflow).toHaveBeenCalledWith(['release', 'rollback']);
+		expect(fetch.mock.calls[0][0].toString()).toContain(`/workflow/${workflowId}/job`);
+	});
+	it('allows an unapproved hold only during preflight', async () => {
+		job.status = 'on_hold';
+		delete job.approved_by;
+		await expect(requireApprovalEnvironment('production')).resolves.toBeUndefined();
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('approval');
+	});
+	it.each(['failed', 'canceled', 'not_run', 'on_hold'])('rejects status %s', async (status) => {
+		job.status = status;
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('approval');
+	});
+	it('rejects an approval by another actor', async () => {
+		job.approved_by = workflowId;
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('owner');
+	});
+	it('rejects an approval for the other production role', async () => {
+		job.name = 'release-flow.approve-migrations';
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('unique');
+	});
+	it.each([undefined, 'invalid', new Date(Date.now() - 86400001).toISOString()])(
+		'rejects a missing, invalid or expired approval time (%s)',
+		async (time) => {
+			job.stopped_at = time;
+			await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('fresh');
 		},
 	);
-	it('rejects an approval for another environment ID even when the name matches', async () => {
-		context.approvalEnvironmentId = 456;
-		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
-			'No recorded human approval',
-		);
+	it('rejects duplicate approval jobs', async () => {
+		fetch.mockResolvedValueOnce(Response.json({ items: [job, { ...job, id: owner }] }));
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('unique');
 	});
-	it('rejects an approval without an environment ID', async () => {
-		context.approvalEnvironmentId = undefined;
-		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
-			'No recorded human approval',
-		);
-	});
-	it.each([undefined, 0, -1, 1.5, Number.NaN])(
-		'rejects an unproven environment identity (%s)',
-		async (id) => {
-			context.environmentId = id;
-			await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
-				'Environment identity is unproven',
-			);
-		},
-	);
-	it('rejects an environment created without reviewers', async () => {
-		context.reviewers = false;
-		await expect(requireApprovalEnvironment('production')).rejects.toThrow('owner approval');
-	});
-	it('rejects a broad branch policy', async () => {
-		context.branches = ['*'];
-		await expect(requireApprovalEnvironment('production')).rejects.toThrow('only the main');
-	});
-	it('rejects missing or rejected review history', async () => {
-		context.history = false;
-		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
-			'No recorded human approval',
-		);
-		context.history = true;
-		context.approved = false;
-		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow(
-			'No recorded human approval',
-		);
+	it('propagates a workflow/source mismatch without accepting the hold', async () => {
+		fixture.mainWorkflow.mockRejectedValueOnce(new Error('Workflow identity mismatch.'));
+		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('identity');
+		expect(fetch).not.toHaveBeenCalled();
 	});
 });
