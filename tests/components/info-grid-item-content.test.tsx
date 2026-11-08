@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { InfoGridItemContent } from '@/components/public/info-grid-item-content';
 import { PortfolioSectionProvider } from '@/components/public/portfolio-section-provider';
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	window.history.replaceState(null, '', '/');
+});
 
 describe('responsive introduction content', () => {
 	it('keeps the portrait, complete introduction, status, and both actions available', () => {
@@ -34,6 +37,7 @@ describe('responsive introduction content', () => {
 	});
 
 	it('omits an unavailable CV and redundant section action in About me', () => {
+		window.history.replaceState(null, '', '/?section=About+me');
 		render(
 			<NuqsTestingAdapter searchParams="?section=About+me">
 				<PortfolioSectionProvider>

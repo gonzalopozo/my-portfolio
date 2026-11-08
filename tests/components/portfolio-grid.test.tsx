@@ -58,6 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	cleanup();
+	window.history.replaceState(null, '', '/');
 	grid.width = 1200;
 	grid.mounted = true;
 	grid.isMobile = false;
@@ -67,7 +68,10 @@ afterEach(() => {
 });
 
 function setup(searchParams = '', empty = false) {
-	const onUrlUpdate = vi.fn();
+	window.history.replaceState(null, '', `/${searchParams}`);
+	const onUrlUpdate = vi.fn(({ queryString }: { queryString: string }) => {
+		window.history.replaceState(null, '', `/${queryString}`);
+	});
 	const renderContent = () => (
 		<NuqsTestingAdapter
 			searchParams={searchParams}
