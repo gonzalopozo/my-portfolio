@@ -194,6 +194,7 @@ jobs:
             - run: pnpm migrate:baseline
 
 # A serial job group holds the production lock across both human approval waits.
+# Keep approval names unique across groups so dependencies resolve within their group.
 job-groups:
     release-flow:
         jobs:
@@ -202,38 +203,38 @@ job-groups:
             - contracts:
                   context: [ci-metadata, service-contracts]
                   requires: [preflight]
-            - approve-migrations:
+            - approve-release-migrations:
                   type: approval
                   requires: [contracts]
             - migrate:
                   context: [ci-metadata, production-migrations]
-                  requires: [approve-migrations]
+                  requires: [approve-release-migrations]
             - candidate:
                   context: [ci-metadata, release-candidate]
                   requires: [migrate]
-            - approve-production:
+            - approve-release-production:
                   type: approval
                   requires: [candidate]
             - promote:
                   context: [ci-metadata, production]
-                  requires: [approve-production]
+                  requires: [approve-release-production]
     rollback-flow:
         jobs:
-            - approve-production:
+            - approve-rollback-production:
                   type: approval
             - rollback:
                   context: [ci-metadata, production]
-                  requires: [approve-production]
+                  requires: [approve-rollback-production]
     baseline-flow:
         jobs:
             - baseline-preflight:
                   context: ci-metadata
-            - approve-migrations:
+            - approve-baseline-migrations:
                   type: approval
                   requires: [baseline-preflight]
             - baseline:
                   context: [ci-metadata, production-migrations]
-                  requires: [approve-migrations]
+                  requires: [approve-baseline-migrations]
 
 workflows:
     pr-validation:

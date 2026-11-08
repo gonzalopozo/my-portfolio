@@ -9,10 +9,16 @@ has passed validation.
 
 Use the [CircleCI setup guide](./circleci.md), [local testing guide](./testing.md),
 [GitHub protections](./github.md), and [release runbook](./releases.md). Work in
-this order. Record completion dates and exact SHA/run/deployment evidence. Every
-item below is deliberately open until its acceptance has been demonstrated;
-repository implementation alone does not complete platform setup or testing.
+the phase order below. CCI numbers are stable task IDs; they are not a strict
+numerical execution order. Record completion dates and exact SHA/run/deployment
+evidence. Existing checkmarks retain owner-recorded progress; implementation
+alone does not complete platform setup or testing.
 Never include credentials, browser state, databases or private response bodies.
+
+**If your migration branch is already committed and pushed, continue with
+[Publish the branch and validate its PR](#publish-the-branch-and-validate-its-pr).
+Open the PR before attempting CCI-006.** Pushing a feature branch and validating
+a PR are separate steps.
 
 ## Account, safety and developer setup
 
@@ -30,14 +36,6 @@ Never include credentials, browser state, databases or private response bodies.
     **Where:** [CircleCI signup](https://circleci.com/signup/) → organization;
     Plan / Usage; GitHub → Settings → Applications → Installed GitHub Apps.
 
-- [x] **CCI-003.** Create the Portfolio and isolated Portfolio Preview projects.
-      Set the Portfolio trigger to same-repository PRs/default-branch pushes and
-      target main. Set Preview config/checkout to main with no push/PR trigger.
-      Record project IDs, pipeline definition IDs and the main project slug.
-
-    **Where:** CircleCI → Projects → Create Project → Project Setup. See the
-    [project setup instructions](./circleci.md#projects-and-triggers).
-
 - [x] **CCI-004.** Install Node 24, pinned pnpm, OpenSSL, all Playwright browsers
       and required system libraries locally. Run the explicit Husky installation
       in every clone/worktree used for commits or pushes.
@@ -45,7 +43,7 @@ Never include credentials, browser state, databases or private response bodies.
     **Where:** Local terminal → [developer setup](./testing.md#developer-setup).
     Implementation approval does not authorize agents to run verification.
 
-- [ ] **CCI-005.** On a disposable local branch, demonstrate both hooks run the
+- [x] **CCI-005.** On a disposable local branch, demonstrate both hooks run the
       complete production suite and a browser failure blocks both commit and push.
       Confirm API, all three desktop engines, mobile and CSP projects run, cleanup
       succeeds and an active development build remains intact.
@@ -53,64 +51,74 @@ Never include credentials, browser state, databases or private response bodies.
     **Where:** Local terminal → authorized commit/push verification. Record test
     output and the tested working-tree state privately; never push a failing branch.
 
-## Pipeline and controller acceptance
+## Publish the branch and validate its PR
 
-- [ ] **CCI-006.** Prove the seven CircleCI validation jobs on the migration PR:
+Before CCI-006, complete this publishing sequence. If an action is already
+complete, continue with the next one rather than repeating it.
+
+1. Complete authorized local verification, commit the migration on its feature
+   branch, and push that branch. Keep main protected; merge through a PR.
+2. Finish or confirm the Portfolio project setup in CCI-003 using the pushed
+   branch for initial bootstrap and the enabled PR/default-branch trigger.
+3. On GitHub, open the migration PR with **base main** and **compare your
+   pushed migration branch**. A draft PR is supported by the selected trigger.
+4. Continue with CCI-006 once that PR has triggered `pr-validation`. A push
+   to a feature branch without an open PR is not this PR-validation run.
+
+Prepare the restricted contexts in CCI-008 before merge so the first actual
+main validation can publish CodeQL. Keep deployment credentials out of PR
+jobs and keep `CIRCLECI_RELEASES_ENABLED=false`.
+
+- [x] **CCI-003.** Create the Portfolio and isolated Portfolio Preview projects.
+      Enable the Portfolio GitHub trigger for same-repository PRs/default-branch
+      pushes, using `.circleci/config.yml` from the event revision. Target main
+      as the PR base. For Preview, prepare `.circleci/preview.yml` with main
+      config/checkout refs and keep its GitHub trigger disabled. Connect and
+      prove the Preview webhook only after merge, in CCI-011.
+      Record project IDs, pipeline definition IDs and the main project slug.
+
+    **Where:** CircleCI → Projects → Create Project → Project Setup. See the
+    [project setup instructions](./circleci.md#projects-and-triggers).
+
+- [ ] **CCI-006.** After opening the migration PR against main, wait for its
+      `pr-validation` workflow and prove all seven CircleCI jobs:
       quality, tests/coverage, migrations, browser-free production build/smoke,
       dependencies, secrets and CodeQL. Confirm frozen pnpm installation, no
       caches, no Playwright invocation and no browser downloads.
 
-    **Where:** CircleCI → Portfolio → migration PR pipeline → job results.
+    **Where:** GitHub → Pull requests → migration PR → Checks; CircleCI →
+    Portfolio → `pr-validation` → job results. This item verifies the PR
+    created in the steps above; it does not require an earlier PR or merge.
 
-- [ ] **CCI-007.** Prove CodeQL severity blocking and trusted-main SARIF publication;
-      disable duplicate GitHub default CodeQL setup. Retain the dependency graph,
-      Dependabot alerts/updates, native secret scanning and push protection.
-      Resolve historical exposed credentials and review bypass permissions.
-
-    **Where:** CircleCI security jobs; GitHub → Settings → Code security and
-    Security → Code scanning / Secret scanning. Carries forward 038–041 and 160.
-
-- [ ] **CCI-008.** Configure every context and its project/main/SSH/config-source
-      restrictions. Obtain the read-scoped CircleCI API token and owner UUID.
+- [ ] **CCI-008.** Before merging, configure every context and its project, main,
+      SSH and config-source restrictions. Obtain the read-scoped CircleCI API
+      token and owner UUID.
       Issue narrowly scoped GitHub credentials and migrate provider secrets from
-      private storage. Keep release activation false until the controlled drill.
+      private storage. Prepare the isolated Preview project variables too,
+      keeping its webhook off until CCI-011. Ordinary PR validation receives
+      none of these privileged contexts. Keep release activation false until
+      the controlled drill.
 
     **Where:** CircleCI → Organization Settings → Contexts and User Settings;
     provider token dashboards; [credential matrix](./circleci.md#credentials).
 
-- [ ] **CCI-009.** Demonstrate controllers reject wrong projects, checkouts,
-      workflows, SHAs, approval roles/actors and missing/expired approvals.
-      Confirm fresh actual main-push validation is required; newer failed/pending
-      scans block release and stale results cannot be reused.
+- [ ] **CCI-009.** Review the migration PR controller test results for rejection
+      of wrong projects, checkouts, workflows, SHAs, approval roles/actors and
+      missing/expired approvals. Confirm coverage of fresh main-push proof,
+      newer failed/pending scans and stale-result rejection. Actual hosted
+      approval/release drills follow merge in CCI-012 and CCI-016; passing unit
+      tests does not prove external account settings.
 
-    **Where:** CircleCI → controller test results; isolated owner-operated release
-    rehearsal. Carries forward 053 and the applicable 251–255 drills.
+    **Where:** CircleCI → migration PR → tests → controller test results.
+    Carries forward the test coverage for 053 and applicable 251–255 drills;
+    retain actual hosted rehearsal evidence under CCI-012 / CCI-016.
 
-- [ ] **CCI-010.** Run service contracts from trusted main using only nonproduction
-      resources. Prove ownership fingerprint checks, success/failure cleanup and
-      interrupted-run reconciliation. Confirm production schema/ledger and
-      compatibility guards remain enforced.
+## Switch required checks and merge the PR
 
-    **Where:** CircleCI → Run Pipeline → task `contracts`; isolated Turso/Blob
-    dashboards; [services guide](./services.md). Carries forward 256–257 and 261.
-
-- [ ] **CCI-011.** Connect the GitHub deployment-status webhook to the isolated
-      Preview project. Prove successful Preview events automatically run HTTP
-      smoke checks; ping/failure/production events are ignored, other repositories
-      and fork-only/superseded sources are rejected, and credentials stay private.
-      Run authenticated Preview browser acceptance locally when applicable.
-
-    **Where:** GitHub → Settings → Webhooks → Recent Deliveries; CircleCI →
-    Portfolio Preview; local `pnpm test:preview`. See [Preview setup](./circleci.md#automatic-preview-smoke).
-
-## Cutover, release and ongoing ownership
-
-- [ ] **CCI-012.** Prove missing/failed/cancelled/skipped gates block merging and
-      release. Rehearse failed contracts, drift, build/smoke failures, changed main,
-      rejected approval, canonical smoke failure and interrupted cleanup safely.
-
-    **Where:** Disposable PR/local branch and isolated CircleCI/provider resources.
-    Carries forward applicable historical 251–261; do not mutate production for drills.
+Continue only after the migration PR has successful CircleCI checks.
+Configure the new required checks while the PR is open, then merge it.
+Main-only publication, service contracts and Preview checks follow merge;
+they are not prerequisites for creating this first migration PR.
 
 - [ ] **CCI-013.** After the seven checks genuinely appear on the migration PR,
       replace old Actions required checks with their exact CircleCI names and
@@ -118,7 +126,9 @@ Never include credentials, browser state, databases or private response bodies.
       resolution, force-push/deletion restrictions and CodeQL severity enforcement
       through the required CircleCI check. Retire native required-tool rules that
       still wait for PR/Actions analyses; main SARIF/alerts remain active.
-      A final Actions rerun is not required for this cutover.
+      Disable duplicate default CodeQL setup so main can accept external SARIF.
+      Keep release activation false. A final Actions rerun is not required
+      for this cutover.
 
     **Where:** GitHub → Settings → Rules → Production main → required checks.
     Record the actual emitted names and a failing-check rejection example.
@@ -132,6 +142,13 @@ Never include credentials, browser state, databases or private response bodies.
     Standard Dependabot update jobs may remain visible in Actions; they do not
     consume the included Actions minutes.
 
+## Validate merged main and hosted workflows
+
+These tasks require the migration files on main. First obtain successful
+validation for the actual merged SHA; keep production release activation
+disabled while accepting security publication, nonproduction contracts,
+Preview checks and isolated controller rehearsals.
+
 - [ ] **CCI-015.** Retain successful main-validation evidence for the exact merged
       SHA. Enable daily security and weekly CodeQL schedule triggers; prove their
       first runs. Review actual credits, resource memory and projected monthly
@@ -139,6 +156,44 @@ Never include credentials, browser state, databases or private response bodies.
 
     **Where:** CircleCI → Portfolio → pipelines / Project Setup → Schedules;
     organization → Plan / Usage. Never enable paid overage to make a check pass.
+
+- [ ] **CCI-007.** After merge, prove trusted-main SARIF publication and verify
+      that the duplicate GitHub default CodeQL setup was disabled at CCI-013.
+      Retain the PR severity-blocking evidence from CCI-006, the dependency graph,
+      Dependabot alerts/updates, native secret scanning and push protection.
+      Resolve historical exposed credentials and review bypass permissions.
+
+    **Where:** CircleCI security jobs; GitHub → Settings → Code security and
+    Security → Code scanning / Secret scanning. Carries forward 038–041 and 160.
+
+- [ ] **CCI-010.** After the migration config/scripts reach main, run service
+      contracts from trusted main using only nonproduction resources. Prove
+      ownership fingerprint checks, success/failure cleanup and
+      interrupted-run reconciliation. Confirm production schema/ledger and
+      compatibility guards remain enforced.
+
+    **Where:** CircleCI → Run Pipeline → task `contracts`; isolated Turso/Blob
+    dashboards; [services guide](./services.md). Carries forward 256–257 and 261.
+
+- [ ] **CCI-011.** After `.circleci/preview.yml` and its controller reach main,
+      connect the GitHub deployment-status webhook to the isolated Preview
+      project. Prove successful Preview events automatically run HTTP
+      smoke checks; ping/failure/production events are ignored, other repositories
+      and fork-only/superseded sources are rejected, and credentials stay private.
+      Run authenticated Preview browser acceptance locally when applicable.
+
+    **Where:** GitHub → Settings → Webhooks → Recent Deliveries; CircleCI →
+    Portfolio Preview; local `pnpm test:preview`. See [Preview setup](./circleci.md#automatic-preview-smoke).
+
+- [ ] **CCI-012.** After merge, retain the merge-blocking evidence from CCI-013
+      and prove missing/failed/cancelled/skipped gates block release. Rehearse
+      failed contracts, drift, build/smoke failures, changed main,
+      rejected approval, canonical smoke failure and interrupted cleanup safely.
+
+    **Where:** Disposable PR/local branch and isolated CircleCI/provider resources.
+    Carries forward applicable historical 251–261; do not mutate production for drills.
+
+## Production activation and ongoing ownership
 
 - [ ] **CCI-016.** Deliberately enable releases for a controlled release and rollback
       drill. Review SQL/recovery before migration approval and candidate evidence

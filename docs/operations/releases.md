@@ -16,7 +16,10 @@ validation also blocks the affected gates. Rerun the original push workflow for
 unchanged main if freshness has expired; old scheduled failures may be superseded
 by a newer successful full validation.
 
-CircleCI holds are the human gates: `approve-migrations` and `approve-production`.
+CircleCI holds are the human gates. Releases use `approve-release-migrations` and
+`approve-release-production`; baseline and rollback use `approve-baseline-migrations`
+and `approve-rollback-production`, respectively. Each hold has a distinct name so
+dependencies remain within its job group.
 The controller binds them to the current workflow/project/pipeline/main checkout,
 requires the configured owner UUID and rejects missing, cancelled, wrong-role or
 expired approvals. A pipeline start, green smoke check or GitHub Deployment record
@@ -36,7 +39,7 @@ is not approval. Its read-scoped CircleCI token cannot approve jobs.
    domain assignment and the previous production target.
 5. Service contracts create an owned disposable nonproduction Turso database,
    exercise real SQL/Blob transport and clean up. Failure blocks migration/build.
-6. Open the `approve-migrations` hold inside the release group. Review the SQL diff,
+6. Open the `approve-release-migrations` hold inside the release group. Review the SQL diff,
    expand/contract policy, ledger/drift and recovery point. Approve deliberately.
    Migration rechecks approval, checkout/current SHA and fresh validation before
    applying reviewed expand SQL under the database write lock. No schema push or
@@ -48,7 +51,7 @@ is not approval. Its read-scoped CircleCI token cannot approve jobs.
 8. **Before approving production**, review candidate evidence, the protected
    deployment URL, candidate ID/SHA and relevant runtime logs. Record the canonical
    health SHA while waiting and confirm it is still the previous live release.
-9. Approve `approve-production`. The controller rechecks owner approval, main,
+9. Approve `approve-release-production`. The controller rechecks owner approval, main,
    fresh validation/findings, candidate age/source, previous live identity and smoke
    behavior. Changed main/production, expired evidence or a failed probe blocks it.
 10. Promotion uses the same candidate ID without rebuilding. The controller restores
@@ -91,7 +94,7 @@ storage state, database files, TLS keys or environment files. See
 
 Use `task=baseline`, the full current main `sha`, `recovery_point`, and exact
 `baseline_tag`. Preflight requires fresh validation and the migration hold.
-After SQL/schema comparison and recovery review, approve `approve-migrations`.
+After SQL/schema comparison and recovery review, approve `approve-baseline-migrations`.
 The controller checks the exact reference schema and inserts only the matching
 historical ledger prefix. Existing ledgers and unknown drift are rejected.
 A baseline is an exceptional owner operation, not a normal release step.
@@ -106,7 +109,7 @@ A baseline is an exceptional owner operation, not a normal release step.
 3. In CircleCI Run Pipeline, select main for controller config/checkout and enter
    `task=rollback`, `deployment_id=<previous-id>` and `sha=<previous-full-sha>`.
    The target SHA intentionally differs from the controller/current main SHA.
-4. Review the target and approve `approve-production`. The controller verifies
+4. Review the target and approve `approve-rollback-production`. The controller verifies
    the successful GitHub deployment chain and target source, performs read-only
    smoke probes, invokes Vercel rollback, restores domain safeguards and waits
    for canonical health/public/auth checks before recording success.

@@ -142,7 +142,7 @@ See [automation bypass](https://vercel.com/docs/deployment-protection/methods-to
 
 Follow [releases](./releases.md). Candidate creation must leave the canonical domain
 on the old deployment. Review the protected candidate and CircleCI/GitHub deployment evidence, then
-approve the CircleCI **approve-production** hold. Promotion uses the same deployment ID and never
+approve the CircleCI **approve-release-production** hold. Promotion uses the same deployment ID and never
 rebuilds the release. The controller resets automatic domain assignment to false
 because promotion can re-enable it, then verifies canonical identity and behavior.
 

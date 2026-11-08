@@ -3,17 +3,23 @@ import { circlePages, mainWorkflow, uuid, type WorkflowJob } from './ci-context.
 
 /** Check the owner-approved hold in this exact workflow, including job-group prefixes. */
 export async function requireApprovalEnvironment(name: string, approved = false) {
-	const role =
+	const roles: Record<string, string> | undefined =
 		name === 'production-migrations'
-			? 'approve-migrations'
+			? {
+					release: 'approve-release-migrations',
+					baseline: 'approve-baseline-migrations',
+				}
 			: name === 'production'
-				? 'approve-production'
+				? {
+						release: 'approve-release-production',
+						rollback: 'approve-rollback-production',
+					}
 				: undefined;
-	if (!role) throw new Error('Unknown production approval role.');
+	if (!roles) throw new Error('Unknown production approval role.');
 	const owner = uuid(required('CIRCLECI_APPROVER_ID'));
-	const workflow = await mainWorkflow(
-		name === 'production-migrations' ? ['release', 'baseline'] : ['release', 'rollback'],
-	);
+	const workflow = await mainWorkflow(Object.keys(roles));
+	const role = roles[workflow.name];
+	if (!role) throw new Error('Unknown production approval workflow.');
 	const jobs = await circlePages<WorkflowJob>(`/api/v2/workflow/${workflow.id}/job`);
 	const matches = jobs.filter(
 		(job) =>

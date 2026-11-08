@@ -21,11 +21,12 @@ beforeEach(() => {
 	vi.stubGlobal('fetch', fetch);
 	fixture.mainWorkflow.mockResolvedValue({
 		id: workflowId,
+		name: 'release',
 		created_at: new Date(Date.now() - 60000).toISOString(),
 	});
 	job = {
 		id: jobId,
-		name: 'release-flow.approve-production',
+		name: 'release-flow.approve-release-production',
 		type: 'approval',
 		status: 'success',
 		approved_by: owner,
@@ -47,6 +48,56 @@ describe('CircleCI human approval', () => {
 		expect(fixture.mainWorkflow).toHaveBeenCalledWith(['release', 'rollback']);
 		expect(fetch.mock.calls[0][0].toString()).toContain(`/workflow/${workflowId}/job`);
 	});
+	it.each([
+		{
+			workflow: 'release',
+			environment: 'production-migrations',
+			hold: 'approve-release-migrations',
+			allowedWorkflows: ['release', 'baseline'],
+		},
+		{
+			workflow: 'release',
+			environment: 'production',
+			hold: 'approve-release-production',
+			allowedWorkflows: ['release', 'rollback'],
+		},
+		{
+			workflow: 'baseline',
+			environment: 'production-migrations',
+			hold: 'approve-baseline-migrations',
+			allowedWorkflows: ['release', 'baseline'],
+		},
+		{
+			workflow: 'rollback',
+			environment: 'production',
+			hold: 'approve-rollback-production',
+			allowedWorkflows: ['release', 'rollback'],
+		},
+	])(
+		'accepts the distinct $workflow hold for $environment',
+		async ({ workflow, environment, hold, allowedWorkflows }) => {
+			fixture.mainWorkflow.mockResolvedValueOnce({
+				id: workflowId,
+				name: workflow,
+				created_at: new Date(Date.now() - 60000).toISOString(),
+			});
+			job.name = hold;
+			await expect(requireApprovalEnvironment(environment, true)).resolves.toMatchObject({
+				jobId,
+				approvedBy: owner,
+			});
+			expect(fixture.mainWorkflow).toHaveBeenCalledWith(allowedWorkflows);
+		},
+	);
+	it.each([
+		{ environment: 'production', hold: 'rollback-flow.approve-rollback-production' },
+		{ environment: 'production-migrations', hold: 'baseline-flow.approve-baseline-migrations' },
+		{ environment: 'production', hold: 'approve-production' },
+		{ environment: 'production-migrations', hold: 'approve-migrations' },
+	])('rejects $hold in a release workflow', async ({ environment, hold }) => {
+		job.name = hold;
+		await expect(requireApprovalEnvironment(environment, true)).rejects.toThrow('unique');
+	});
 	it('allows an unapproved hold only during preflight', async () => {
 		job.status = 'on_hold';
 		delete job.approved_by;
@@ -62,7 +113,7 @@ describe('CircleCI human approval', () => {
 		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('owner');
 	});
 	it('rejects an approval for the other production role', async () => {
-		job.name = 'release-flow.approve-migrations';
+		job.name = 'release-flow.approve-release-migrations';
 		await expect(requireApprovalEnvironment('production', true)).rejects.toThrow('unique');
 	});
 	it.each([undefined, 'invalid', new Date(Date.now() - 86400001).toISOString()])(

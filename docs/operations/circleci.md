@@ -26,10 +26,28 @@ and [current pricing](https://circleci.com/pricing/). Menu labels can change.
 
 ## Projects and triggers
 
-Publish the reviewed migration feature branch after authorized local verification
-so CircleCI can read its committed config. Use that branch for initial project
-bootstrap if main does not yet contain the config; do not generate a starter
-commit or merge before CircleCI validation and the coordinated ruleset switch.
+The first migration PR needs this setup sequence:
+
+1. Complete local setup and authorized verification, commit on the migration
+   feature branch, then push that branch to GitHub. If it is already pushed,
+   continue with project setup.
+2. Configure Portfolio with `.circleci/config.yml` from the pushed branch for
+   initial bootstrap. Keep normal PR validation following the event revision.
+   Enable the combined PR/default-branch trigger described below.
+3. Open a GitHub PR from that branch into main. This starts `pr-validation`;
+   CCI-006 is the acceptance of those PR results. A feature-branch push by
+   itself does not satisfy the configured PR workflow condition.
+4. Once the PR checks pass, prepare restricted main contexts, switch the
+   GitHub required checks and merge through the PR. Keep releases disabled.
+5. Validate the actual merged SHA, then accept main-only CodeQL publication,
+   service contracts and Preview webhooks. They do not have to run before
+   opening this first PR.
+
+Do not generate a starter commit or merge before CircleCI PR validation and
+the coordinated ruleset switch. Prepare the separate Preview project now,
+but activate its fixed-main webhook only after its config/controller reach
+main (CCI-011). Follow the checklist phase headings; IDs stay fixed when
+tasks move to their correct dependency phase.
 
 Create these two projects in the same free organization. Keep automatic reruns
 and automatic cancellation off during acceptance. Never cancel active production
@@ -203,8 +221,10 @@ Do not enable paid features or reruns that hide flaky failures to stay green.
 Keep `CIRCLECI_RELEASES_ENABLED=false` until credentials, restrictions, source
 identity, tests, approvals and recovery have been reviewed. The owner deliberately
 sets it to true for controlled activation. A manually triggered pipeline is not
-human approval; **approve-migrations** and **approve-production** are separate
-holds checked against the owner UUID in the current workflow.
+human approval. Releases use **approve-release-migrations** and
+**approve-release-production**; baseline and rollback use
+**approve-baseline-migrations** and **approve-rollback-production**, respectively.
+Each distinct hold is checked against the owner UUID in the current workflow.
 
 Release, rollback and baseline job groups share `portfolio-production` across all
 steps and holds. Do not release the serial lock manually or cancel an active
