@@ -325,6 +325,19 @@ workers; host CPU discovery can otherwise exceed the container's memory budget.
 CodeQL publishes only from trusted main; PR analysis uses no publication token.
 The full audit replaces the dependency-review Action at the same high threshold.
 
+Before downloading CodeQL, publication verifies the workflow, project and checkout
+against CircleCI metadata. GitHub App runs provide source identity through
+`trigger_parameters.git`, including `branch`, `ref`, `checkout_sha` and
+`checkout_url`; they can omit the legacy `vcs` object. The exact repository's
+HTTPS URL or SSH clone address is accepted. Release validation reads the same
+commit metadata and requires a GitHub App `push` event for merged validation.
+See [CircleCI's source metadata formats](https://circleci.com/docs/reference/outbound-webhooks-reference/#trigger-parameters).
+
+An authentication error such as `circleci operation failed (401)` requires checking
+the read token. A source-identity error lists the failed field names without
+printing response bodies or credentials. Correct that mismatch before rerunning;
+changing a token cannot fix source metadata parsing.
+
 After successful merged-main validation, add two **schedule triggers** under
 Project Setup, branch main, with pipeline parameters:
 
