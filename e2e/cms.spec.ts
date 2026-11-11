@@ -37,6 +37,7 @@ test('CMS icon changes render publicly without loading icon catalogs in the brow
 	const name = `CMS icon selection ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
 	const publicPage = await context.newPage();
 	let editUrl = '';
+	let savedSvg = '';
 
 	try {
 		for (const [index, iconName] of ['TbAbacus', 'BiAlarm'].entries()) {
@@ -45,7 +46,19 @@ test('CMS icon changes render publicly without loading icon catalogs in the brow
 				await page.getByLabel('Nombre', { exact: true }).fill(name);
 				await page.getByLabel('URL', { exact: true }).fill('https://example.test/cms-icon');
 			}
-			await page.getByRole('combobox', { name: /Select an icon|Selected icon:/ }).click();
+			const picker = page.getByRole('combobox', { name: /Select an icon|Selected icon:/ });
+			if (savedSvg) {
+				// The saved preview loads after hydration; wait before interacting with the picker.
+				await expect
+					.poll(() =>
+						picker
+							.locator('svg')
+							.first()
+							.evaluate((svg) => svg.innerHTML),
+					)
+					.toBe(savedSvg);
+			}
+			await picker.click();
 			await page.getByPlaceholder('Search icons…').fill(iconName);
 			const option = page.getByRole('option', { name: new RegExp(`^${iconName}\\b`) });
 			await expect(option.locator('svg')).toHaveCount(1);
@@ -66,6 +79,7 @@ test('CMS icon changes render publicly without loading icon catalogs in the brow
 			editUrl = (await row
 				.getByRole('link', { name: 'Editar', exact: true })
 				.getAttribute('href'))!;
+			savedSvg = expectedSvg;
 
 			const scripts: Promise<string>[] = [];
 			const collectScript = (response: Response) => {
