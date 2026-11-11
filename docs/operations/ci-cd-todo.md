@@ -102,7 +102,7 @@ jobs and keep `CIRCLECI_RELEASES_ENABLED=false`.
     **Where:** CircleCI → Organization Settings → Contexts and User Settings;
     provider token dashboards; [credential matrix](./circleci.md#credentials).
 
-- [ ] **CCI-009.** Review the migration PR controller test results for rejection
+- [x] **CCI-009.** Review the migration PR controller test results for rejection
       of wrong projects, checkouts, workflows, SHAs, approval roles/actors and
       missing/expired approvals. Confirm coverage of fresh main-push proof,
       newer failed/pending scans and stale-result rejection. Actual hosted
@@ -123,7 +123,7 @@ Configure the new required checks while the PR is open, then merge it.
 Main-only publication, service contracts and Preview checks follow merge;
 they are not prerequisites for creating this first migration PR.
 
-- [ ] **CCI-013.** After the seven checks genuinely appear on the migration PR,
+- [x] **CCI-013.** After the seven checks genuinely appear on the migration PR,
       replace old Actions required checks with their exact CircleCI names and
       source. Preserve PR-only main updates, up-to-date branches, conversation
       resolution, force-push/deletion restrictions and CodeQL severity enforcement
@@ -136,7 +136,7 @@ they are not prerequisites for creating this first migration PR.
     **Where:** GitHub → Settings → Rules → Production main → required checks.
     Record the actual emitted names and a failing-check rejection example.
 
-- [ ] **CCI-014.** Merge the reviewed migration with all six repository Actions
+- [x] **CCI-014.** Merge the reviewed migration with all six repository Actions
       workflows removed. Retain only Dependabot's package updater and native
       security features. Confirm no old default CodeQL or custom workflow remains
       active. Retain historical run/evidence links and shared Git history.
@@ -152,7 +152,7 @@ validation for the actual merged SHA; keep production release activation
 disabled while accepting security publication, nonproduction contracts,
 Preview checks and isolated controller rehearsals.
 
-- [ ] **CCI-015.** Retain successful main-validation evidence for the exact merged
+- [x] **CCI-015.** Retain successful main-validation evidence for the exact merged
       SHA. Enable daily security and weekly CodeQL schedule triggers; prove their
       first runs. Review actual credits, resource memory and projected monthly
       usage against the free allowance before considering setup complete.
