@@ -199,7 +199,7 @@ job-groups:
     release-flow:
         jobs:
             - preflight:
-                  context: [ci-metadata, release-candidate]
+                  context: [ci-metadata, release-credentials, release-candidate]
             - contracts:
                   context: [ci-metadata, service-contracts]
                   requires: [preflight]
@@ -210,20 +210,20 @@ job-groups:
                   context: [ci-metadata, production-migrations]
                   requires: [approve-release-migrations]
             - candidate:
-                  context: [ci-metadata, release-candidate]
+                  context: [ci-metadata, release-credentials, release-candidate]
                   requires: [migrate]
             - approve-release-production:
                   type: approval
                   requires: [candidate]
             - promote:
-                  context: [ci-metadata, production]
+                  context: [ci-metadata, release-credentials, production]
                   requires: [approve-release-production]
     rollback-flow:
         jobs:
             - approve-rollback-production:
                   type: approval
             - rollback:
-                  context: [ci-metadata, production]
+                  context: [ci-metadata, release-credentials, production]
                   requires: [approve-rollback-production]
     baseline-flow:
         jobs:
