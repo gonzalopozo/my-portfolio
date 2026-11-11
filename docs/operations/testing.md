@@ -106,6 +106,9 @@ or credential manager. The owner-operated Node 24 entry point can load that file
 pnpm exec tsx --env-file=.env.preview-acceptance scripts/preview-acceptance.mts
 ```
 
+Use the dedicated preview-acceptance `VERCEL_AUTOMATION_BYPASS_SECRET` here,
+following the [four-secret mapping](./circleci.md#preserve-the-four-automation-bypass-secrets).
+
 Alternatively, export those values privately and run `pnpm test:preview`. Required
 values are `DEPLOYMENT_ID`, `GITHUB_REPOSITORY`, `GITHUB_REPOSITORY_ID`, a read-only
 `GITHUB_TOKEN`, `VERCEL_PROJECT_ID`, optional `VERCEL_TEAM_ID`, `VERCEL_TOKEN`,

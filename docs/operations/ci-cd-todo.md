@@ -80,7 +80,7 @@ jobs and keep `CIRCLECI_RELEASES_ENABLED=false`.
     **Where:** CircleCI → Projects → Create Project → Project Setup. See the
     [project setup instructions](./circleci.md#projects-and-triggers).
 
-- [ ] **CCI-006.** After opening the migration PR against main, wait for its
+- [x] **CCI-006.** After opening the migration PR against main, wait for its
       `pr-validation` workflow and prove all seven CircleCI jobs:
       quality, tests/coverage, migrations, browser-free production build/smoke,
       dependencies, secrets and CodeQL. Confirm frozen pnpm installation, no
@@ -90,7 +90,7 @@ jobs and keep `CIRCLECI_RELEASES_ENABLED=false`.
     Portfolio → `pr-validation` → job results. This item verifies the PR
     created in the steps above; it does not require an earlier PR or merge.
 
-- [ ] **CCI-008.** Before merging, configure every context and its project, main,
+- [x] **CCI-008.** Before merging, configure every context and its project, main,
       SSH and config-source restrictions. Obtain the read-scoped CircleCI API
       token and owner UUID.
       Issue narrowly scoped GitHub credentials and migrate provider secrets from
@@ -110,6 +110,9 @@ jobs and keep `CIRCLECI_RELEASES_ENABLED=false`.
       tests does not prove external account settings.
 
     **Where:** CircleCI → migration PR → tests → controller test results.
+    Review the `tests` job in that PR's `pr-validation` workflow; the separate
+    `migrations` job checks schema replay/drift. Keep all seven PR checks passing
+    before proceeding to the required-check cutover and merge.
     Carries forward the test coverage for 053 and applicable 251–255 drills;
     retain actual hosted rehearsal evidence under CCI-012 / CCI-016.
 

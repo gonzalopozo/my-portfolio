@@ -115,10 +115,12 @@ copy production database or Blob credentials into all environments.
 2. Require owner approval for deployments from forks/untrusted contributions. Do not
    approve code before review to run with Preview credentials. Secret-free CircleCI
    validation remains mandatory for same-repository PRs and do not depend on a Preview deployment.
-3. Create an automation bypass secret under **Deployment Protection → Protection
-   Bypass for Automation**; store it only in the scoped CircleCI production contexts, isolated Preview
-   controller project and private local Preview acceptance environment. Verify
-   its current scope in the Vercel dashboard. Do not add it to `NEXT_PUBLIC_*` values.
+3. Preserve four separate automation bypass secrets for release-candidate,
+   production, preview-checks and preview-acceptance under **Deployment Protection
+   → Protection Bypass for Automation**. Migrate each still-active saved value to
+   its [corresponding CircleCI or local destination](./circleci.md#preserve-the-four-automation-bypass-secrets).
+   Replace secrets individually when needed. Verify their current scope in the
+   Vercel dashboard. Do not add them to `NEXT_PUBLIC_*` values.
 4. **Scope limitation:** Vercel automation bypass secrets apply across a project,
    and Vercel can expose a selected secret as `VERCEL_AUTOMATION_BYPASS_SECRET` to
    deployments. They are not inherently Preview-only secrets. Inspect/disable that

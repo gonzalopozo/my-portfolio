@@ -67,10 +67,12 @@ integration, fork imports, or secret forwarding. Same-repository Dependabot PRs
 use normal validation.
 
 Record both project IDs and pipeline definition IDs privately. For Portfolio,
-copy the organization/project UUIDs into the slug
-`circleci/<organization-uuid>/<project-uuid>`. The controllers use this exact slug,
-not `gh/gonzalopozo/my-portfolio`. Record the owner user UUID from
-`GET https://circleci.com/api/v2/me` as `CIRCLECI_APPROVER_ID`.
+copy **Project Settings → Overview → Project Slug** exactly into
+`CIRCLECI_PROJECT_SLUG`. Its format is `circleci/<organization-id>/<project-id>`;
+the identifiers are opaque and need not be UUIDs. Keep the copied value intact.
+Record the owner's user UUID from `GET https://circleci.com/api/v2/me` as
+`CIRCLECI_APPROVER_ID`. The [credential steps below](#copy-the-portfolio-project-slug)
+explain where to find both values.
 
 No account/project UUIDs are invented in configuration. Missing setup fails closed.
 Both projects use the same pinned Node image; neither installs a browser.
@@ -83,8 +85,14 @@ GitHub does not expose existing Actions secrets for copying. Keep preview and
 production Turso/Blob/auth resources isolated as described in [services](./services.md).
 Do not put a production credential into Portfolio project-level variables.
 
-Under **Organization Settings → Contexts**, create this matrix. Values in later
-contexts override the same-named value in earlier contexts.
+For the first four metadata values, follow [CircleCI read token](#obtain-the-read-scoped-circleci-token),
+[GitHub token](#obtain-the-metadata-github-token), [project slug](#copy-the-portfolio-project-slug)
+and [owner user ID](#obtain-the-owner-approval-id) below.
+
+Under **Organization Settings → Contexts**, create this matrix. When a job lists
+multiple contexts in `.circleci/config.yml`, their variables are combined in that
+YAML order; a later context supplies the value when variable names overlap.
+The order you create contexts in CircleCI does not matter.
 
 - **ci-metadata:** `CIRCLECI_READ_TOKEN`, read-only `GITHUB_TOKEN`,
   `CIRCLECI_PROJECT_SLUG`, `CIRCLECI_APPROVER_ID`, `CIRCLECI_RELEASES_ENABLED=false`,
@@ -92,23 +100,50 @@ contexts override the same-named value in earlier contexts.
   `VERCEL_PROJECT_ID`, optional `VERCEL_TEAM_ID`, canonical `PRODUCTION_ORIGIN`.
 - **codeql-publication:** `GITHUB_TOKEN` with Contents read and Code scanning
   alerts write for this repository.
-- **release-candidate:** `VERCEL_TOKEN`, `VERCEL_AUTOMATION_BYPASS_SECRET`,
-  production `HEALTH_READINESS_TOKEN`; `GITHUB_TOKEN` with Contents read, Code
-  scanning alerts read and Deployments write for this repository.
+- **release-credentials:** shared `VERCEL_TOKEN`, production
+  `HEALTH_READINESS_TOKEN` and `GITHUB_TOKEN` with Contents read, Code scanning
+  alerts read and Deployments write for this repository. Store these three
+  credentials once in this context.
+- **release-candidate:** only `VERCEL_AUTOMATION_BYPASS_SECRET`, using the
+  separate release-candidate bypass value.
 - **production-migrations:** production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
   only; the metadata context supplies separate read-only validation access.
-- **production:** the Vercel/readiness values and GitHub scopes listed for
-  release-candidate. No database credentials.
+- **production:** only `VERCEL_AUTOMATION_BYPASS_SECRET`, using the separate
+  production bypass value. No database credentials.
 - **service-contracts:** nonproduction `TURSO_API_TOKEN`,
   `NONPRODUCTION_BLOB_TOKEN`, `TURSO_NONPRODUCTION_ORG`,
   `TURSO_NONPRODUCTION_GROUP=ci-contracts`, `CONTRACT_BLOB_ORIGIN` and
   `PRODUCTION_BLOB_ORIGIN`.
 
+Each release job combines metadata, shared release credentials and its own bypass
+context, in this order:
+
+| Jobs | Contexts, in YAML order |
+| --- | --- |
+| `preflight`, `candidate` | `[ci-metadata, release-credentials, release-candidate]` |
+| `promote`, `rollback` | `[ci-metadata, release-credentials, production]` |
+
+The `GITHUB_TOKEN` from `release-credentials` overrides the read-only metadata
+token for these jobs. Each job receives only its explicitly listed contexts.
+
+If you already populated both phase contexts with duplicate credentials:
+
+1. Create `release-credentials`, apply the restrictions below and add the three
+   shared variables there.
+2. Publish the updated `.circleci/config.yml` with the context lists above through
+   the normal feature-branch/PR process.
+3. Remove `VERCEL_TOKEN`, `HEALTH_READINESS_TOKEN` and `GITHUB_TOKEN` from
+   `release-candidate` and `production`, leaving each one's distinct bypass value.
+
+Keep `CIRCLECI_RELEASES_ENABLED=false` during this setup. Once the updated config
+is in use, the two bypass contexts need only their single variable.
+
 The metadata GitHub token needs Contents read and Code scanning alerts read. The
-release tokens additionally need Deployments write. Use separate fine-grained
-GitHub PATs limited to this single repository and record their expiry. Grant no
-Contents write, Actions write or Administration permission. Vercel tokens must
-be restricted to the intended owner/project as current controls permit.
+shared release token additionally needs Deployments write. Keep GitHub PATs separate
+where permissions differ, limit them to this repository and record their expiry.
+Store the release PAT only in `release-credentials`.
+Grant no Contents write, Actions write or Administration permission. Vercel tokens
+must be restricted to the intended owner/project as current controls permit.
 
 For **every context**, add Portfolio as its only allowed project, plus this
 expression restriction:
@@ -123,24 +158,113 @@ restrictions to make a rehearsal pass. If the account cannot enforce these
 boundaries, keep releases disabled and record the limitation.
 See [contexts and restrictions](https://circleci.com/docs/guides/security/contexts/).
 
+### Preserve the four automation bypass secrets
+
+Keep the existing separate `VERCEL_AUTOMATION_BYPASS_SECRET` values for each
+consumer. Migrate saved values that are still active, or replace them individually:
+
+| Existing bypass secret | Destination |
+| --- | --- |
+| release-candidate | CircleCI context `release-candidate` |
+| production | CircleCI context `production` |
+| preview-checks | Portfolio Preview project → Environment Variables |
+| preview-acceptance | Private local `.env.preview-acceptance` or credential manager |
+
+Every destination uses the variable name `VERCEL_AUTOMATION_BYPASS_SECRET` with
+its corresponding value. Hosted Preview browser acceptance is now local, so its
+secret stays with the owner's local acceptance credentials.
+
+Vercel supports multiple bypass secrets per project, allowing independent
+revocation and rotation. Each valid secret still applies across that Vercel
+project's deployments; naming one production or Preview does not restrict it to
+that environment. See [Vercel's bypass secret documentation](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation).
+
 ### Obtain the read-scoped CircleCI token
 
-Use CircleCI's [OAuth registration and PKCE instructions](https://circleci.com/docs/guides/toolkit/oauth-dynamic-client-registration/):
+`CIRCLECI_READ_TOKEN` is the `access_token` returned by CircleCI's OAuth flow.
+Follow the command blocks in its [registration and PKCE guide](https://circleci.com/docs/guides/toolkit/oauth-dynamic-client-registration/)
+in your own local terminal, using these choices:
 
-1. Register an OAuth client named `portfolio-ci-metadata` with the documented
-   local callback. Keep its client ID for rotations.
-2. Start the local callback listener, create the authorization URL and open it in
-   your browser. On the consent screen select **Read**, then authorize this org.
-3. Verify the callback state and exchange the code with its PKCE verifier.
-4. Copy the resulting access token directly into the private credential manager
-   and `ci-metadata` as `CIRCLECI_READ_TOKEN`. Do not save terminal output or put
-   the token in pipeline parameters, commands, PR comments or artifacts.
-5. Schedule rotation before 90 days. This flow issues no refresh token; repeat
-   authorization using the same client ID and update the context promptly.
+1. **Step 1 — Register:** set `client_name` to `portfolio-ci-metadata` and keep
+   `http://127.0.0.1:9090/callback` as the callback. Save the returned `client_id`
+   for future rotations. This client ID is not the token.
+2. **Step 2 — Listener:** run the guide's Python listener in a second terminal;
+   leave it running. Copy its verifier, challenge and state into the first terminal
+   as instructed. The guide requires `curl` and `python3`; `jq` is optional.
+3. **Step 3 — Authorize:** open the generated URL, log in with the owner account,
+   select **Read** and allow access. Authorize the organization if an SSO org
+   selector appears. Verify the callback state matches the original state.
+4. **Step 4 — Exchange:** exchange the returned code immediately. From the JSON
+   response, copy only the value of `access_token` into `ci-metadata` as
+   `CIRCLECI_READ_TOKEN` and into the private credential manager. The authorization
+   code, client ID and PKCE verifier are different values.
+5. Rotate before the 90-day expiry. Reuse the client ID; a new authorization
+   revokes its previous token, so update the context immediately. No refresh token
+   is issued.
+
+Perform the flow in an unrecorded local terminal. Keep the token out of repository
+files, pipeline parameters, PR comments, logs and artifacts.
 
 Do not use a manually created owner PAT for this variable: those carry write
 permissions and could approve jobs. The metadata adapter also permits only GET
 requests to CircleCI. It never invokes an approval endpoint.
+
+### Obtain the metadata GitHub token
+
+For the `GITHUB_TOKEN` inside `ci-metadata`:
+
+1. Open **GitHub → profile picture → Settings → Developer settings → Personal
+   access tokens → Fine-grained tokens → Generate new token**.
+2. Name it `portfolio-ci-metadata`, choose an expiry and select `gonzalopozo` as
+   the resource owner.
+3. Under **Repository access**, choose **Only select repositories** and select
+   `my-portfolio`.
+4. Under **Repository permissions**, set **Contents: Read-only** and **Code scanning
+   alerts: Read-only**. Metadata read access is included automatically. Leave
+   other permissions unchanged.
+5. Generate the token. Copy its value into the private credential manager and
+   the `ci-metadata` context's `GITHUB_TOKEN` variable.
+
+Create GitHub tokens for the other permission sets in the matrix above. Store the
+shared release PAT in `release-credentials`; the release-candidate and production
+contexts contain only their respective bypass secrets. CircleCI does not generate
+this GitHub token automatically.
+See [GitHub's token instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token).
+
+### Copy the Portfolio project slug
+
+Open **CircleCI → Projects → Portfolio → Project Settings → Overview** and copy
+**Project Slug**. Set that complete value as `CIRCLECI_PROJECT_SLUG` in
+`ci-metadata`. Choose the Portfolio project that runs `.circleci/config.yml`.
+The Preview project has a different slug.
+
+CircleCI also returns the exact `project_slug` in pipeline/workflow API responses.
+See [finding the project slug](https://circleci.com/docs/guides/toolkit/api-developers-guide/#getting-started-with-the-api).
+
+### Obtain the owner approval ID
+
+After obtaining the owner's read token, run this locally. It prompts for the
+token without displaying it and prints only the owner's CircleCI user ID:
+
+```sh
+python3 - <<'PY'
+import getpass
+import json
+import urllib.request
+
+token = getpass.getpass("CircleCI read token: ")
+request = urllib.request.Request(
+    "https://circleci.com/api/v2/me",
+    headers={"Authorization": f"Bearer {token}"},
+)
+with urllib.request.urlopen(request, timeout=30) as response:
+    print(json.load(response)["id"])
+PY
+```
+
+Copy the printed UUID into `ci-metadata` as `CIRCLECI_APPROVER_ID`. This identifies
+the account that must approve production holds; it is a user ID, not a token or
+organization ID. See [the current-user API example](https://circleci.com/docs/guides/toolkit/api-developers-guide/#add-an-api-token).
 
 ### Preview project variables
 
@@ -152,6 +276,9 @@ Environment Variables**, set only:
 - `GITHUB_REPOSITORY`, `GITHUB_REPOSITORY_ID`, `VERCEL_PROJECT_ID`, optional `VERCEL_TEAM_ID`.
 - `GITHUB_TOKEN` with Contents read for this repository.
 - `VERCEL_TOKEN` and `VERCEL_AUTOMATION_BYPASS_SECRET` for verified Preview probes.
+
+Use the existing preview-checks bypass secret here, following the
+[four-secret mapping](#preserve-the-four-automation-bypass-secrets).
 
 Do not add production Turso/readiness tokens or Preview administrator credentials.
 Do not enable other VCS triggers or allow webhook data to select configuration,
@@ -191,6 +318,10 @@ CircleCI checks appear after PRs/pushes independently of local hook verification
 The quality job runs existing formatting/lint/type/spelling/unused-code/boundary
 gates. Tests include coverage and JUnit reporting. The build job uses a migrated
 synthetic local database and production HTTP/HTTPS smoke probes, with no browser.
+Isolated production builds explicitly use one Next.js page-data/static-generation
+worker, including the builds for local browser hooks. The harness uses an
+allowlisted environment, so Next.js cannot rely on CircleCI metadata to size its
+workers; host CPU discovery can otherwise exceed the container's memory budget.
 CodeQL publishes only from trusted main; PR analysis uses no publication token.
 The full audit replaces the dependency-review Action at the same high threshold.
 
@@ -215,6 +346,13 @@ Keep `medium` as the default and `large` for CodeQL. There are no dependency,
 Docker layer, browser or build caches. Review Usage after the first PR/main pair
 and first scheduled scans; project monthly compute and storage from actual usage.
 Do not enable paid features or reruns that hide flaky failures to stay green.
+
+If the build prints `Killed` and exits with code 137 after compilation/type checking,
+inspect the job's Resources memory graph for an out-of-memory kill. Confirm the
+run includes the isolated-build worker limit before considering a larger executor.
+The expected Next.js warning about a missing build cache does not establish the
+cause of that failure. Retain the worker count, peak memory and SHA with the run
+evidence. See [CircleCI's exit-137 guidance](https://support.circleci.com/en/articles/15090919-exit-code-137-out-of-memory).
 
 ## Production activation and evidence
 
