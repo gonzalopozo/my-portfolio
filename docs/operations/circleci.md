@@ -118,10 +118,10 @@ The order you create contexts in CircleCI does not matter.
 Each release job combines metadata, shared release credentials and its own bypass
 context, in this order:
 
-| Jobs | Contexts, in YAML order |
-| --- | --- |
+| Jobs                     | Contexts, in YAML order                                 |
+| ------------------------ | ------------------------------------------------------- |
 | `preflight`, `candidate` | `[ci-metadata, release-credentials, release-candidate]` |
-| `promote`, `rollback` | `[ci-metadata, release-credentials, production]` |
+| `promote`, `rollback`    | `[ci-metadata, release-credentials, production]`        |
 
 The `GITHUB_TOKEN` from `release-credentials` overrides the read-only metadata
 token for these jobs. Each job receives only its explicitly listed contexts.
@@ -163,12 +163,12 @@ See [contexts and restrictions](https://circleci.com/docs/guides/security/contex
 Keep the existing separate `VERCEL_AUTOMATION_BYPASS_SECRET` values for each
 consumer. Migrate saved values that are still active, or replace them individually:
 
-| Existing bypass secret | Destination |
-| --- | --- |
-| release-candidate | CircleCI context `release-candidate` |
-| production | CircleCI context `production` |
-| preview-checks | Portfolio Preview project → Environment Variables |
-| preview-acceptance | Private local `.env.preview-acceptance` or credential manager |
+| Existing bypass secret | Destination                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| release-candidate      | CircleCI context `release-candidate`                          |
+| production             | CircleCI context `production`                                 |
+| preview-checks         | Portfolio Preview project → Environment Variables             |
+| preview-acceptance     | Private local `.env.preview-acceptance` or credential manager |
 
 Every destination uses the variable name `VERCEL_AUTOMATION_BYPASS_SECRET` with
 its corresponding value. Hosted Preview browser acceptance is now local, so its

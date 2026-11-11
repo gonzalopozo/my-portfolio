@@ -47,6 +47,10 @@ webglcontextlost
 ESOCKETNODATA
 ETIMEOUT
 
+# Python standard-library APIs in setup instructions
+getpass
+urlopen
+
 # CSP / Next.js rendering terminology
 basemaps
 cartocdn
