@@ -34,11 +34,14 @@ export function assertMainController() {
 
 export function projectSlug() {
 	const slug = required('CIRCLECI_PROJECT_SLUG');
+	// Copy the provider's opaque slug; its organization/project segments need not be UUIDs.
 	const parts = slug.split('/');
-	if (parts.length !== 3 || parts[0] !== 'circleci')
+	if (
+		parts.length !== 3 ||
+		parts[0] !== 'circleci' ||
+		parts.slice(1).some((part) => !part || /[^A-Za-z0-9_-]/.test(part))
+	)
 		throw new Error('Use the configured GitHub App CircleCI project slug.');
-	uuid(parts[1]);
-	uuid(parts[2]);
 	return slug;
 }
 

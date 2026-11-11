@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const checkout = vi.hoisted(() => vi.fn());
 vi.mock('node:child_process', () => ({ execFileSync: checkout }));
-import { mainWorkflow } from '../../scripts/ci-context.mjs';
+import { mainWorkflow, projectSlug } from '../../scripts/ci-context.mjs';
 
 const sha = 'a'.repeat(40);
 const workflowId = '11111111-1111-4111-8111-111111111111';
 const pipelineId = '22222222-2222-4222-8222-222222222222';
-const slug = 'circleci/33333333-3333-4333-8333-333333333333/44444444-4444-4444-8444-444444444444';
+const slug = 'circleci/OrgExample123/ProjectExample456';
 const fetch = vi.fn<typeof globalThis.fetch>();
 let workflow: Record<string, unknown>;
 let source: { branch: string; revision: string; origin_repository_url: string };
@@ -54,6 +54,29 @@ beforeEach(() => {
 afterEach(() => {
 	vi.unstubAllEnvs();
 	vi.unstubAllGlobals();
+});
+
+describe('CircleCI project slug', () => {
+	it.each([
+		slug,
+		'circleci/33333333-3333-4333-8333-333333333333/44444444-4444-4444-8444-444444444444',
+	])('preserves the configured opaque slug %s', (value) => {
+		vi.stubEnv('CIRCLECI_PROJECT_SLUG', value);
+		expect(projectSlug()).toBe(value);
+	});
+	it.each([
+		'gh/owner/portfolio',
+		'circleci/org',
+		'circleci/org/project/extra',
+		'circleci//project',
+		'circleci/org/..',
+		'circleci/org/project?other=value',
+		'circleci/org/project#fragment',
+		'circleci/org/project\n',
+	])('rejects an invalid slug %s', (value) => {
+		vi.stubEnv('CIRCLECI_PROJECT_SLUG', value);
+		expect(() => projectSlug()).toThrow('project slug');
+	});
 });
 
 describe('trusted CircleCI controller', () => {
