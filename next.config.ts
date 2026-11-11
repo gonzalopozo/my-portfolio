@@ -2,13 +2,13 @@ import type { NextConfig } from 'next';
 import { buildCsp, getCspHeaderName, getCspMode } from './lib/security/csp';
 import { getBlobPublicHostname } from './lib/blob-environment';
 
+const isIsolatedProductionBuild =
+	process.env.PORTFOLIO_TEST_BUILD === 'true' &&
+	process.env.CI === 'true' &&
+	process.env.APP_ENV === 'test';
+
 const nextConfig: NextConfig = {
-	distDir:
-		process.env.PORTFOLIO_TEST_BUILD === 'true' &&
-		process.env.CI === 'true' &&
-		process.env.APP_ENV === 'test'
-			? '.ci/next-production'
-			: '.next',
+	distDir: isIsolatedProductionBuild ? '.ci/next-production' : '.next',
 	env: {
 		NEXT_PUBLIC_RELEASE_SHA:
 			process.env.VERCEL_GIT_COMMIT_SHA ??
@@ -52,6 +52,8 @@ const nextConfig: NextConfig = {
 	},
 
 	experimental: {
+		// The isolated harness omits CircleCI metadata; host CPU discovery can over-allocate workers.
+		...(isIsolatedProductionBuild ? { cpus: 1 } : {}),
 		turbopackFileSystemCacheForDev: true,
 		turbopackFileSystemCacheForBuild: false,
 		optimizePackageImports: ['lucide-react', 'react-icons', '@radix-ui/react-icons'],
