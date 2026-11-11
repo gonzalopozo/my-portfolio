@@ -1,51 +1,45 @@
-import { api, required } from './platform.mjs';
+import { required } from './platform.mjs';
+import { circlePages, mainWorkflow, uuid, type WorkflowJob } from './ci-context.mjs';
 
-/**
- * Require protection and recorded approval for the environment's immutable ID.
- * GitHub resolves names without case sensitivity but preserves display-name casing.
- */
+/** Check the owner-approved hold in this exact workflow, including job-group prefixes. */
 export async function requireApprovalEnvironment(name: string, approved = false) {
-	const repository = required('GITHUB_REPOSITORY');
-	const path = `/repos/${repository}/environments/${encodeURIComponent(name)}`;
-	const environment = await api<{
-		id: number;
-		protection_rules: { type: string; prevent_self_review?: boolean; reviewers?: unknown[] }[];
-		deployment_branch_policy?: { custom_branch_policies: boolean };
-	}>('github', path);
-	const environmentId = environment.id;
-	if (!Number.isSafeInteger(environmentId) || environmentId <= 0)
-		throw new Error(`Environment identity is unproven for ${name}.`);
-	const review = environment.protection_rules.find((rule) => rule.type === 'required_reviewers');
-	if (
-		!review?.reviewers?.length ||
-		review.prevent_self_review ||
-		!environment.deployment_branch_policy?.custom_branch_policies
-	)
-		throw new Error(
-			`Configure required owner approval and a main-only branch policy for ${name}.`,
-		);
-	const branches = await api<{ branch_policies: { name: string; type?: string }[] }>(
-		'github',
-		`${path}/deployment-branch-policies`,
+	const roles: Record<string, string> | undefined =
+		name === 'production-migrations'
+			? {
+					release: 'approve-release-migrations',
+					baseline: 'approve-baseline-migrations',
+				}
+			: name === 'production'
+				? {
+						release: 'approve-release-production',
+						rollback: 'approve-rollback-production',
+					}
+				: undefined;
+	if (!roles) throw new Error('Unknown production approval role.');
+	const owner = uuid(required('CIRCLECI_APPROVER_ID'));
+	const workflow = await mainWorkflow(Object.keys(roles));
+	const role = roles[workflow.name];
+	if (!role) throw new Error('Unknown production approval workflow.');
+	const jobs = await circlePages<WorkflowJob>(`/api/v2/workflow/${workflow.id}/job`);
+	const matches = jobs.filter(
+		(job) =>
+			job.type === 'approval' &&
+			(job.name === role || new RegExp(`[/.:]${role}$`).test(job.name)),
 	);
+	if (matches.length !== 1) throw new Error(`Missing unique approval job for ${name}.`);
+	const job = matches[0];
+	uuid(job.id);
+	if (!approved) return;
+	const stopped = Date.parse(job.stopped_at ?? '');
 	if (
-		branches.branch_policies.length !== 1 ||
-		branches.branch_policies[0].name !== 'main' ||
-		(branches.branch_policies[0].type ?? 'branch') !== 'branch'
+		job.status !== 'success' ||
+		job.approved_by !== owner ||
+		!Number.isFinite(stopped) ||
+		!Number.isFinite(Date.parse(workflow.created_at)) ||
+		stopped < Date.parse(workflow.created_at) ||
+		Date.now() - stopped < -300000 ||
+		Date.now() - stopped >= 86400000
 	)
-		throw new Error(`Environment ${name} must allow only the main branch.`);
-	if (approved) {
-		const history = await api<{ state: string; environments: { id: number }[] }[]>(
-			'github',
-			`/repos/${repository}/actions/runs/${required('GITHUB_RUN_ID')}/approvals`,
-		);
-		if (
-			!history.some(
-				(review) =>
-					review.state === 'approved' &&
-					review.environments.some((environment) => environment.id === environmentId),
-			)
-		)
-			throw new Error(`No recorded human approval for ${name} in this workflow run.`);
-	}
+		throw new Error(`No fresh recorded owner approval for ${name} in this workflow.`);
+	return { jobId: job.id, approvedBy: owner, approvedAt: job.stopped_at };
 }

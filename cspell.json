@@ -62,6 +62,7 @@
 		"designs/**/*.pen"
 	],
 	"useGitignore": true,
+	"ignoreRegExpList": ["\\bdpl_[A-Za-z0-9]+\\b"],
 	"overrides": [
 		{
 			"filename": "**/package.json",

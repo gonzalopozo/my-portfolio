@@ -8,6 +8,11 @@ const fixture = vi.hoisted(() => ({
 			url: 'https://github.com/pnpm/pnpm/releases/download/v1.2.3/pnpm-linux-x64.tar.gz',
 			sha256: '',
 		},
+		codeql: {
+			version: '1.2.3',
+			url: 'https://github.com/github/codeql-action/releases/download/codeql-bundle-v1.2.3/codeql-bundle-javascript-linux64.tar.zst',
+			sha256: '',
+		},
 		gitleaks: {
 			version: '1.2.3',
 			url: 'https://github.com/gitleaks/gitleaks/releases/download/v1.2.3/gitleaks_1.2.3_linux_x64.tar.gz',
@@ -129,6 +134,23 @@ describe('native tool downloads', () => {
 		const tool = await nativeTool('gitleaks');
 		expect(fetch.mock.calls[0][0]).toBe(fixture.manifest.gitleaks.url);
 		expect(tool.binary).toBe(`${directory}/nested/gitleaks`);
+		await tool.close();
+	});
+
+	it('extracts the pinned language bundle using zstd', async () => {
+		fixture.readdir.mockResolvedValueOnce(['codeql/codeql']);
+		const tool = await nativeTool('codeql');
+		expect(fetch.mock.calls[0][0]).toBe(fixture.manifest.codeql.url);
+		expect(fixture.spawnSync.mock.calls[0][1]).toEqual([
+			'--zstd',
+			'-xf',
+			'-',
+			'-C',
+			directory,
+			'--no-same-owner',
+			'--no-same-permissions',
+		]);
+		expect(tool.binary).toBe(`${directory}/codeql/codeql`);
 		await tool.close();
 	});
 

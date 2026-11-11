@@ -23,7 +23,10 @@ const experience: ExperienceData = {
 	experienceSkills: [{ skill: { id: 1, name: 'React', icon: null, customIconUrl: null } }],
 };
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	window.history.replaceState(null, '', '/');
+});
 
 describe('experience card content', () => {
 	it('renders the record, ongoing dates, company link, and related skills', () => {
@@ -44,6 +47,7 @@ describe('experience card content', () => {
 	});
 
 	it('omits missing metadata and keeps the description available in category views', () => {
+		window.history.replaceState(null, '', '/?section=Experience');
 		render(
 			<NuqsTestingAdapter searchParams="?section=Experience">
 				<PortfolioSectionProvider>

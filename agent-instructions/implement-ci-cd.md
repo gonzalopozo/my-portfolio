@@ -1,5 +1,8 @@
 # Implement CI/CD
 
+Historical implementation brief. The provider/fork/browser execution model is
+superseded by [the CircleCI migration](./migrate-ci-to-circleci.md) on 2026-11-06.
+
 ## Objective
 
 Implement the approved CI/CD architecture for the existing portfolio and CMS,

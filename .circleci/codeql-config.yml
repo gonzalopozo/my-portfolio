@@ -1,0 +1,9 @@
+name: Portfolio JavaScript and TypeScript
+paths-ignore:
+    - '.specstory/**'
+    - '.agents/**'
+    - '.claude/**'
+    - 'public/**'
+    - '.ci/**'
+    - '.next/**'
+    - 'node_modules/**'

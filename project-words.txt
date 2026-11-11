@@ -47,6 +47,10 @@ webglcontextlost
 ESOCKETNODATA
 ETIMEOUT
 
+# Python standard-library APIs in setup instructions
+getpass
+urlopen
+
 # CSP / Next.js rendering terminology
 basemaps
 cartocdn
@@ -163,3 +167,13 @@ sarif
 # Dependency updater API keys and weekday values
 cooldown
 monday
+CircleCI
+circleci
+CIRCLECI
+cimg
+PKCE
+zstd
+checkmarks
+codescanning
+cutover
+worktree

@@ -1,0 +1,60 @@
+version: 2.1
+
+# Configure this in a separate Preview-only CircleCI project. Both source refs are main.
+parameters:
+    deployment_id:
+        type: string
+        default: ''
+
+jobs:
+    preview-smoke:
+        docker:
+            - image: cimg/node:24.18.0@sha256:4a638ad75f8601fec1f193e71df584639e6accb1771cea23f3d9d3857bca480c
+        resource_class: small
+        parameters:
+            webhook-body:
+                type: string
+                default: ''
+            deployment-id:
+                type: string
+                default: ''
+        environment:
+            PREVIEW_EVENT_JSON: << parameters.webhook-body >>
+            DEPLOYMENT_ID: << parameters.deployment-id >>
+        steps:
+            - checkout:
+                  method: full
+            - run:
+                  name: Ignore unsuccessful events before installing dependencies
+                  command: |
+                      node --input-type=module <<'JS'
+                      const body = process.env.PREVIEW_EVENT_JSON;
+                      if (body) {
+                          if (Buffer.byteLength(body) > 262144) throw new Error('Preview event is too large.');
+                          const event = JSON.parse(body);
+                          if (event.deployment_status?.state !== 'success' || event.deployment?.environment !== 'Preview') {
+                              const { execFileSync } = await import('node:child_process');
+                              execFileSync('circleci-agent', ['step', 'halt'], { stdio: 'inherit' });
+                          }
+                      } else if (!/^dpl_[A-Za-z0-9]+$/.test(process.env.DEPLOYMENT_ID ?? '')) {
+                          throw new Error('A manual Preview run requires a deployment ID.');
+                      }
+                      JS
+            - run: node scripts/install-ci.mjs
+            - run:
+                  name: Verify the owned Preview and run HTTP smoke checks
+                  command: pnpm tsx scripts/preview.mts
+            - store_artifacts:
+                  path: .ci/outputs/preview.json
+
+workflows:
+    preview-webhook:
+        when: pipeline.git.branch == "main" and pipeline.event.name == "custom_webhook"
+        jobs:
+            - preview-smoke:
+                  webhook-body: << pipeline.trigger_parameters.webhook.body >>
+    preview-manual:
+        when: pipeline.git.branch == "main" and pipeline.event.name == "api"
+        jobs:
+            - preview-smoke:
+                  deployment-id: << pipeline.parameters.deployment_id >>

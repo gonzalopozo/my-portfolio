@@ -12,7 +12,15 @@ if (
 )
 	throw new Error('HTTPS harness requires isolated production test fixtures.');
 
-// Same .next production output, with the real TLS origin supplied to Next's request adapter.
+// Next's cache handlers mix wall-clock and performance epoch timestamps. Keep those
+// epochs aligned in this synthetic process when the host clock steps (for example NTP).
+const wallNow = Date.now.bind(Date);
+const monotonicNow = performance.now.bind(performance);
+Object.defineProperty(performance, 'timeOrigin', {
+	configurable: true,
+	get: () => wallNow() - monotonicNow(),
+});
+// Same isolated production output, with the real TLS origin supplied to Next's request adapter.
 const application = next({ dev: false, hostname: 'localhost', port: 3443 });
 await application.prepare();
 const handler = application.getRequestHandler();

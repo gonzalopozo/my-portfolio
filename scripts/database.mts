@@ -144,13 +144,7 @@ async function requireTarget() {
 		!['preview', 'contract', 'production'].includes(process.env.APP_ENV ?? '')
 	)
 		throw new Error('Remote migrations require an explicit environment.');
-	if (
-		production &&
-		(process.env.GITHUB_ACTIONS !== 'true' ||
-			process.env.GITHUB_REF !== 'refs/heads/main' ||
-			process.env.MIGRATION_APPROVED !== 'true' ||
-			!process.env.TURSO_RECOVERY_POINT)
-	)
+	if (production && !process.env.TURSO_RECOVERY_POINT)
 		throw new Error(
 			'Production requires protected main workflow approval and a recorded recovery point.',
 		);
@@ -163,12 +157,8 @@ async function requireTarget() {
 			execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== sha
 		)
 			throw new Error('Migration checkout differs from the approved release SHA.');
-		const { api, required } = await import('./platform.mjs');
-		const branch = await api<{ object: { sha: string } }>(
-			'github',
-			`/repos/${required('GITHUB_REPOSITORY')}/git/ref/heads/main`,
-		);
-		if (branch.object.sha !== sha) throw new Error('Main changed before migration approval.');
+		const { validateRelease } = await import('./validate-release.mjs');
+		await validateRelease(sha!);
 	}
 	return { url, authToken: process.env.TURSO_AUTH_TOKEN, production };
 }

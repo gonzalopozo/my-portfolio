@@ -18,6 +18,7 @@ vi.mock('node:crypto', async (importOriginal) => ({
 	randomUUID: () => '12345678-1234-1234-1234-123456789abc',
 }));
 vi.mock('node:child_process', () => ({ spawn: fixture.spawn }));
+vi.mock('../../scripts/ci-context.mjs', () => ({ mainWorkflow: vi.fn() }));
 vi.mock('../../db/client', () => ({
 	openDatabase: () => ({ client: { close: fixture.close } }),
 }));
@@ -35,13 +36,14 @@ beforeEach(() => {
 	vi.resetAllMocks();
 	originalArgv = process.argv;
 	process.argv = ['node', 'contracts.mts'];
-	vi.stubEnv('GITHUB_ACTIONS', 'true');
-	vi.stubEnv('GITHUB_REF', 'refs/heads/main');
-	vi.stubEnv('GITHUB_RUN_ID', '123');
+	vi.stubEnv('CIRCLECI', 'true');
+	vi.stubEnv('CIRCLE_BRANCH', 'main');
+	vi.stubEnv('CIRCLE_BUILD_NUM', '123');
 	vi.stubEnv('APP_ENV', 'contract');
 	vi.stubEnv('TURSO_NONPRODUCTION_ORG', 'fixture');
 	vi.stubEnv('TURSO_NONPRODUCTION_GROUP', 'ci-contracts');
 	vi.stubEnv('TURSO_API_TOKEN', 'synthetic-api-token');
+	vi.stubEnv('NONPRODUCTION_BLOB_TOKEN', 'synthetic-blob-token');
 	vi.stubGlobal('fetch', fetch);
 	fixture.readFile.mockResolvedValue(JSON.stringify(record));
 	fixture.spawn.mockImplementation(() => {

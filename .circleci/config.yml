@@ -1,0 +1,305 @@
+version: 2.1
+
+parameters:
+    task:
+        type: enum
+        enum: [validate, security, codeql, contracts, release, rollback, baseline]
+        default: validate
+    sha:
+        type: string
+        default: ''
+    deployment_id:
+        type: string
+        default: ''
+    recovery_point:
+        type: string
+        default: ''
+    baseline_tag:
+        type: string
+        default: ''
+
+executors:
+    node:
+        docker:
+            # Node 24.18.0; review tag and digest together during weekly tool maintenance.
+            - image: cimg/node:24.18.0@sha256:4a638ad75f8601fec1f193e71df584639e6accb1771cea23f3d9d3857bca480c
+        resource_class: medium
+        environment:
+            CI: 'true'
+            APP_ENV: test
+            BLOB_PUBLIC_HOSTNAME: https://fixture.public.blob.vercel-storage.com
+            CI_PIPELINE_ID: << pipeline.id >>
+            EXPECTED_SHA: << pipeline.parameters.sha >>
+            DEPLOYMENT_ID: << pipeline.parameters.deployment_id >>
+            TURSO_RECOVERY_POINT: << pipeline.parameters.recovery_point >>
+            MIGRATION_BASELINE_TAG: << pipeline.parameters.baseline_tag >>
+
+commands:
+    install:
+        steps:
+            - checkout:
+                  method: full
+            - run:
+                  name: Install verified pnpm and frozen dependencies
+                  command: node scripts/install-ci.mjs
+
+jobs:
+    quality:
+        executor: node
+        parameters:
+            pr-title:
+                type: string
+                default: ''
+        steps:
+            - install
+            - run: pnpm ci:quality
+            - run:
+                  name: Validate the PR title without evaluating it as shell code
+                  environment:
+                      PR_TITLE: << parameters.pr-title >>
+                  command: |
+                      if [ -n "$PR_TITLE" ]; then
+                          printf '%s\n' "$PR_TITLE" | pnpm exec commitlint
+                      fi
+    tests:
+        executor: node
+        steps:
+            - install
+            - run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=test-results/vitest.xml
+            - store_test_results:
+                  path: test-results
+            - store_artifacts:
+                  path: coverage
+    migrations:
+        executor: node
+        steps:
+            - install
+            - run: pnpm migrate:check
+    build:
+        executor: node
+        steps:
+            - install
+            - run:
+                  name: Build and smoke the isolated production server without browsers
+                  command: pnpm ci:build
+                  no_output_timeout: 20m
+    dependencies:
+        executor: node
+        steps:
+            - install
+            - run: pnpm audit --audit-level high
+    secrets:
+        executor: node
+        resource_class: small
+        steps:
+            - checkout:
+                  method: full
+            - run:
+                  name: Fetch complete history for redacted secret scanning
+                  command: |
+                      if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+                          git fetch --unshallow
+                      fi
+            - run: node scripts/scan-secrets.mjs
+    codeql:
+        executor: node
+        resource_class: large
+        parameters:
+            publish:
+                type: enum
+                enum: ['true', 'false']
+                default: 'false'
+        environment:
+            CODEQL_PUBLISH: << parameters.publish >>
+        steps:
+            - install
+            - run:
+                  name: Install the CodeQL archive decompressor
+                  command: sudo apt-get update && sudo apt-get install --no-install-recommends -y zstd
+            - run:
+                  name: Analyze JavaScript and TypeScript and enforce severity
+                  command: pnpm ci:codeql
+                  no_output_timeout: 20m
+            - store_artifacts:
+                  path: .ci/codeql
+    preflight:
+        executor: node
+        steps:
+            - install
+            - run: pnpm release preflight
+            - persist_to_workspace:
+                  root: .
+                  paths: [.ci/outputs/preflight.json]
+    contracts:
+        executor: node
+        environment:
+            APP_ENV: contract
+        steps:
+            - install
+            - run: pnpm tsx scripts/contracts.mts
+            - run:
+                  name: Clean up an interrupted owned contract database
+                  when: always
+                  command: pnpm tsx scripts/contracts.mts cleanup
+    migrate:
+        executor: node
+        environment:
+            APP_ENV: production
+        steps:
+            - install
+            - run: pnpm migrate:apply
+    candidate:
+        executor: node
+        steps:
+            - install
+            - attach_workspace:
+                  at: .
+            - run:
+                  name: Create and verify the staged Vercel candidate
+                  command: pnpm release create
+                  no_output_timeout: 25m
+            - persist_to_workspace:
+                  root: .
+                  paths: [.ci/outputs/candidate.json]
+            - store_artifacts:
+                  path: .ci/evidence
+    promote:
+        executor: node
+        steps:
+            - install
+            - attach_workspace:
+                  at: .
+            - run: pnpm release promote
+            - store_artifacts:
+                  path: .ci/evidence
+    rollback:
+        executor: node
+        steps:
+            - install
+            - run: pnpm release rollback
+            - store_artifacts:
+                  path: .ci/evidence
+    baseline-preflight:
+        executor: node
+        steps:
+            - install
+            - run: pnpm tsx scripts/baseline-preflight.mts
+    baseline:
+        executor: node
+        environment:
+            APP_ENV: production
+            BASELINE_APPROVED: 'true'
+        steps:
+            - install
+            - run: pnpm migrate:baseline
+
+# A serial job group holds the production lock across both human approval waits.
+# Keep approval names unique across groups so dependencies resolve within their group.
+job-groups:
+    release-flow:
+        jobs:
+            - preflight:
+                  context: [ci-metadata, release-credentials, release-candidate]
+            - contracts:
+                  context: [ci-metadata, service-contracts]
+                  requires: [preflight]
+            - approve-release-migrations:
+                  type: approval
+                  requires: [contracts]
+            - migrate:
+                  context: [ci-metadata, production-migrations]
+                  requires: [approve-release-migrations]
+            - candidate:
+                  context: [ci-metadata, release-credentials, release-candidate]
+                  requires: [migrate]
+            - approve-release-production:
+                  type: approval
+                  requires: [candidate]
+            - promote:
+                  context: [ci-metadata, release-credentials, production]
+                  requires: [approve-release-production]
+    rollback-flow:
+        jobs:
+            - approve-rollback-production:
+                  type: approval
+            - rollback:
+                  context: [ci-metadata, release-credentials, production]
+                  requires: [approve-rollback-production]
+    baseline-flow:
+        jobs:
+            - baseline-preflight:
+                  context: ci-metadata
+            - approve-baseline-migrations:
+                  type: approval
+                  requires: [baseline-preflight]
+            - baseline:
+                  context: [ci-metadata, production-migrations]
+                  requires: [approve-baseline-migrations]
+
+workflows:
+    pr-validation:
+        when: pipeline.parameters.task == "validate" and pipeline.event.name == "pull_request" and pipeline.event.github.pull_request.base.ref == "main"
+        jobs:
+            - quality:
+                  pr-title: << pipeline.event.github.pull_request.title >>
+            - tests
+            - migrations
+            - build
+            - dependencies
+            - secrets
+            - codeql
+    main-validation:
+        when: pipeline.parameters.task == "validate" and pipeline.event.name == "push" and pipeline.git.branch == "main"
+        jobs:
+            - quality
+            - tests
+            - migrations
+            - build
+            - dependencies
+            - secrets
+            - codeql:
+                  publish: 'true'
+                  context: [ci-metadata, codeql-publication]
+    manual-validation:
+        when: pipeline.parameters.task == "validate" and pipeline.event.name == "api" and pipeline.git.branch == "main"
+        jobs:
+            - quality
+            - tests
+            - migrations
+            - build
+            - dependencies
+            - secrets
+            - codeql:
+                  publish: 'true'
+                  context: [ci-metadata, codeql-publication]
+    security-scan:
+        when: pipeline.parameters.task == "security" and pipeline.git.branch == "main"
+        jobs:
+            - dependencies
+            - secrets
+    codeql-scan:
+        when: pipeline.parameters.task == "codeql" and pipeline.git.branch == "main"
+        jobs:
+            - codeql:
+                  publish: 'true'
+                  context: [ci-metadata, codeql-publication]
+    service-contracts:
+        when: pipeline.parameters.task == "contracts" and pipeline.git.branch == "main"
+        jobs:
+            - contracts:
+                  context: [ci-metadata, service-contracts]
+    release:
+        when: pipeline.parameters.task == "release" and pipeline.event.name == "api" and pipeline.git.branch == "main"
+        jobs:
+            - release-flow:
+                  serial-group: portfolio-production
+    rollback:
+        when: pipeline.parameters.task == "rollback" and pipeline.event.name == "api" and pipeline.git.branch == "main"
+        jobs:
+            - rollback-flow:
+                  serial-group: portfolio-production
+    baseline:
+        when: pipeline.parameters.task == "baseline" and pipeline.event.name == "api" and pipeline.git.branch == "main"
+        jobs:
+            - baseline-flow:
+                  serial-group: portfolio-production

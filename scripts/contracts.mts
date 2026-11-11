@@ -5,13 +5,11 @@ import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { openDatabase } from '../db/client';
 import { applyMigrations } from './database.mjs';
 import { required } from './platform.mjs';
+import { mainWorkflow } from './ci-context.mjs';
 
-if (
-	process.env.GITHUB_ACTIONS !== 'true' ||
-	process.env.GITHUB_REF !== 'refs/heads/main' ||
-	process.env.APP_ENV !== 'contract'
-)
+if (process.env.APP_ENV !== 'contract')
 	throw new Error('Remote contracts require the protected main workflow.');
+await mainWorkflow(['service-contracts', 'release']);
 const organization = required('TURSO_NONPRODUCTION_ORG').trim();
 const group = required('TURSO_NONPRODUCTION_GROUP').trim();
 if (!/^[a-z0-9-]+$/.test(organization))
@@ -22,7 +20,7 @@ if (!/^ci-[a-z0-9-]+$/.test(group))
 	throw new Error(
 		'TURSO_NONPRODUCTION_GROUP must be a group name starting with ci- (for example ci-contracts).',
 	);
-const run = required('GITHUB_RUN_ID');
+const run = required('CIRCLE_BUILD_NUM');
 const name = `ci-${run}-${randomUUID().slice(0, 8)}`;
 if (!/^ci-[0-9]+-[a-f0-9]{8}$/.test(name)) throw new Error('Invalid owned test database name.');
 const base = `https://api.turso.tech/v1/organizations/${organization}/databases`;
@@ -124,11 +122,15 @@ if (process.argv[2] === 'cleanup') {
 		}
 		const environment: NodeJS.ProcessEnv = {
 			...process.env,
+			BLOB_READ_WRITE_TOKEN: required('NONPRODUCTION_BLOB_TOKEN'),
 			TURSO_DATABASE_URL: url,
 			TURSO_AUTH_TOKEN: token.jwt,
 			TURSO_CONTRACT_DATABASE_NAME: name,
 		};
 		delete environment.TURSO_API_TOKEN;
+		delete environment.NONPRODUCTION_BLOB_TOKEN;
+		delete environment.CIRCLECI_READ_TOKEN;
+		delete environment.GITHUB_TOKEN;
 		const child = spawn('pnpm', ['test:contract'], { stdio: 'inherit', env: environment });
 		const [code] = await once(child, 'exit');
 		if (code !== 0) throw new Error('Remote service contracts failed.');

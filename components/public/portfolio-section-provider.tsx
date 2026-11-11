@@ -19,6 +19,11 @@ interface PortfolioSectionState {
 
 const PortfolioSectionContext = createContext<PortfolioSectionState | null>(null);
 
+function readSectionFromLocation() {
+	const value = new URLSearchParams(window.location.search).get('section');
+	return value === null ? null : portfolioSectionParser.parse(value);
+}
+
 /** Only this bridge reads request search params; the visible grid stays prerenderable. */
 function PortfolioSectionUrlSync({
 	request,
@@ -31,10 +36,17 @@ function PortfolioSectionUrlSync({
 	const handledVersion = useRef(0);
 
 	useEffect(() => {
+		const restoreSection = () => onUrlChange(readSectionFromLocation());
+		window.addEventListener('popstate', restoreSection);
+		return () => window.removeEventListener('popstate', restoreSection);
+	}, [onUrlChange]);
+
+	useEffect(() => {
 		if (request && request.version !== handledVersion.current) {
 			handledVersion.current = request.version;
 			void setSection(request.section);
-		} else {
+		} else if (section === readSectionFromLocation()) {
+			// Next's query adapter can report an older transition after Back/Forward.
 			onUrlChange(section);
 		}
 	}, [request, section, setSection, onUrlChange]);

@@ -67,7 +67,7 @@ describe('remote service fidelity', () => {
 		let owned: string | undefined;
 		try {
 			const blob = await put(
-				`ci/${process.env.GITHUB_RUN_ID}/${randomUUID()}.txt`,
+				`ci/${process.env.CIRCLE_BUILD_NUM}/${randomUUID()}.txt`,
 				'Synthetic service contract',
 				{
 					access: 'public',

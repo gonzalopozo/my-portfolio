@@ -16,7 +16,12 @@ function required(name: string) {
 
 /** Create credentials locally; administrator access still requires an explicit allowlist. */
 async function main() {
-	if (process.env.APP_ENV !== 'preview' || process.env.VERCEL || process.env.GITHUB_ACTIONS)
+	if (
+		process.env.APP_ENV !== 'preview' ||
+		process.env.VERCEL ||
+		process.env.GITHUB_ACTIONS ||
+		process.env.CIRCLECI
+	)
 		throw new PreviewSetupError('Run this setup locally with APP_ENV=preview.');
 	if (!stdin.isTTY || !stdout.isTTY)
 		throw new PreviewSetupError('Run this setup in an interactive terminal.');

@@ -1,12 +1,17 @@
 {
 	"pnpm": {
-		"version": "12.14.0",
-		"url": "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64.tar.gz",
-		"sha256": "3910c3852136bed5bc1511b9137a45fd4357ed6b3970d9d08893641e9005867e"
+		"version": "12.18.0",
+		"url": "https://github.com/pnpm/pnpm/releases/download/v12.18.0/pnpm-linux-x64.tar.gz",
+		"sha256": "3726060e236c0db3e7124c0a5af123c840ba0cb76682149b63ea0baf290017c2"
 	},
 	"gitleaks": {
 		"version": "8.30.1",
 		"url": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
 		"sha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+	},
+	"codeql": {
+		"version": "2.27.3",
+		"url": "https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.3/codeql-bundle-javascript-linux64.tar.zst",
+		"sha256": "95a1de65ac7f234ebbc49786eda82135819e2b0ac3b2c5d3263277ec5c020711"
 	}
 }

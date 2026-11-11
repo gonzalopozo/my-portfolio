@@ -52,11 +52,15 @@ Rules:
 
 ## Pre-Commit Checks
 
-**Run checks only when the user explicitly asks the agent to commit. If the user
-has not requested a commit, do not run any checks.** This includes formatting,
+**Run local checks only when the user explicitly asks the agent to commit. An
+explicit push request authorizes the mandatory local Playwright gate only. If
+neither operation was requested, do not run any checks.** This includes formatting,
 linting, type checking, tests, spellchecking, unused-code analysis, dependency
 boundary validation, builds, and verification commands from other guides or skills.
 Do not run checks during routine implementation or automatically after edits.
+The only additional authorization is an explicit push request, which runs the
+full local Playwright gate described below, including its isolated build/smoke;
+it does not authorize the other checks.
 
 Once the user requests a commit, before creating it, run a dedicated Codex subagent with model `gpt-6-luna`,
 reasoning effort `low`, and Fast Mode enabled. The subagent performs the final
@@ -86,12 +90,27 @@ If any pre-commit check returns errors or warnings, fix them before creating the
 commit. Treat warnings as blockers unless they are explicitly confirmed to be
 false positives and documented in the commit notes.
 
+## Local browser hooks
+
+Install Husky explicitly with `pnpm hooks:install` in every clone/worktree because
+package lifecycle scripts are disabled. Both pre-commit (after lint-staged) and
+pre-push run `pnpm test:e2e:local`, the complete isolated production Playwright
+suite. Every commit and push needs a fresh successful run; no result reuse or
+documentation-only exemption. Keep hosted Preview acceptance local too. CircleCI
+must never execute Playwright or download browsers.
+
+The dedicated nine-check pre-commit subagent policy above remains unchanged.
+Local hooks cannot prove that GitHub web/bot-created commits were tested; owner
+review must arrange local browser verification before accepting those changes.
+
 ## Automated CI and local verification
 
-GitHub Actions runs validation automatically after pull requests and pushes. This
+CircleCI runs browser-free validation automatically after pull requests and pushes. This
 does not authorize agents to run local checks. The pre-commit policy above,
 including the dedicated subagent and all required checks, remains unchanged.
-Implementation approval alone is not a request to commit. See [CI/CD](./AGENTS-CICD.md).
+Implementation approval alone is not a request to commit. An explicit push request
+authorizes only the mandatory local Playwright gate in addition to its Git operation.
+See [CI/CD](./AGENTS-CICD.md).
 
 ## Tech Stack
 
