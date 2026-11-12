@@ -178,7 +178,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** CircleCI → Run Pipeline → task `contracts`; isolated Turso/Blob
     dashboards; [services guide](./services.md). Carries forward 256–257 and 261.
 
-- [ ] **CCI-011.** After `.circleci/preview.yml` and its controller reach main,
+- [x] **CCI-011.** After `.circleci/preview.yml` and its controller reach main,
       connect the GitHub deployment-status webhook to the isolated Preview
       project. Prove successful Preview events automatically run HTTP
       smoke checks; ping/failure/production events are ignored, other repositories
@@ -188,7 +188,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** GitHub → Settings → Webhooks → Recent Deliveries; CircleCI →
     Portfolio Preview; local `pnpm test:preview`. See [Preview setup](./circleci.md#automatic-preview-smoke).
 
-- [ ] **CCI-012.** After merge, retain the merge-blocking evidence from CCI-013
+- [x] **CCI-012.** After merge, retain the merge-blocking evidence from CCI-013
       and prove missing/failed/cancelled/skipped gates block release. Rehearse
       failed contracts, drift, build/smoke failures, changed main,
       rejected approval, canonical smoke failure and interrupted cleanup safely.
