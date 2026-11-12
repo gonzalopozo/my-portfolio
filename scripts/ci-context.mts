@@ -53,7 +53,18 @@ export type Pipeline = {
 		revision: string;
 		origin_repository_url: string;
 		target_repository_url?: string;
-	};
+		tag?: string | null;
+	} | null;
+	trigger_parameters?: {
+		git?: {
+			branch: string;
+			ref: string;
+			checkout_sha: string;
+			checkout_url: string;
+			tag?: string | null;
+		} | null;
+		circleci?: { event_type: string; trigger_type: string } | null;
+	} | null;
 	trigger: { type: string };
 };
 export type Workflow = {
@@ -91,20 +102,54 @@ export async function circlePages<T>(path: string) {
 	throw new Error('CircleCI metadata pagination exceeded its bound.');
 }
 
+/** GitHub App runs carry git metadata in trigger_parameters instead of vcs. */
+export function pipelineRevision(pipeline: Pipeline) {
+	const git = pipeline.trigger_parameters?.git;
+	if (git && pipeline.vcs && git.checkout_sha !== pipeline.vcs.revision)
+		throw new Error('CircleCI pipeline source identity is unproven: conflicting commits.');
+	return git ? git.checkout_sha : pipeline.vcs?.revision;
+}
+
+export function isRepositoryPush(pipeline: Pipeline) {
+	const trigger = pipeline.trigger_parameters?.circleci;
+	if (pipeline.trigger_parameters?.git || trigger)
+		return trigger?.trigger_type === 'github_app' && trigger.event_type === 'push';
+	return pipeline.trigger.type === 'webhook';
+}
+
 export function verifyPipeline(pipeline: Pipeline, sha: string) {
 	const repository = required('GITHUB_REPOSITORY');
 	if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository))
 		throw new Error('Invalid GitHub repository identity.');
 	const origins = [`https://github.com/${repository}`, `https://github.com/${repository}.git`];
-	if (
-		pipeline.project_slug !== projectSlug() ||
-		pipeline.vcs?.branch !== 'main' ||
-		pipeline.vcs.revision !== sha ||
-		!origins.includes(pipeline.vcs.origin_repository_url) ||
-		(pipeline.vcs.target_repository_url &&
-			!origins.includes(pipeline.vcs.target_repository_url))
-	)
-		throw new Error('CircleCI pipeline source or project identity is unproven.');
+	const failures: string[] = [];
+	if (pipeline.project_slug !== projectSlug()) failures.push('project');
+	if (pipelineRevision(pipeline) !== sha) failures.push('commit');
+	const vcs = pipeline.vcs;
+	const git = pipeline.trigger_parameters?.git;
+	if (!vcs && !git) failures.push('missing source metadata');
+	// If both formats are present, every source claim must agree with trusted main.
+	if (vcs) {
+		if (vcs.branch !== 'main' || (vcs.tag != null && vcs.tag !== ''))
+			failures.push('vcs branch');
+		if (!origins.includes(vcs.origin_repository_url)) failures.push('origin repository');
+		if (vcs.target_repository_url && !origins.includes(vcs.target_repository_url))
+			failures.push('target repository');
+	}
+	if (git) {
+		if (
+			git.branch !== 'main' ||
+			git.ref !== 'refs/heads/main' ||
+			(git.tag != null && git.tag !== '')
+		)
+			failures.push('checkout branch');
+		const checkouts = [...origins, `git@github.com:${repository}.git`];
+		if (!checkouts.includes(git.checkout_url)) failures.push('checkout repository');
+	}
+	if (failures.length)
+		throw new Error(
+			`CircleCI pipeline source or project identity is unproven: ${failures.join(', ')}.`,
+		);
 }
 
 export async function mainWorkflow(names: string[]) {

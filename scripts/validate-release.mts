@@ -1,6 +1,8 @@
 import { api, required } from './platform.mjs';
 import {
 	circlePages,
+	isRepositoryPush,
+	pipelineRevision,
 	projectSlug,
 	verifyPipeline,
 	uuid,
@@ -44,7 +46,7 @@ export async function validateRelease(sha: string) {
 		`/api/v2/project/${projectSlug()}/pipeline?branch=main`,
 	);
 	const workflows: Workflow[] = [];
-	for (const pipeline of pipelines.filter((value) => value.vcs?.revision === sha)) {
+	for (const pipeline of pipelines.filter((value) => pipelineRevision(value) === sha)) {
 		verifyPipeline(pipeline, sha);
 		uuid(pipeline.id);
 		const runs = await circlePages<Workflow>(`/api/v2/pipeline/${pipeline.id}/workflow`);
@@ -58,7 +60,7 @@ export async function validateRelease(sha: string) {
 			)
 				throw new Error('Validation workflow identity mismatch.');
 			// main-validation is emitted only by the trusted push-event workflow definition.
-			if (run.name === 'main-validation' && pipeline.trigger.type !== 'webhook')
+			if (run.name === 'main-validation' && !isRepositoryPush(pipeline))
 				throw new Error('Merged validation must originate from a repository push.');
 			workflows.push(run);
 		}

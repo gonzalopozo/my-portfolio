@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { waitForCanonicalHealth } from '../../scripts/smoke.mjs';
+import { smoke, waitForCanonicalHealth } from '../../scripts/smoke.mjs';
 
 const origin = 'https://portfolio.example.test';
 const sha = 'a'.repeat(40);
@@ -19,6 +19,74 @@ afterEach(() => {
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
 	vi.unstubAllEnvs();
+});
+
+describe('canonical production HTTP smoke', () => {
+	it('requests fresh health after convergence without sending protected credentials', async () => {
+		vi.stubEnv('VERCEL_AUTOMATION_BYPASS_SECRET', 'synthetic-bypass');
+		vi.stubEnv('HEALTH_READINESS_TOKEN', 'synthetic-readiness');
+		fetch.mockImplementation(async (url, options) => {
+			switch (new URL(String(url)).pathname) {
+				case '/api/health':
+					return healthyResponse(options?.cache === 'no-store' ? sha : 'b'.repeat(40));
+				case '/':
+					return new Response('<main id="main-content">Gonzalo Pozo</main>');
+				case '/login':
+					return new Response('<form>Login</form>');
+				case '/api/auth/ok':
+					return Response.json({ ok: true });
+				default:
+					throw new Error('Unexpected smoke path.');
+			}
+		});
+		await waitForCanonicalHealth(origin, sha);
+		await expect(smoke(origin, sha, false)).resolves.toBeUndefined();
+		expect(fetch).toHaveBeenCalledTimes(5);
+		for (const [, options] of fetch.mock.calls) {
+			const headers = new Headers(options?.headers);
+			expect(headers.has('authorization')).toBe(false);
+			expect(headers.has('x-vercel-protection-bypass')).toBe(false);
+		}
+	});
+
+	it.each([
+		{
+			name: 'a different release',
+			health: { status: 'ok', release: 'b'.repeat(40) },
+			cacheControl: 'no-store',
+			message: `Deployment health SHA mismatch (expected ${sha}; received ${'b'.repeat(40)}).`,
+		},
+		{
+			name: 'a cacheable response',
+			health: { status: 'ok', release: sha },
+			cacheControl: 'public, max-age=60',
+			message: 'Health response is missing Cache-Control: no-store.',
+		},
+		{
+			name: 'an unhealthy status',
+			health: { status: 'error', release: sha },
+			cacheControl: 'no-store',
+			message: 'Health endpoint did not report ok.',
+		},
+	])('rejects $name with a specific diagnosis', async ({ health, cacheControl, message }) => {
+		fetch.mockResolvedValueOnce(
+			Response.json(health, { headers: { 'cache-control': cacheControl } }),
+		);
+		await expect(smoke(origin, sha, false)).rejects.toThrow(message);
+		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it('omits arbitrary response values from health failure diagnostics', async () => {
+		fetch.mockResolvedValueOnce(
+			Response.json(
+				{ status: 'ok', release: 'synthetic-private-value' },
+				{ headers: { 'cache-control': 'no-store' } },
+			),
+		);
+		const result = smoke(origin, sha, false);
+		await expect(result).rejects.toThrow('received unrecognized');
+		await expect(result).rejects.not.toThrow('synthetic-private-value');
+	});
 });
 
 describe('canonical production health convergence', () => {

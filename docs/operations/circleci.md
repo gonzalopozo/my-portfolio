@@ -288,14 +288,39 @@ manual runs. Always choose main for both config and checkout refs.
 ## Automatic Preview smoke
 
 1. After the migration reaches main, open **Portfolio Preview → Project Settings
-   → Project Setup → Custom webhook +**. Set its branch to main and save.
+   → Project Setup**. Edit the pipeline using its pencil icon (its initial name
+   may be `build-and-test`). Select `gonzalopozo/my-portfolio` for both the config
+   source and checkout source, set **Config file path** to
+   `.circleci/preview.yml`, and save. Then select **Custom webhook +** under that
+   pipeline. Set **Event name** to `preview-deployment-status`, **Event source**
+   to `GitHub`, and both the config and checkout branches to `main`, then save.
 2. Copy its generated endpoint URL including the secret to private storage. In
    **GitHub → repository Settings → Webhooks → Add webhook**, use that complete
    URL as Payload URL, select `application/json`, retain SSL verification and
    select only **Deployment statuses**. Keep the webhook active.
-3. Redeliver the initial ping and an actual successful Vercel Preview event.
-   Ping, pending/failure statuses and production deployments should halt before
-   dependency installation. Inspect GitHub Recent Deliveries and CircleCI jobs.
+3. Test the webhook with both an ignored event and a successful Preview event:
+    - Open **GitHub → repository Settings → Webhooks → the CircleCI webhook →
+      Recent deliveries**. Open the initial `ping` delivery and click
+      **Redeliver**. See [GitHub's redelivery instructions](https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/redelivering-webhooks).
+    - Confirm GitHub receives a successful HTTP response. In **CircleCI →
+      Portfolio Preview**, inspect `preview-webhook` → `preview-smoke`. The ping
+      should halt at **Ignore unsuccessful events before installing dependencies**;
+      installation and HTTP smoke steps should be skipped. A green halted job is
+      expected for this connectivity test.
+    - If no successful Preview delivery exists yet, open **Vercel → project →
+      Deployments**, select a **Preview** deployment for a branch's current head
+      commit in this repository and choose **Redeploy**, keeping the environment
+      Preview. Wait until the new deployment is **Ready**. Use a deployment created
+      within the last 24 hours whose commit is still a branch head.
+    - Return to GitHub's **Recent deliveries**. Open a `deployment_status` delivery
+      whose payload has `deployment.environment=Preview` and
+      `deployment_status.state=success`, then click **Redeliver**. In the resulting
+      CircleCI Preview job, installation and HTTP smoke should run and finish with
+      **Preview HTTP smoke verified.** Retain the delivery and job links as evidence.
+    - Pending/failed statuses and production deployment events, when available in
+      Recent deliveries, should halt at the same early step as the ping. A
+      successful webhook HTTP response proves delivery acceptance; inspect the
+      CircleCI job separately to establish whether the smoke checks passed.
 4. Verify a successful event resolves the deployment through the Vercel API,
    checks repository/project/SHA/age and confirms its SHA is a current branch head
    in this repository before sending bypass credentials to its exact origin.
@@ -303,6 +328,20 @@ manual runs. Always choose main for both config and checkout refs.
 5. A manual Preview run takes `deployment_id=dpl_...`. Use the Preview project's
    checked-in main config and checkout. Browser acceptance remains a separate
    [local operation](./testing.md#hosted-preview-acceptance).
+
+Event name and Event source are descriptive labels. GitHub sends the repository's
+Deployment statuses webhook, so use `GitHub` as the source label. This field is
+not `PRODUCTION_ORIGIN`, a Preview URL or the webhook endpoint. CircleCI exposes
+the trigger type as `pipeline.event.name=custom_webhook`; the configured display
+name does not replace that value. The smoke target comes from the deployment
+payload and is independently verified through the Vercel API.
+
+If a custom-webhook run shows **No workflows found**, check the pipeline's config
+file path in **Project Setup** first. The regular `.circleci/config.yml` filters
+out this event with its default parameters; Preview must use
+`.circleci/preview.yml`. With the Preview configuration and main refs, even a ping
+creates `preview-webhook` → `preview-smoke`, which then halts before installation.
+An empty workflow list does not establish that the job's event filter ran.
 
 The webhook URL is a credential. Do not paste it into this guide or public job
 logs. Treat payload strings as data; the controller does not execute PR artifacts
@@ -324,6 +363,19 @@ allowlisted environment, so Next.js cannot rely on CircleCI metadata to size its
 workers; host CPU discovery can otherwise exceed the container's memory budget.
 CodeQL publishes only from trusted main; PR analysis uses no publication token.
 The full audit replaces the dependency-review Action at the same high threshold.
+
+Before downloading CodeQL, publication verifies the workflow, project and checkout
+against CircleCI metadata. GitHub App runs provide source identity through
+`trigger_parameters.git`, including `branch`, `ref`, `checkout_sha` and
+`checkout_url`; they can omit the legacy `vcs` object. The exact repository's
+HTTPS URL or SSH clone address is accepted. Release validation reads the same
+commit metadata and requires a GitHub App `push` event for merged validation.
+See [CircleCI's source metadata formats](https://circleci.com/docs/reference/outbound-webhooks-reference/#trigger-parameters).
+
+An authentication error such as `circleci operation failed (401)` requires checking
+the read token. A source-identity error lists the failed field names without
+printing response bodies or credentials. Correct that mismatch before rerunning;
+changing a token cannot fix source metadata parsing.
 
 After successful merged-main validation, add two **schedule triggers** under
 Project Setup, branch main, with pipeline parameters:

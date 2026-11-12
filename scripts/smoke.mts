@@ -36,13 +36,18 @@ async function json<T>(response: Response): Promise<T> {
 	}
 }
 
-async function hasExpectedHealth(response: Response, sha: string) {
-	const health = await json<{ status?: string; release?: string }>(response);
-	return (
-		health.status === 'ok' &&
-		health.release === sha &&
-		response.headers.get('cache-control')?.includes('no-store') === true
-	);
+async function assertExpectedHealth(response: Response, sha: string) {
+	const health = await json<{ status?: unknown; release?: unknown } | null>(response);
+	if (health?.status !== 'ok') throw new Error('Health endpoint did not report ok.');
+	if (health.release !== sha) {
+		const observed =
+			typeof health.release === 'string' && /^[a-f0-9]{40}$/.test(health.release)
+				? health.release
+				: 'unrecognized';
+		throw new Error(`Deployment health SHA mismatch (expected ${sha}; received ${observed}).`);
+	}
+	if (response.headers.get('cache-control')?.includes('no-store') !== true)
+		throw new Error('Health response is missing Cache-Control: no-store.');
 }
 
 /**
@@ -77,7 +82,12 @@ export async function waitForCanonicalHealth(origin: string, sha: string) {
 		}).catch(() => undefined);
 		if (response) {
 			if (response.status === 200) {
-				if (await hasExpectedHealth(response, sha).catch(() => false)) return;
+				try {
+					await assertExpectedHealth(response, sha);
+					return;
+				} catch {
+					// Public routing may still serve the previous release within this bounded wait.
+				}
 			} else {
 				await response.body?.cancel().catch(() => {});
 			}
@@ -121,14 +131,14 @@ export async function smoke(
 	for (const path of ['/api/health', '/', '/login', '/api/auth/ok']) {
 		const response = await fetch(new URL(path, origin), {
 			headers,
+			cache: 'no-store',
 			redirect: 'manual',
 			signal: AbortSignal.timeout(15000),
 		});
 		if (response.status !== 200)
 			throw new Error(`Smoke request failed for ${path} (${response.status}).`);
 		if (path === '/api/health') {
-			if (!(await hasExpectedHealth(response, sha)))
-				throw new Error('Deployment identity or uncached health check mismatch.');
+			await assertExpectedHealth(response, sha);
 		} else if (path === '/') {
 			const content = await body(response);
 			if (!content.includes('Gonzalo Pozo') || !content.includes('main-content'))
@@ -143,6 +153,7 @@ export async function smoke(
 	if (readiness) {
 		const response = await fetch(`${origin}/api/ready`, {
 			headers: { ...headers, authorization: `Bearer ${required('HEALTH_READINESS_TOKEN')}` },
+			cache: 'no-store',
 			redirect: 'error',
 			signal: AbortSignal.timeout(6000),
 		});

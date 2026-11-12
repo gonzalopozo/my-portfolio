@@ -13,6 +13,23 @@ let jobs: WorkflowJob[];
 let main: string;
 let alerts: { rule: { severity: string; security_severity_level?: string } }[];
 
+function useGitHubAppSource() {
+	const circleci = { event_type: 'push', trigger_type: 'github_app' };
+	pipeline.vcs = null;
+	pipeline.trigger = { type: 'github_app' };
+	pipeline.trigger_parameters = {
+		git: {
+			branch: 'main',
+			ref: 'refs/heads/main',
+			tag: null,
+			checkout_sha: sha,
+			checkout_url: 'git@github.com:owner/portfolio.git',
+		},
+		circleci,
+	};
+	return circleci;
+}
+
 beforeEach(() => {
 	vi.resetAllMocks();
 	vi.stubEnv('GITHUB_REPOSITORY', 'owner/portfolio');
@@ -70,6 +87,32 @@ afterEach(() => {
 describe('merged-commit release gates', () => {
 	it('accepts fresh main push results with every required gate', async () => {
 		await expect(validateRelease(sha)).resolves.toBeUndefined();
+	});
+	it('accepts fresh GitHub App main push results without legacy vcs metadata', async () => {
+		useGitHubAppSource();
+		await expect(validateRelease(sha)).resolves.toBeUndefined();
+	});
+	it.each(['api', 'schedule', 'pull_request'])(
+		'rejects a GitHub App %s event masquerading as a main push',
+		async (event) => {
+			useGitHubAppSource().event_type = event;
+			await expect(validateRelease(sha)).rejects.toThrow('repository push');
+		},
+	);
+	it('requires a proven GitHub App push provider', async () => {
+		useGitHubAppSource().trigger_type = 'webhook';
+		await expect(validateRelease(sha)).rejects.toThrow('repository push');
+	});
+	it('rejects a newer failed GitHub App scan despite a successful main push', async () => {
+		useGitHubAppSource();
+		runs.push({
+			...runs[0],
+			id: pipelineId,
+			name: 'codeql-scan',
+			status: 'failed',
+			created_at: new Date().toISOString(),
+		});
+		await expect(validateRelease(sha)).rejects.toThrow('fresh');
 	});
 	it('rejects a changed main SHA', async () => {
 		main = 'b'.repeat(40);

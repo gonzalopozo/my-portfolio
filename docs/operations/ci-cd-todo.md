@@ -102,7 +102,7 @@ jobs and keep `CIRCLECI_RELEASES_ENABLED=false`.
     **Where:** CircleCI → Organization Settings → Contexts and User Settings;
     provider token dashboards; [credential matrix](./circleci.md#credentials).
 
-- [ ] **CCI-009.** Review the migration PR controller test results for rejection
+- [x] **CCI-009.** Review the migration PR controller test results for rejection
       of wrong projects, checkouts, workflows, SHAs, approval roles/actors and
       missing/expired approvals. Confirm coverage of fresh main-push proof,
       newer failed/pending scans and stale-result rejection. Actual hosted
@@ -123,7 +123,7 @@ Configure the new required checks while the PR is open, then merge it.
 Main-only publication, service contracts and Preview checks follow merge;
 they are not prerequisites for creating this first migration PR.
 
-- [ ] **CCI-013.** After the seven checks genuinely appear on the migration PR,
+- [x] **CCI-013.** After the seven checks genuinely appear on the migration PR,
       replace old Actions required checks with their exact CircleCI names and
       source. Preserve PR-only main updates, up-to-date branches, conversation
       resolution, force-push/deletion restrictions and CodeQL severity enforcement
@@ -136,7 +136,7 @@ they are not prerequisites for creating this first migration PR.
     **Where:** GitHub → Settings → Rules → Production main → required checks.
     Record the actual emitted names and a failing-check rejection example.
 
-- [ ] **CCI-014.** Merge the reviewed migration with all six repository Actions
+- [x] **CCI-014.** Merge the reviewed migration with all six repository Actions
       workflows removed. Retain only Dependabot's package updater and native
       security features. Confirm no old default CodeQL or custom workflow remains
       active. Retain historical run/evidence links and shared Git history.
@@ -152,7 +152,7 @@ validation for the actual merged SHA; keep production release activation
 disabled while accepting security publication, nonproduction contracts,
 Preview checks and isolated controller rehearsals.
 
-- [ ] **CCI-015.** Retain successful main-validation evidence for the exact merged
+- [x] **CCI-015.** Retain successful main-validation evidence for the exact merged
       SHA. Enable daily security and weekly CodeQL schedule triggers; prove their
       first runs. Review actual credits, resource memory and projected monthly
       usage against the free allowance before considering setup complete.
@@ -160,7 +160,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** CircleCI → Portfolio → pipelines / Project Setup → Schedules;
     organization → Plan / Usage. Never enable paid overage to make a check pass.
 
-- [ ] **CCI-007.** After merge, prove trusted-main SARIF publication and verify
+- [x] **CCI-007.** After merge, prove trusted-main SARIF publication and verify
       that the duplicate GitHub default CodeQL setup was disabled at CCI-013.
       Retain the PR severity-blocking evidence from CCI-006, the dependency graph,
       Dependabot alerts/updates, native secret scanning and push protection.
@@ -169,7 +169,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** CircleCI security jobs; GitHub → Settings → Code security and
     Security → Code scanning / Secret scanning. Carries forward 038–041 and 160.
 
-- [ ] **CCI-010.** After the migration config/scripts reach main, run service
+- [x] **CCI-010.** After the migration config/scripts reach main, run service
       contracts from trusted main using only nonproduction resources. Prove
       ownership fingerprint checks, success/failure cleanup and
       interrupted-run reconciliation. Confirm production schema/ledger and
@@ -178,7 +178,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** CircleCI → Run Pipeline → task `contracts`; isolated Turso/Blob
     dashboards; [services guide](./services.md). Carries forward 256–257 and 261.
 
-- [ ] **CCI-011.** After `.circleci/preview.yml` and its controller reach main,
+- [x] **CCI-011.** After `.circleci/preview.yml` and its controller reach main,
       connect the GitHub deployment-status webhook to the isolated Preview
       project. Prove successful Preview events automatically run HTTP
       smoke checks; ping/failure/production events are ignored, other repositories
@@ -188,7 +188,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** GitHub → Settings → Webhooks → Recent Deliveries; CircleCI →
     Portfolio Preview; local `pnpm test:preview`. See [Preview setup](./circleci.md#automatic-preview-smoke).
 
-- [ ] **CCI-012.** After merge, retain the merge-blocking evidence from CCI-013
+- [x] **CCI-012.** After merge, retain the merge-blocking evidence from CCI-013
       and prove missing/failed/cancelled/skipped gates block release. Rehearse
       failed contracts, drift, build/smoke failures, changed main,
       rejected approval, canonical smoke failure and interrupted cleanup safely.
@@ -198,7 +198,7 @@ Preview checks and isolated controller rehearsals.
 
 ## Production activation and ongoing ownership
 
-- [ ] **CCI-016.** Deliberately enable releases for a controlled release and rollback
+- [x] **CCI-016.** Deliberately enable releases for a controlled release and rollback
       drill. Review SQL/recovery before migration approval and candidate evidence
       before production approval. Record the old canonical health SHA while the
       candidate waits, then prove same-ID promotion and canonical smoke success.
@@ -208,7 +208,7 @@ Preview checks and isolated controller rehearsals.
     jobs; Vercel; GitHub Deployments; private recovery notes. Carries forward
     215, 222, 228–229 and applicable 262–270. Missing evidence remains open.
 
-- [ ] **CCI-017.** Export nonsensitive release evidence privately for at least 90
+- [x] **CCI-017.** Export nonsensitive release evidence privately for at least 90
       days; configure short CircleCI diagnostic retention. Review health/readiness,
       classified logs, provider quota notifications, credential rotation and weekly
       dependency/image/binary updates. Reconcile guides, limitations and owners.

@@ -6,6 +6,8 @@ import { mainWorkflow } from './ci-context.mjs';
 import { commit, required } from './platform.mjs';
 
 if (process.env.CIRCLECI !== 'true') throw new Error('CodeQL is a CircleCI security job.');
+if (process.env.CODEQL_PUBLISH === 'true')
+	await mainWorkflow(['main-validation', 'manual-validation', 'codeql-scan']);
 const tool = await nativeTool('codeql');
 const database = resolve('.ci/codeql-database');
 const report = '.ci/codeql/javascript.sarif';
@@ -42,7 +44,6 @@ try {
 		'--ram=6144',
 	]);
 	if (process.env.CODEQL_PUBLISH === 'true') {
-		await mainWorkflow(['main-validation', 'manual-validation', 'codeql-scan']);
 		run(
 			[
 				'github',
