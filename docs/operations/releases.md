@@ -78,10 +78,21 @@ queued operations require a new reviewed dispatch; they are not completed releas
 - Rejected approval, changed main or expired candidate prevents promotion.
 - Canonical smoke failure fails the release and records failure. Inspect actual
   live state and obtain owner-approved rollback where necessary.
+- Promotion happens before canonical smoke. A failed smoke job can therefore
+  leave the candidate live while its GitHub Deployment status is failure. Compare
+  the actual production deployment ID and canonical health SHA with the run's
+  candidate evidence before retrying. Repeating promotion against the former
+  previous deployment can fail its production-identity guard.
 - Failure to restore disabled automatic domain assignment is an incident: freeze
   Git production triggers, restore the setting and verify actual domains.
 - Runner interruption requires checking ledger, deployment identity, current
   domains and owned resources before retrying; failure does not imply no side effects.
+
+Health probes request fresh responses throughout polling and final smoke. Health
+errors distinguish an unhealthy status, a different release SHA and a missing
+`Cache-Control: no-store` header. Only valid commit SHAs appear in mismatch
+diagnostics; arbitrary response values and bodies remain omitted. A later healthy
+response does not change the failed run into a successful release.
 
 Candidate/production GitHub Deployment records retain the Vercel ID, previous ID,
 SHA, CircleCI IDs, approval identity and status. CircleCI artifacts contain bounded
