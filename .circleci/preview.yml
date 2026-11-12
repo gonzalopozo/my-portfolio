@@ -27,7 +27,7 @@ jobs:
             - run:
                   name: Ignore unsuccessful events before installing dependencies
                   command: |
-                      node --input-type=module <<'JS'
+                      node --input-type=module \<<'JS'
                       const body = process.env.PREVIEW_EVENT_JSON;
                       if (body) {
                           if (Buffer.byteLength(body) > 262144) throw new Error('Preview event is too large.');
