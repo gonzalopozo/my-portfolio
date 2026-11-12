@@ -160,7 +160,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** CircleCI → Portfolio → pipelines / Project Setup → Schedules;
     organization → Plan / Usage. Never enable paid overage to make a check pass.
 
-- [ ] **CCI-007.** After merge, prove trusted-main SARIF publication and verify
+- [x] **CCI-007.** After merge, prove trusted-main SARIF publication and verify
       that the duplicate GitHub default CodeQL setup was disabled at CCI-013.
       Retain the PR severity-blocking evidence from CCI-006, the dependency graph,
       Dependabot alerts/updates, native secret scanning and push protection.
@@ -169,7 +169,7 @@ Preview checks and isolated controller rehearsals.
     **Where:** CircleCI security jobs; GitHub → Settings → Code security and
     Security → Code scanning / Secret scanning. Carries forward 038–041 and 160.
 
-- [ ] **CCI-010.** After the migration config/scripts reach main, run service
+- [x] **CCI-010.** After the migration config/scripts reach main, run service
       contracts from trusted main using only nonproduction resources. Prove
       ownership fingerprint checks, success/failure cleanup and
       interrupted-run reconciliation. Confirm production schema/ledger and
