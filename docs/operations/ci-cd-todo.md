@@ -198,7 +198,7 @@ Preview checks and isolated controller rehearsals.
 
 ## Production activation and ongoing ownership
 
-- [ ] **CCI-016.** Deliberately enable releases for a controlled release and rollback
+- [x] **CCI-016.** Deliberately enable releases for a controlled release and rollback
       drill. Review SQL/recovery before migration approval and candidate evidence
       before production approval. Record the old canonical health SHA while the
       candidate waits, then prove same-ID promotion and canonical smoke success.
@@ -208,7 +208,7 @@ Preview checks and isolated controller rehearsals.
     jobs; Vercel; GitHub Deployments; private recovery notes. Carries forward
     215, 222, 228–229 and applicable 262–270. Missing evidence remains open.
 
-- [ ] **CCI-017.** Export nonsensitive release evidence privately for at least 90
+- [x] **CCI-017.** Export nonsensitive release evidence privately for at least 90
       days; configure short CircleCI diagnostic retention. Review health/readiness,
       classified logs, provider quota notifications, credential rotation and weekly
       dependency/image/binary updates. Reconcile guides, limitations and owners.
