@@ -299,28 +299,28 @@ manual runs. Always choose main for both config and checkout refs.
    URL as Payload URL, select `application/json`, retain SSL verification and
    select only **Deployment statuses**. Keep the webhook active.
 3. Test the webhook with both an ignored event and a successful Preview event:
-   - Open **GitHub → repository Settings → Webhooks → the CircleCI webhook →
-     Recent deliveries**. Open the initial `ping` delivery and click
-     **Redeliver**. See [GitHub's redelivery instructions](https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/redelivering-webhooks).
-   - Confirm GitHub receives a successful HTTP response. In **CircleCI →
-     Portfolio Preview**, inspect `preview-webhook` → `preview-smoke`. The ping
-     should halt at **Ignore unsuccessful events before installing dependencies**;
-     installation and HTTP smoke steps should be skipped. A green halted job is
-     expected for this connectivity test.
-   - If no successful Preview delivery exists yet, open **Vercel → project →
-     Deployments**, select a **Preview** deployment for a branch's current head
-     commit in this repository and choose **Redeploy**, keeping the environment
-     Preview. Wait until the new deployment is **Ready**. Use a deployment created
-     within the last 24 hours whose commit is still a branch head.
-   - Return to GitHub's **Recent deliveries**. Open a `deployment_status` delivery
-     whose payload has `deployment.environment=Preview` and
-     `deployment_status.state=success`, then click **Redeliver**. In the resulting
-     CircleCI Preview job, installation and HTTP smoke should run and finish with
-     **Preview HTTP smoke verified.** Retain the delivery and job links as evidence.
-   - Pending/failed statuses and production deployment events, when available in
-     Recent deliveries, should halt at the same early step as the ping. A
-     successful webhook HTTP response proves delivery acceptance; inspect the
-     CircleCI job separately to establish whether the smoke checks passed.
+    - Open **GitHub → repository Settings → Webhooks → the CircleCI webhook →
+      Recent deliveries**. Open the initial `ping` delivery and click
+      **Redeliver**. See [GitHub's redelivery instructions](https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/redelivering-webhooks).
+    - Confirm GitHub receives a successful HTTP response. In **CircleCI →
+      Portfolio Preview**, inspect `preview-webhook` → `preview-smoke`. The ping
+      should halt at **Ignore unsuccessful events before installing dependencies**;
+      installation and HTTP smoke steps should be skipped. A green halted job is
+      expected for this connectivity test.
+    - If no successful Preview delivery exists yet, open **Vercel → project →
+      Deployments**, select a **Preview** deployment for a branch's current head
+      commit in this repository and choose **Redeploy**, keeping the environment
+      Preview. Wait until the new deployment is **Ready**. Use a deployment created
+      within the last 24 hours whose commit is still a branch head.
+    - Return to GitHub's **Recent deliveries**. Open a `deployment_status` delivery
+      whose payload has `deployment.environment=Preview` and
+      `deployment_status.state=success`, then click **Redeliver**. In the resulting
+      CircleCI Preview job, installation and HTTP smoke should run and finish with
+      **Preview HTTP smoke verified.** Retain the delivery and job links as evidence.
+    - Pending/failed statuses and production deployment events, when available in
+      Recent deliveries, should halt at the same early step as the ping. A
+      successful webhook HTTP response proves delivery acceptance; inspect the
+      CircleCI job separately to establish whether the smoke checks passed.
 4. Verify a successful event resolves the deployment through the Vercel API,
    checks repository/project/SHA/age and confirms its SHA is a current branch head
    in this repository before sending bypass credentials to its exact origin.
