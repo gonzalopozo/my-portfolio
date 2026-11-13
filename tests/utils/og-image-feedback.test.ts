@@ -51,3 +51,15 @@ describe('OG image redirect feedback', () => {
 		expect(params.toString()).toBe('filter=active');
 	});
 });
+
+describe('recovery feedback codes', () => {
+	it.each(['persistence-uncertain', 'image-too-complex'] as const)(
+		'round-trips %s through the safe catalogue',
+		(code) => {
+			const recovery = { ...feedback, error: { ...feedback.error, code } };
+			const params = new URL(getOgImageWarningRedirect(recovery), 'https://admin.example.com')
+				.searchParams;
+			expect(parseOgImageWarning(Object.fromEntries(params))).toEqual(recovery);
+		},
+	);
+});

@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OgImageError } from '@/lib/og-image-feedback';
 
@@ -10,30 +9,32 @@ const mocks = vi.hoisted(() => ({
 	delete: vi.fn(),
 	set: vi.fn(),
 	returning: vi.fn(),
-	findMany: vi.fn(),
 	upload: vi.fn(),
+	persist: vi.fn(),
 	cleanup: vi.fn(),
+	record: vi.fn(),
 	redirect: vi.fn(),
 	updateTag: vi.fn(),
 	revalidatePath: vi.fn(),
 }));
-
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/admin', () => ({ requireAdmin: mocks.admin }));
 vi.mock('@/db', () => ({
 	db: {
-		transaction: async (callback: (transaction: unknown) => unknown) =>
+		transaction: async (callback: (tx: unknown) => unknown) =>
 			callback((await import('@/db')).db),
 		select: mocks.select,
 		insert: mocks.insert,
 		update: mocks.update,
 		delete: mocks.delete,
-		query: { projectSkills: { findMany: mocks.findMany } },
+		query: { projectSkills: { findMany: async () => [] } },
 	},
 }));
-vi.mock('@/lib/og-image', () => ({
-	saveImageInVercelBlob: mocks.upload,
-	deleteOldImageInVercelBlob: mocks.cleanup,
+vi.mock('@/lib/og-image', () => ({ saveImageInVercelBlob: mocks.upload }));
+vi.mock('@/lib/og-image/store', () => ({
+	persistProjectImage: mocks.persist,
+	cleanupImageOperation: mocks.cleanup,
+	recordImageCleanup: mocks.record,
 }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next/cache', () => ({ updateTag: mocks.updateTag, revalidatePath: mocks.revalidatePath }));
@@ -46,17 +47,15 @@ import {
 } from '@/lib/actions/projects';
 import { parseOgImageWarning } from '@/lib/og-image-feedback';
 
-const oldImage = 'https://store.public.blob.vercel-storage.com/old.png';
-const newImage = 'https://store.public.blob.vercel-storage.com/new.png';
-const sourceUrl = 'https://example.com/project';
-const failure: OgImageError = {
+const oldImage = 'https://store.public.blob.vercel-storage.com/og-images/7-123.png';
+const source = 'https://example.com/project';
+const error: OgImageError = {
 	code: 'timeout',
 	stage: 'page-fetch',
 	reference: '11111111-1111-4111-8111-111111111111',
 };
-const cleanupFailure: OgImageError = { ...failure, code: 'delete-failed', stage: 'cleanup' };
-
-function form(url = sourceUrl) {
+const cleanupError: OgImageError = { ...error, code: 'delete-failed', stage: 'cleanup' };
+function form(url = source) {
 	const data = new FormData();
 	data.set('title', 'Portfolio');
 	data.set('description', 'Personal portfolio');
@@ -64,231 +63,136 @@ function form(url = sourceUrl) {
 	data.set('status', 'active');
 	return data;
 }
-
-function existingProject(url: string | null = sourceUrl) {
-	mocks.select.mockReturnValue({
-		from: () => ({ where: async () => [{ url, ogImageUrl: oldImage }] }),
-	});
-}
-
 function redirectedWarning() {
-	const [path] = mocks.redirect.mock.calls.at(-1)!;
 	return parseOgImageWarning(
-		Object.fromEntries(new URL(path, 'https://admin.example.com').searchParams),
+		Object.fromEntries(
+			new URL(mocks.redirect.mock.calls.at(-1)![0], 'https://admin.example.com').searchParams,
+		),
 	);
 }
-
 beforeEach(() => {
 	vi.resetAllMocks();
-	mocks.admin.mockResolvedValue({ user: { id: 'admin' } });
-	existingProject();
+	mocks.select.mockReturnValue({
+		from: () => ({ where: async () => [{ url: source, ogImageUrl: oldImage }] }),
+	});
 	mocks.insert.mockReturnValue({
 		values: () => ({ returning: async () => [{ insertedId: 7 }] }),
 	});
-	mocks.findMany.mockResolvedValue([]);
 	mocks.update.mockReturnValue({ set: mocks.set });
 	mocks.set.mockReturnValue({ where: () => ({ returning: mocks.returning }) });
 	mocks.returning.mockResolvedValue([{ id: 7 }]);
 	mocks.delete.mockReturnValue({
 		where: () => ({ returning: async () => [{ ogImageUrl: oldImage }] }),
 	});
-	mocks.upload.mockResolvedValue({ ok: true, url: newImage });
+	mocks.upload.mockResolvedValue({
+		ok: true,
+		url: 'https://store.public.blob.vercel-storage.com/og-images/7-124.png',
+		operationId: error.reference,
+	});
+	mocks.persist.mockResolvedValue({ ok: true });
 	mocks.cleanup.mockResolvedValue({ ok: true });
+	mocks.record.mockResolvedValue('cleanup-operation');
 	mocks.redirect.mockImplementation(() => {
 		throw new Error('redirect');
 	});
 	vi.spyOn(console, 'error').mockImplementation(() => {});
-	vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
-
 afterEach(() => vi.restoreAllMocks());
 
-describe('project saves with image warnings', () => {
-	it('creates a project despite an image failure and redirects with safe feedback', async () => {
+describe('project image action feedback', () => {
+	it('creates the project despite image acquisition failure', async () => {
 		mocks.select.mockReturnValue({ from: async () => [{ maxOrder: 0 }] });
-		mocks.upload.mockResolvedValue({ ok: false, error: failure });
+		mocks.upload.mockResolvedValue({ ok: false, error });
 		await expect(createProject(form())).rejects.toThrow('redirect');
-		expect(mocks.insert).toHaveBeenCalled();
-		expect(redirectedWarning()).toEqual({ projectId: 7, operation: 'create', error: failure });
-		expect(mocks.updateTag).toHaveBeenCalled();
-		expect(mocks.cleanup).not.toHaveBeenCalled();
-	});
-
-	it('redirects a saved project with a persistence warning and cleans the unused upload', async () => {
-		mocks.select.mockReturnValue({ from: async () => [{ maxOrder: 0 }] });
-		mocks.returning.mockRejectedValueOnce(new Error('database unavailable'));
-		await expect(createProject(form())).rejects.toThrow('redirect');
-		expect(redirectedWarning()).toMatchObject({
-			projectId: 7,
-			operation: 'create',
-			error: { code: 'persist-failed' },
-		});
-		expect(mocks.cleanup).toHaveBeenCalledExactlyOnceWith(newImage, 7);
+		expect(redirectedWarning()).toEqual({ projectId: 7, operation: 'create', error });
+		expect(mocks.persist).not.toHaveBeenCalled();
 		expect(mocks.updateTag).toHaveBeenCalled();
 	});
-
-	it('updates project data and preserves the old image when the source fails', async () => {
-		mocks.upload.mockResolvedValue({ ok: false, error: failure });
-		await expect(updateProject(7, form('https://example.com/new'))).rejects.toThrow('redirect');
-		expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ title: 'Portfolio' }));
-		expect(mocks.set).not.toHaveBeenCalledWith({ ogImageUrl: newImage });
-		expect(redirectedWarning()).toEqual({ projectId: 7, operation: 'update', error: failure });
-		expect(mocks.cleanup).not.toHaveBeenCalled();
-	});
-
-	it('removes the database reference before cleaning up a cleared source URL', async () => {
-		mocks.cleanup.mockResolvedValue({ ok: false, error: cleanupFailure });
-		await expect(updateProject(7, form(''))).rejects.toThrow('redirect');
-		expect(mocks.set).toHaveBeenCalledWith({ ogImageUrl: null });
-		expect(mocks.set.mock.invocationCallOrder.at(-1)).toBeLessThan(
-			mocks.cleanup.mock.invocationCallOrder[0],
-		);
-		expect(redirectedWarning()?.error).toEqual(cleanupFailure);
-	});
-
-	it('keeps the image blob when clearing its database reference fails', async () => {
-		mocks.set.mockImplementation((values: { ogImageUrl?: string | null }) => {
-			if (values.ogImageUrl === null) throw new Error('database token secret');
-			return { where: async () => undefined };
-		});
-		await expect(updateProject(7, form(''))).rejects.toThrow('redirect');
-		expect(redirectedWarning()?.error.code).toBe('persist-failed');
-		expect(mocks.cleanup).not.toHaveBeenCalled();
-		expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain('secret');
-	});
-
-	it('does not clean the old image if a concurrent edit prevents clearing the reference', async () => {
-		mocks.returning.mockResolvedValueOnce([]);
-		await expect(updateProject(7, form(''))).rejects.toThrow('redirect');
-		expect(redirectedWarning()?.error.code).toBe('persist-failed');
-		expect(mocks.cleanup).not.toHaveBeenCalled();
-	});
-
-	it('does not refetch the image for an unchanged source URL', async () => {
-		await expect(updateProject(7, form())).rejects.toThrow('redirect');
-		expect(mocks.upload).not.toHaveBeenCalled();
-		expect(mocks.redirect).toHaveBeenCalledWith('/dashboard/projects');
-	});
-});
-
-describe('manual OG image refresh', () => {
-	it('keeps the old image when acquisition fails', async () => {
-		mocks.upload.mockResolvedValue({ ok: false, error: failure });
-		expect(await refreshProjectOgImage(7)).toEqual({ ok: false, error: failure });
-		expect(mocks.update).not.toHaveBeenCalled();
-		expect(mocks.cleanup).not.toHaveBeenCalled();
-	});
-
-	it('persists the replacement before deleting the previous image', async () => {
+	it('passes the previous image and shared deadline to the durable replacement', async () => {
 		expect(await refreshProjectOgImage(7)).toEqual({ ok: true });
-		expect(mocks.set).toHaveBeenCalledWith({ ogImageUrl: newImage });
-		expect(mocks.cleanup).toHaveBeenCalledWith(oldImage, 7);
-		expect(mocks.returning.mock.invocationCallOrder[0]).toBeLessThan(
-			mocks.cleanup.mock.invocationCallOrder[0],
+		expect(mocks.upload).toHaveBeenCalledWith(source, 7, oldImage, expect.anything());
+		expect(mocks.persist).toHaveBeenCalledWith(
+			error.reference,
+			source,
+			mocks.upload.mock.calls[0][3],
 		);
+	});
+	it('retains failed acquisition feedback without persistence or cleanup', async () => {
+		mocks.upload.mockResolvedValue({ ok: false, error });
+		expect(await refreshProjectOgImage(7)).toEqual({ ok: false, error });
+		expect(mocks.persist).not.toHaveBeenCalled();
+		expect(mocks.cleanup).not.toHaveBeenCalled();
+	});
+	it('returns uncertainty and refreshes cached data without deleting anything', async () => {
+		const uncertain = { ...error, code: 'persistence-uncertain' };
+		mocks.persist.mockResolvedValue({ ok: false, error: uncertain });
+		expect(await refreshProjectOgImage(7)).toEqual({ ok: false, error: uncertain });
+		expect(mocks.cleanup).not.toHaveBeenCalled();
 		expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/projects');
 	});
-
-	it('cleans up an unused upload on persistence failure without deleting the old image', async () => {
-		mocks.returning.mockRejectedValueOnce(new Error('database URL secret'));
-		expect(await refreshProjectOgImage(7)).toMatchObject({
-			ok: false,
-			error: { code: 'persist-failed' },
-		});
-		expect(mocks.cleanup).toHaveBeenCalledExactlyOnceWith(newImage, 7);
-		expect(mocks.updateTag).not.toHaveBeenCalled();
+	it('updates project data even when image acquisition fails', async () => {
+		mocks.upload.mockResolvedValue({ ok: false, error });
+		await expect(updateProject(7, form('https://example.com/new'))).rejects.toThrow('redirect');
+		expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ title: 'Portfolio' }));
+		expect(redirectedWarning()?.error).toEqual(error);
 	});
-
-	it('cleans up an upload when its project was deleted before persistence', async () => {
+	it('does not refetch for an unchanged source', async () => {
+		await expect(updateProject(7, form())).rejects.toThrow('redirect');
+		expect(mocks.upload).not.toHaveBeenCalled();
+	});
+	it('records cleanup alongside reference removal before touching storage', async () => {
+		mocks.cleanup.mockResolvedValue({ ok: false, error: cleanupError });
+		await expect(updateProject(7, form(''))).rejects.toThrow('redirect');
+		expect(mocks.record).toHaveBeenCalledWith(expect.anything(), 7, oldImage);
+		expect(mocks.record.mock.invocationCallOrder[0]).toBeLessThan(
+			mocks.cleanup.mock.invocationCallOrder[0],
+		);
+		expect(redirectedWarning()?.error).toEqual(cleanupError);
+	});
+	it('does not clean an image when the clear-reference CAS fails', async () => {
 		mocks.returning.mockResolvedValueOnce([]);
-		expect(await refreshProjectOgImage(7)).toMatchObject({
-			ok: false,
-			error: { code: 'persist-failed' },
-		});
-		expect(mocks.cleanup).toHaveBeenCalledWith(newImage, 7);
+		await expect(updateProject(7, form(''))).rejects.toThrow('redirect');
+		expect(mocks.record).not.toHaveBeenCalled();
+		expect(mocks.cleanup).not.toHaveBeenCalled();
+		expect(redirectedWarning()?.error.code).toBe('persist-failed');
 	});
-
-	it('keeps the primary persistence failure if secondary upload cleanup fails', async () => {
-		mocks.returning.mockRejectedValueOnce(new Error('database unavailable'));
-		mocks.cleanup.mockResolvedValue({ ok: false, error: cleanupFailure });
-		expect(await refreshProjectOgImage(7)).toMatchObject({
-			ok: false,
-			error: { code: 'persist-failed' },
-		});
+	it('deletes the project and returns secondary cleanup failures as warnings', async () => {
+		mocks.cleanup.mockResolvedValue({ ok: false, error: cleanupError });
+		expect(await deleteProject(7)).toEqual({ ok: true, warning: cleanupError });
+		expect(mocks.record).toHaveBeenCalledWith(expect.anything(), 7, oldImage);
+		expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/projects');
 	});
-
-	it('reports old-image cleanup failure as a warning after a successful refresh', async () => {
-		mocks.cleanup.mockResolvedValue({ ok: false, error: cleanupFailure });
-		expect(await refreshProjectOgImage(7)).toEqual({ ok: true, warning: cleanupFailure });
+	it('does not delete storage after an uncertain project deletion', async () => {
+		mocks.delete.mockImplementation(() => {
+			throw new Error('secret database credentials');
+		});
+		expect(await deleteProject(7)).toMatchObject({
+			ok: false,
+			error: { code: 'persistence-uncertain' },
+		});
+		expect(mocks.cleanup).not.toHaveBeenCalled();
 		expect(mocks.updateTag).toHaveBeenCalled();
-		expect(mocks.revalidatePath).toHaveBeenCalled();
+		expect(mocks.revalidatePath).toHaveBeenCalledWith('/dashboard/projects');
 	});
-
-	it('returns a safe no-source outcome', async () => {
-		existingProject(null);
-		expect(await refreshProjectOgImage(7)).toMatchObject({
-			ok: false,
-			error: { code: 'no-source' },
-		});
-		expect(mocks.upload).not.toHaveBeenCalled();
-	});
-
-	it('returns a safe not-found outcome', async () => {
-		mocks.select.mockReturnValue({ from: () => ({ where: async () => [] }) });
-		expect(await refreshProjectOgImage(7)).toMatchObject({
-			ok: false,
-			error: { code: 'not-found' },
-		});
-		expect(mocks.upload).not.toHaveBeenCalled();
-	});
-
-	it('handles a failed project lookup without returning database details', async () => {
-		mocks.select.mockImplementation(() => {
-			throw new Error('database credentials secret');
-		});
-		const result = await refreshProjectOgImage(7);
-		expect(result).toMatchObject({
-			ok: false,
-			error: { code: 'unexpected', stage: 'persistence' },
-		});
-		expect(JSON.stringify(result)).not.toContain('secret');
-	});
-
-	it('rejects invalid identifiers before lookup', async () => {
+	it('rejects invalid IDs and authorization before side effects', async () => {
 		expect(await refreshProjectOgImage(-1)).toMatchObject({
 			ok: false,
 			error: { code: 'invalid-project' },
 		});
-		expect(mocks.select).not.toHaveBeenCalled();
-	});
-
-	it('propagates denied authorization before any side effects', async () => {
-		mocks.admin.mockRejectedValue(new Error('Access denied'));
+		mocks.admin.mockRejectedValueOnce(new Error('Access denied'));
 		await expect(refreshProjectOgImage(7)).rejects.toThrow('Access denied');
 		expect(mocks.select).not.toHaveBeenCalled();
-		expect(mocks.upload).not.toHaveBeenCalled();
 	});
-});
-
-describe('project deletion image cleanup', () => {
-	it('reports cleanup failure after deleting the project and invalidating caches', async () => {
-		mocks.cleanup.mockResolvedValue({ ok: false, error: cleanupFailure });
-		expect(await deleteProject(7)).toEqual({ ok: true, warning: cleanupFailure });
-		expect(mocks.delete.mock.invocationCallOrder[0]).toBeLessThan(
-			mocks.cleanup.mock.invocationCallOrder[0],
-		);
-		expect(mocks.cleanup).toHaveBeenCalledWith(oldImage, 7);
-		expect(mocks.updateTag).toHaveBeenCalled();
-	});
-
-	it('never removes an image if the database deletion fails', async () => {
-		mocks.delete.mockImplementation(() => {
-			throw new Error('database unavailable');
+	it.each([null, undefined])('handles missing sources and deleted projects', async (value) => {
+		mocks.select.mockReturnValue({
+			from: () => ({
+				where: async () => (value === null ? [{ url: null, ogImageUrl: oldImage }] : []),
+			}),
 		});
-		expect(await deleteProject(7)).toMatchObject({
+		expect(await refreshProjectOgImage(7)).toMatchObject({
 			ok: false,
-			error: { code: 'project-delete-failed' },
+			error: { code: value === null ? 'no-source' : 'not-found' },
 		});
-		expect(mocks.cleanup).not.toHaveBeenCalled();
+		expect(mocks.upload).not.toHaveBeenCalled();
 	});
 });

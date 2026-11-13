@@ -1,170 +1,14 @@
 import 'server-only';
-import { isProjectImageUrl } from '@/lib/security/blob-ownership';
-import { requireAdmin } from '@/lib/admin';
-import { URL } from 'url';
-import { resolve4, resolve6 } from 'dns/promises';
 import * as cheerio from 'cheerio';
-import { del, put } from '@/lib/blob';
-import { getBlobPublicHostname } from '@/lib/blob-environment';
+import sharp from 'sharp';
+import { requireAdmin } from '@/lib/admin';
+import { put } from '@/lib/blob';
 import { entityIdSchema } from '@/lib/schemas/common';
 import { reportOgImageError } from '@/lib/og-image-errors';
-import type {
-	OgImageErrorCode,
-	OgImageResult,
-	OgImageStage,
-	OgImageUploadResult,
-} from '@/lib/og-image-feedback';
-
-class OgImageOperationError extends Error {
-	constructor(
-		readonly code: OgImageErrorCode,
-		readonly httpStatus?: number,
-	) {
-		super(code);
-	}
-}
-
-/**
- * Retorna true/false dependiendo de si la dirección IP es invalida o valida respectivamente.
- * @param ip Dirección IP recibida
- * @returns Retorna true si es una IP invalida y false si es valida.
- */
-function isInvalidIpV4(ip: string): boolean {
-	const octets = ip.split('.').map(Number);
-	if (octets.length !== 4 || octets.some((p) => isNaN(p))) return true;
-
-	const [a, b, c] = octets;
-
-	if (
-		a === 0 ||
-		a === 10 ||
-		(a === 100 && b >= 64 && b <= 127) ||
-		a === 127 ||
-		(a === 169 && b === 254) ||
-		(a === 172 && b >= 16 && b <= 31) ||
-		(a === 192 && b === 0 && c === 0) ||
-		(a === 192 && b === 0 && c === 2) ||
-		(a === 192 && b === 88 && c === 99) ||
-		(a === 192 && b === 168) ||
-		(a === 198 && b >= 18 && b <= 19) ||
-		(a === 198 && b === 51 && c === 100) ||
-		(a === 203 && b === 0 && c === 113) ||
-		a >= 224
-	)
-		return true;
-
-	return false;
-}
-
-function isInvalidIpV6(ip: string): boolean {
-	if (ip.split('::').length > 2) return true;
-
-	let ipFilled;
-
-	if (ip.includes('::')) {
-		const ipSplitParts = ip.split('::');
-
-		const leftIpPart = ipSplitParts[0].split(':');
-		const rightIpPart = ipSplitParts[1].split(':');
-
-		const leftGroupsCount =
-			leftIpPart.length === 1 && leftIpPart[0] === '' ? 0 : leftIpPart.length;
-		const rightGroupsCount =
-			rightIpPart.length === 1 && rightIpPart[0] === '' ? 0 : rightIpPart.length;
-
-		const zeroGroupsToAdd = 8 - leftGroupsCount - rightGroupsCount;
-
-		let zerosFiller = '';
-
-		if (leftGroupsCount !== 0) zerosFiller += ':';
-		for (let i = 0; i < zeroGroupsToAdd; i++) {
-			zerosFiller += '0:';
-		}
-		if (rightGroupsCount === 0) zerosFiller = zerosFiller.slice(0, -1);
-
-		ipFilled = ip.replaceAll('::', zerosFiller);
-	} else ipFilled = ip;
-
-	const groups = ipFilled.split(':').map((hexGroup) => parseInt(hexGroup, 16));
-	if (groups.length !== 8 || groups.some((p) => isNaN(p))) return true;
-
-	const [g0, g1, g2, g3, g4, g5, g6, g7] = groups;
-
-	if (
-		(g0 === 0 &&
-			g1 === 0 &&
-			g2 === 0 &&
-			g3 === 0 &&
-			g4 === 0 &&
-			g5 === 0 &&
-			g6 === 0 &&
-			g7 >= 0 &&
-			g7 <= 1) ||
-		(g0 === 100 && g1 === 65435 && g2 === 1) ||
-		(g0 === 256 && g1 === 0 && g2 === 0 && g3 === 0) ||
-		(g0 === 8193 && g1 === 0) ||
-		(g0 === 8193 && g1 === 2) ||
-		(g0 === 8193 && g1 >= 16 && g1 <= 31) ||
-		(g0 === 8193 && g1 === 3512) ||
-		g0 === 8194 ||
-		(g0 >= 64512 && g0 <= 65023) ||
-		(g0 >= 65152 && g0 <= 65215) ||
-		g0 >= 65280
-	)
-		return true;
-
-	if (
-		(g0 === 0 && g1 === 0 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 65535) ||
-		(g0 === 100 && g1 === 65435 && g2 === 0 && g3 === 0 && g4 === 0 && g5 === 0)
-	) {
-		const octet1 = g6 >> 8;
-		const octet2 = g6 & 255;
-		const octet3 = g7 >> 8;
-		const octet4 = g7 & 255;
-
-		const extractedIpV4 = `${octet1}.${octet2}.${octet3}.${octet4}`;
-
-		if (isInvalidIpV4(extractedIpV4)) return true;
-	}
-
-	return false;
-}
-
-function isDnsMissingRecordsError(err: unknown): boolean {
-	if (typeof err !== 'object' || err === null || !('code' in err)) return false;
-	const code = (err as NodeJS.ErrnoException).code;
-	return code === 'ENODATA' || code === 'ENOTFOUND' || code === 'ESOCKETNODATA';
-}
-
-/**
- * Resuelve A y AAAA; falla si el DNS falla de forma irrecuperable o si alguna IP es privada.
- * Hosts solo IPv4 o solo IPv6: el otro resolve puede rechazar con ENODATA/ENOTFOUND — es normal.
- */
-async function assertHostnameHasOnlyPublicIps(hostname: string): Promise<void> {
-	let v4: string[] = [];
-	try {
-		v4 = await resolve4(hostname);
-	} catch (e) {
-		if (!isDnsMissingRecordsError(e)) throw new OgImageOperationError('dns-failed');
-	}
-
-	for (const ip of v4) {
-		if (isInvalidIpV4(ip)) throw new OgImageOperationError('blocked-url');
-	}
-
-	let v6: string[] = [];
-	try {
-		v6 = await resolve6(hostname);
-	} catch (e) {
-		if (!isDnsMissingRecordsError(e)) throw new OgImageOperationError('dns-failed');
-	}
-
-	for (const ip of v6) {
-		if (isInvalidIpV6(ip)) throw new OgImageOperationError('blocked-url');
-	}
-
-	if (v4.length === 0 && v6.length === 0) throw new OgImageOperationError('dns-failed');
-}
+import type { OgImageStage, OgImageUploadResult } from '@/lib/og-image-feedback';
+import { ImageBudget, OgImageOperationError } from '@/lib/og-image/budget';
+import { downloadSource, resolvePublicAddresses } from '@/lib/og-image/network';
+import { prepareImageUpload } from '@/lib/og-image/store';
 
 function isPng(uInt8Array: Uint8Array): boolean {
 	return (
@@ -194,6 +38,49 @@ function isWebP(uInt8Array: Uint8Array): boolean {
 
 function isGif(uInt8Array: Uint8Array): boolean {
 	return uInt8Array[0] === 0x47 && uInt8Array[1] === 0x49 && uInt8Array[2] === 0x46;
+}
+
+/** GIF decoders may silently accept a missing frame; require complete block boundaries. */
+function assertCompleteGif(image: Buffer): void {
+	const invalid = () => {
+		throw new OgImageOperationError('invalid-image');
+	};
+	if (image.length < 14 || !['GIF87a', 'GIF89a'].includes(image.toString('ascii', 0, 6)))
+		invalid();
+	let offset = 13;
+	if (image[10] & 0x80) offset += 3 * (1 << ((image[10] & 7) + 1));
+	let frames = 0;
+	const readBlocks = () => {
+		while (offset < image.length) {
+			const size = image[offset++];
+			if (!size) return;
+			offset += size;
+			if (offset > image.length) invalid();
+		}
+		invalid();
+	};
+	while (offset < image.length) {
+		const block = image[offset++];
+		if (block === 0x3b) {
+			if (!frames || offset !== image.length) invalid();
+			return;
+		}
+		if (block === 0x21) {
+			if (offset >= image.length) invalid();
+			offset++; // Extension label; the remaining payload consists of sub-blocks.
+			readBlocks();
+		} else if (block === 0x2c) {
+			if (offset + 9 > image.length) invalid();
+			const packed = image[offset + 8];
+			offset += 9;
+			if (packed & 0x80) offset += 3 * (1 << ((packed & 7) + 1));
+			if (offset >= image.length || image[offset] < 2 || image[offset] > 8) invalid();
+			offset++; // Minimum code size precedes the image data blocks.
+			readBlocks();
+			frames++;
+		} else invalid();
+	}
+	invalid();
 }
 
 /** ISO BMFF first box: `ftyp`; major or compatible brands must be `avif` or `avis`. */
@@ -232,7 +119,13 @@ function isAvif(uInt8Array: Uint8Array): boolean {
 	return false;
 }
 
-const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
+const imageFormats = [
+	{ test: isPng, extension: 'png', contentType: 'image/png' },
+	{ test: isJpeg, extension: 'jpeg', contentType: 'image/jpeg' },
+	{ test: isWebP, extension: 'webp', contentType: 'image/webp' },
+	{ test: isGif, extension: 'gif', contentType: 'image/gif' },
+	{ test: isAvif, extension: 'avif', contentType: 'image/avif' },
+];
 
 function parseSourceUrl(value: string, base?: URL): URL {
 	let url: URL;
@@ -248,158 +141,126 @@ function parseSourceUrl(value: string, base?: URL): URL {
 	return url;
 }
 
-function isTimeout(error: unknown): boolean {
-	return error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
-}
-
-async function fetchSource(url: URL): Promise<Response> {
-	let response: Response;
+/** Decode every frame to catch truncated payloads, but store the original bytes. */
+export async function validateOgImage(image: Buffer, budget: ImageBudget) {
+	const format = imageFormats.find(({ test }) => test(image));
+	if (!format) throw new OgImageOperationError('invalid-image');
+	if (format.extension === 'gif') assertCompleteGif(image);
 	try {
-		response = await fetch(url.toString(), {
-			redirect: 'error',
-			signal: AbortSignal.timeout(5_000),
+		return await budget.run(3000, async (signal) => {
+			const decoder = sharp(image, {
+				animated: true,
+				failOn: 'warning',
+				limitInputPixels: 20_000_000,
+			}).timeout({ seconds: 3 });
+			const stop = () => decoder.destroy();
+			signal.addEventListener('abort', stop, { once: true });
+			try {
+				const metadata = await decoder.metadata();
+				const pixels =
+					(metadata.width ?? 0) *
+					(metadata.pageHeight ?? metadata.height ?? 0) *
+					(metadata.pages ?? 1);
+				if (pixels > 20_000_000) throw new OgImageOperationError('image-too-complex');
+				if (!pixels) throw new OgImageOperationError('invalid-image');
+				await decoder.raw().toBuffer();
+				return format;
+			} finally {
+				signal.removeEventListener('abort', stop);
+				decoder.destroy();
+			}
 		});
 	} catch (error) {
-		throw new OgImageOperationError(isTimeout(error) ? 'timeout' : 'request-failed');
-	}
-	if (!response.ok) {
-		void response.body?.cancel().catch(() => {});
-		throw new OgImageOperationError('http-failed', response.status);
-	}
-	return response;
-}
-
-/** Enforce the limit on bytes as they arrive, including responses without Content-Length. */
-async function readLimitedBody(response: Response): Promise<Buffer> {
-	const contentLength = Number(response.headers.get('content-length'));
-	if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
-		void response.body?.cancel().catch(() => {});
-		throw new OgImageOperationError('too-large');
-	}
-	if (!response.body) return Buffer.alloc(0);
-	const reader = response.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let size = 0;
-	try {
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			size += value.byteLength;
-			if (size > MAX_RESPONSE_BYTES) {
-				void reader.cancel().catch(() => {});
-				throw new OgImageOperationError('too-large');
-			}
-			chunks.push(value);
-		}
-		return Buffer.concat(chunks, size);
-	} catch (error) {
 		if (error instanceof OgImageOperationError) throw error;
-		throw new OgImageOperationError(isTimeout(error) ? 'timeout' : 'request-failed');
-	} finally {
-		reader.releaseLock();
+		if (error instanceof Error && error.message.includes('pixel limit')) {
+			throw new OgImageOperationError('image-too-complex');
+		}
+		if (error instanceof Error && error.message.includes('timeout'))
+			throw new OgImageOperationError('timeout');
+		throw new OgImageOperationError('invalid-image');
 	}
 }
 
-function assertContentType(response: Response, allowed: readonly string[]): void {
-	const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
-	if (!contentType || !allowed.includes(contentType)) {
-		void response.body?.cancel().catch(() => {});
-		throw new OgImageOperationError('invalid-content-type');
-	}
-}
-
-const imageFormats = [
-	{ test: isPng, extension: 'png', contentType: 'image/png' },
-	{ test: isJpeg, extension: 'jpeg', contentType: 'image/jpeg' },
-	{ test: isWebP, extension: 'webp', contentType: 'image/webp' },
-	{ test: isGif, extension: 'gif', contentType: 'image/gif' },
-	{ test: isAvif, extension: 'avif', contentType: 'image/avif' },
-];
-
-/** Download and store an OG image, returning safe failure details for the administrator. */
+/** Upload intent is durable before Blob is contacted, including ambiguous upload failures. */
 export async function saveImageInVercelBlob(
 	url: string,
 	projectId: number,
+	previousImage: string | null = null,
+	budget = new ImageBudget(),
 ): Promise<OgImageUploadResult> {
 	await requireAdmin();
 	let stage: OgImageStage = 'page-url';
+	let operationId: string | undefined;
 	try {
 		if (!entityIdSchema.safeParse(projectId).success) {
 			throw new OgImageOperationError('invalid-project');
 		}
 		const webUrl = parseSourceUrl(url);
 		stage = 'page-dns';
-		await assertHostnameHasOnlyPublicIps(webUrl.hostname);
+		const pageAddresses = await resolvePublicAddresses(webUrl, budget);
 		stage = 'page-fetch';
-		const response = await fetchSource(webUrl);
-		assertContentType(response, ['text/html']);
-		stage = 'page-body';
-		const html = await readLimitedBody(response);
+		const html = await downloadSource(webUrl, pageAddresses, ['text/html'], budget, () => {
+			stage = 'page-body';
+		});
 		stage = 'metadata';
 		const page = cheerio.load(html.toString('utf8'));
-		const meta =
-			page('meta[property="og:image"]').length > 0
-				? page('meta[property="og:image"]')
-				: page('meta[name="og:image"]');
+		const meta = page('meta[property="og:image"]').length
+			? page('meta[property="og:image"]')
+			: page('meta[name="og:image"]');
 		const imageUrl = meta.attr('content')?.trim();
 		if (!imageUrl) throw new OgImageOperationError('missing-image');
 		stage = 'image-url';
-		const normalizedImageUrl = parseSourceUrl(imageUrl, webUrl);
+		const normalized = parseSourceUrl(imageUrl, webUrl);
 		stage = 'image-dns';
-		await assertHostnameHasOnlyPublicIps(normalizedImageUrl.hostname);
+		const imageAddresses = await resolvePublicAddresses(normalized, budget);
 		stage = 'image-fetch';
-		const imageResponse = await fetchSource(normalizedImageUrl);
-		assertContentType(imageResponse, [
-			'image/png',
-			'image/jpg',
-			'image/jpeg',
-			'image/webp',
-			'image/gif',
-			'image/avif',
-		]);
-		stage = 'image-body';
-		const image = await readLimitedBody(imageResponse);
-		const format = imageFormats.find(({ test }) => test(image));
-		if (!format) throw new OgImageOperationError('invalid-image');
+		const image = await downloadSource(
+			normalized,
+			imageAddresses,
+			imageFormats.map(({ contentType }) => contentType).concat('image/jpg'),
+			budget,
+			() => {
+				stage = 'image-body';
+			},
+		);
+		const format = await validateOgImage(image, budget);
+		stage = 'persistence';
+		const operation = await prepareImageUpload(
+			projectId,
+			format.extension,
+			previousImage,
+			budget,
+		);
+		operationId = operation.id;
 		stage = 'upload';
-		let uploadedImage;
 		try {
-			uploadedImage = await put(
-				`og-images/${projectId}-${Date.now()}.${format.extension}`,
-				image,
-				{
+			const uploaded = await budget.run(8000, (abortSignal) =>
+				put(operation.pathname, image, {
 					access: 'public',
 					contentType: format.contentType,
 					cacheControlMaxAge: 31536000,
-					// Concurrent attempts must not share a blob that a failed save might delete.
-					addRandomSuffix: true,
-				},
+					addRandomSuffix: false,
+					allowOverwrite: false,
+					abortSignal,
+				}),
 			);
-		} catch {
+			if (uploaded.url !== operation.candidateUrl)
+				throw new OgImageOperationError('upload-failed');
+		} catch (error) {
+			if (error instanceof OgImageOperationError) throw error;
 			throw new OgImageOperationError('upload-failed');
 		}
-		return { ok: true, url: uploadedImage.url };
+		return { ok: true, url: operation.candidateUrl, operationId: operation.id };
 	} catch (error) {
-		const code = error instanceof OgImageOperationError ? error.code : 'unexpected';
-		const status = error instanceof OgImageOperationError ? error.httpStatus : undefined;
-		return { ok: false, error: reportOgImageError(code, stage, projectId, status) };
-	}
-}
-
-/** A cleanup failure must not hide the success of the project save or image refresh. */
-export async function deleteOldImageInVercelBlob(
-	oldImage: string,
-	projectId?: number,
-): Promise<OgImageResult> {
-	await requireAdmin();
-	if (!oldImage) return { ok: true };
-	if (!isProjectImageUrl(oldImage, projectId, getBlobPublicHostname())) {
-		return { ok: false, error: reportOgImageError('delete-failed', 'cleanup', projectId) };
-	}
-	try {
-		await del(oldImage);
-		return { ok: true };
-	} catch {
-		return { ok: false, error: reportOgImageError('delete-failed', 'cleanup', projectId) };
+		return {
+			ok: false,
+			error: reportOgImageError(
+				error instanceof OgImageOperationError ? error.code : 'unexpected',
+				stage,
+				projectId,
+				error instanceof OgImageOperationError ? error.httpStatus : undefined,
+				operationId,
+			),
+		};
 	}
 }

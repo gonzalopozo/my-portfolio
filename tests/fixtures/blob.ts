@@ -35,7 +35,7 @@ export async function putFixture(
 	if (typeof body !== 'string' && !(body instanceof Uint8Array))
 		throw new Error('Unsupported Blob fixture body.');
 	await mkdir(dirname(file), { recursive: true });
-	await writeFile(file, body);
+	await writeFile(file, body, { flag: options.allowOverwrite === false ? 'wx' : 'w' });
 	const url = `https://fixture.public.blob.vercel-storage.com/${pathname}`;
 	return {
 		url,

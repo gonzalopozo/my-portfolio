@@ -10,20 +10,13 @@ globalThis.fetch = async (input, init) => {
 		const { readFixture } = await import('./blob');
 		return readFixture(url);
 	}
-	if (url.href === 'https://example.com/ci-og-page')
-		return new Response('<meta property="og:image" content="https://example.com/ci-og.png">', {
-			headers: { 'content-type': 'text/html' },
-		});
-	if (url.href === 'https://example.com/ci-og.png')
-		return new Response(
-			Uint8Array.from(
-				Buffer.from(
-					'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==',
-					'base64',
-				),
-			),
-			{ headers: { 'content-type': 'image/png' } },
-		);
+	if (
+		url.href === 'https://example.com/ci-og-page' ||
+		url.href === 'https://example.com/ci-og.png'
+	) {
+		const { ogImageFixture } = await import('./og-image');
+		return ogImageFixture(url);
+	}
 	if (url.origin === 'https://ws.audioscrobbler.com') {
 		const scenario = await readFile(
 			`${process.env.TEST_FIXTURE_DIRECTORY}/music.txt`,

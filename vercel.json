@@ -3,5 +3,16 @@
 	"framework": "nextjs",
 	"installCommand": "node scripts/install-vercel.mjs",
 	"buildCommand": "node scripts/build-vercel.mjs",
-	"git": { "deploymentEnabled": { "main": false, "restructure": false } }
+	"git": {
+		"deploymentEnabled": {
+			"main": false,
+			"restructure": false
+		}
+	},
+	"crons": [
+		{
+			"path": "/api/cron/og-images",
+			"schedule": "0 3 * * *"
+		}
+	]
 }
