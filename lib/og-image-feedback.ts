@@ -19,12 +19,16 @@ const errorMessages = {
 		'La página no tiene una etiqueta og:image con una dirección válida. Añádela antes de reintentar.',
 	'invalid-image':
 		'El archivo no es una imagen PNG, JPEG, WebP, GIF o AVIF válida. Revisa la imagen de origen.',
+	'image-too-complex':
+		'La imagen supera el límite de 20 millones de píxeles entre todos sus fotogramas. Reduce su tamaño.',
+	'persistence-uncertain':
+		'No se pudo confirmar el resultado. Recarga la página antes de reintentar. La limpieza pendiente se resolverá automáticamente.',
 	'upload-failed':
 		'No se pudo subir la imagen al almacenamiento. Inténtalo de nuevo o revisa su configuración en producción.',
 	'delete-failed':
-		'No se pudo eliminar una imagen del almacenamiento. Revisa los registros con la referencia indicada.',
+		'No se pudo eliminar una imagen del almacenamiento. La limpieza se volverá a intentar automáticamente. Revisa los registros con la referencia indicada.',
 	'persist-failed':
-		'No se pudo guardar la referencia de la imagen. Se ha conservado la imagen anterior, si existía.',
+		'La imagen no se aplicó porque el proyecto cambió durante la operación. Recarga la página antes de reintentar.',
 	'project-delete-failed':
 		'No se pudo eliminar el proyecto. Recarga la página e inténtalo de nuevo.',
 	'not-found': 'El proyecto ya no existe. Recarga la página.',
@@ -61,7 +65,8 @@ export interface OgImageError {
 
 export type OgImageResult = { ok: true } | { ok: false; error: OgImageError };
 
-export type OgImageUploadResult = { ok: true; url: string } | { ok: false; error: OgImageError };
+export type OgImageUploadResult =
+	{ ok: true; url: string; operationId: string } | { ok: false; error: OgImageError };
 
 export type ProjectImageActionResult =
 	{ ok: true; warning?: OgImageError } | { ok: false; error: OgImageError };

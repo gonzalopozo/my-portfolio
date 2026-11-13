@@ -349,6 +349,9 @@ test('project OG refresh persists its new image and deletes the replaced object'
 	await expect(
 		row.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true }),
 	).toBeEnabled();
+	await expect(
+		page.locator('[data-sonner-toast][data-type="success"]').filter({ hasText: name }),
+	).toBeVisible();
 	const readImages = async () =>
 		(await readdir(directory)).filter((file) => !existing.includes(file));
 	await expect.poll(readImages).not.toEqual(previous);
@@ -497,3 +500,111 @@ for (const entity of [
 		await expect(page.getByText(name, { exact: true })).toHaveCount(0);
 	});
 }
+
+test('OG errors expose details and pending notifications disappear on public navigation', async ({
+	page,
+}, testInfo) => {
+	await login(page);
+	const name = `OG notification ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
+	await page.goto('/dashboard/projects/new');
+	await page.getByLabel('Título', { exact: true }).fill(name);
+	await page.getByLabel('Descripción', { exact: true }).fill('Project without an image source');
+	await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
+	await expect(page).toHaveURL(/\/dashboard\/projects$/);
+	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+	const refresh = row.getByRole('button', {
+		name: `Actualizar imagen Open Graph de ${name}`,
+		exact: true,
+	});
+	const release = Promise.withResolvers<void>();
+	try {
+		await refresh.click();
+		const errorToast = page
+			.locator('[data-sonner-toast][data-type="error"]')
+			.filter({ hasText: name });
+		await expect(errorToast).toBeVisible();
+		await errorToast.getByRole('button', { name: 'Ver detalles' }).click();
+		const alert = page.getByRole('alert').filter({ hasText: name });
+		await expect(alert).toBeFocused();
+		await expect(alert).toContainText('no tiene un enlace de origen');
+		await alert.getByRole('button', { name: 'Cerrar aviso' }).click();
+		await expect(errorToast).toHaveCount(0);
+
+		const arrived = Promise.withResolvers<void>();
+		await page.route('**/dashboard/projects', async (route) => {
+			if (route.request().method() !== 'POST' || !route.request().headers()['next-action']) {
+				return route.continue();
+			}
+			arrived.resolve();
+			await release.promise;
+			await route.abort().catch(() => {});
+		});
+		await refresh.click();
+		await arrived.promise;
+		await expect(
+			page.locator('[data-sonner-toast][data-type="loading"]').filter({ hasText: name }),
+		).toBeVisible();
+		await page.goto('/');
+		release.resolve();
+		await expect(page.getByRole('main')).toBeVisible();
+		await expect(page.locator('[data-sonner-toaster]')).toHaveCount(0);
+		await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+	} finally {
+		release.resolve();
+		await page.unroute('**/dashboard/projects');
+		await page.goto('/dashboard/projects');
+		if (await row.isVisible()) {
+			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
+			await expect(row).toHaveCount(0);
+		}
+	}
+});
+
+test('a rejected OG request asks for reload without claiming that the mutation failed', async ({
+	page,
+}, testInfo) => {
+	await login(page);
+	const name = `OG uncertain notification ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
+	await page.goto('/dashboard/projects/new');
+	await page.getByLabel('Título', { exact: true }).fill(name);
+	await page
+		.getByLabel('Descripción', { exact: true })
+		.fill('Lost response notification journey');
+	await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
+	await expect(page).toHaveURL(/\/dashboard\/projects$/);
+	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+	try {
+		await page.route('**/dashboard/projects', (route) => {
+			if (route.request().method() === 'POST' && route.request().headers()['next-action'])
+				return route.abort();
+			return route.continue();
+		});
+		await row
+			.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true })
+			.click();
+		const warning = page
+			.locator('[data-sonner-toast][data-type="warning"]')
+			.filter({ hasText: name });
+		await expect(warning).toBeVisible();
+		const alert = page.getByRole('alert').filter({ hasText: name });
+		await expect(alert).toContainText('puede haberse completado');
+		await expect(alert).not.toContainText('automáticamente');
+		await expect(alert).not.toContainText('Referencia:');
+		await expect(alert.getByRole('button', { name: 'Reintentar imagen' })).toHaveCount(0);
+		await page.unroute('**/dashboard/projects');
+		await Promise.all([
+			page.waitForEvent('load'),
+			warning.getByRole('button', { name: 'Recargar página' }).click(),
+		]);
+		await expect(row).toBeVisible();
+		await expect(page.getByRole('alert').filter({ hasText: name })).toHaveCount(0);
+		await expect(page.locator('[data-sonner-toast]').filter({ hasText: name })).toHaveCount(0);
+	} finally {
+		await page.unroute('**/dashboard/projects');
+		await page.goto('/dashboard/projects');
+		if (await row.isVisible()) {
+			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
+			await expect(row).toHaveCount(0);
+		}
+	}
+});

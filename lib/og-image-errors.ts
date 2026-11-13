@@ -10,8 +10,9 @@ export function reportOgImageError(
 	stage: OgImageStage,
 	projectId?: number,
 	httpStatus?: number,
+	reference: string = randomUUID(),
 ): OgImageError {
-	const error = { code, stage, reference: randomUUID() };
+	const error = { code, stage, reference };
 	// Row IDs and upstream URLs are unnecessary for telemetry; reference correlates UI feedback.
 	void projectId;
 	if (
@@ -19,6 +20,7 @@ export function reportOgImageError(
 			'upload-failed',
 			'delete-failed',
 			'persist-failed',
+			'persistence-uncertain',
 			'project-delete-failed',
 			'unexpected',
 		].includes(code)

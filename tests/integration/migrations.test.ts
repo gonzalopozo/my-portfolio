@@ -69,3 +69,19 @@ describe('committed migrations and constraints', () => {
 		await expect(applyMigrations(fixture.client)).rejects.toThrow('verified prefix');
 	});
 });
+
+describe('image recovery migration', () => {
+	it('keeps recovery records when projects are deleted', async () => {
+		const { projectImageOperations } = await import('../../db/schema');
+		await fixture.db.insert(projectImageOperations).values({
+			id: 'recovery-record',
+			projectId: 1,
+			storeOrigin: 'https://fixture.public.blob.vercel-storage.com',
+			state: 'pending',
+			createdAt: Date.now(),
+			updatedAt: Date.now(),
+		});
+		await fixture.db.delete(projects).where(eq(projects.id, 1));
+		expect(await fixture.db.select().from(projectImageOperations)).toHaveLength(1);
+	});
+});

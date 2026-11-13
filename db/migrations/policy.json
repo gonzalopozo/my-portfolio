@@ -33,5 +33,10 @@
 		"tag": "0006_auth_rate_limits",
 		"sha256": "e51a532bdc4ebb31ef7a25530ff77223ff1417b78b95b7a4a1b5fd820ee5aa51",
 		"kind": "expand"
+	},
+	{
+		"tag": "0007_project_image_operations",
+		"sha256": "cb96dc8c4b8c747c69b73bd07c67df85ddf1fa94ceb64f172c5f6b7dcf168480",
+		"kind": "expand"
 	}
 ]
