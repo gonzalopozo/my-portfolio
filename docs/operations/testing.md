@@ -21,6 +21,7 @@ Run these setup steps in your local clone, using Node 24 and pnpm 12.18.0:
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
+pnpm icons:manifest
 pnpm hooks:install
 pnpm exec playwright install --with-deps chromium firefox webkit
 ```
@@ -39,6 +40,35 @@ documentation-only exemption or browser subset at either hook. Missing browsers,
 ports, certificates or a failed test blocks the Git operation. Do not work around
 failures with `HUSKY=0` or `--no-verify`. GitHub web edits/bot-created commits do
 not invoke local hooks; arrange local verification during owner review.
+
+## Generated icon catalogue
+
+The admin picker imports `lib/react-icons-manifest.json`. This file is generated
+from the ten supported installed `react-icons` packs and is ignored by Git.
+Development, build, lint, type checking, dependency analysis, lint-staged and
+Vitest scripts run `pnpm icons:manifest` explicitly before their consumer. The
+generator preserves unchanged content and modification times; changed catalogues
+are published atomically. A generation failure stops the consuming command.
+
+For tools invoked directly, prepare the catalogue with `pnpm icons:manifest`
+first. This includes the direct TypeScript and Vitest commands in the authorized
+pre-commit pass; retain all nine checks and the dedicated subagent policy.
+Dependency changes during a running development session require explicit
+regeneration or restarting `pnpm dev`. Installation alone does not generate it.
+
+Every CircleCI job using the shared install command generates its own catalogue
+after its frozen install. CircleCI does not publish that JSON to Vercel.
+Preview and production candidate builds generate it independently through
+`pnpm build`, which runs generation before Next.js. The isolated production
+harness uses the same build command. Each build workspace stores the source JSON
+at `lib/react-icons-manifest.json`; Next.js compiles its imported data into the
+application assets. The raw JSON is not a public endpoint or persistent runtime
+file. No database or Blob storage is used.
+
+Generation runs before every build, without version detection or restored
+manifest caches. `pnpm start`, deployment promotion and rollback reuse the built
+catalogue; they do not regenerate it. Each deployment retains the catalogue
+matching its own installed dependencies.
 
 ## Execution and infrastructure
 

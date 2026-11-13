@@ -42,6 +42,9 @@ commands:
             - run:
                   name: Install verified pnpm and frozen dependencies
                   command: node scripts/install-ci.mjs
+            - run:
+                  name: Generate the icon catalogue from frozen dependencies
+                  command: pnpm icons:manifest
 
 jobs:
     quality:
