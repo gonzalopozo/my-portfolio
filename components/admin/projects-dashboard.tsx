@@ -1,19 +1,14 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId } from 'react';
 import { AlertTriangle, FolderKanban, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProjectsTable } from '@/components/admin/projects-table';
-import {
-	clearOgImageWarningParams,
-	getOgImageErrorMessage,
-	type ProjectImageActionResult,
-	type ProjectImageFeedback,
-} from '@/lib/og-image-feedback';
+import type { ProjectImageActionResult, ProjectImageFeedback } from '@/lib/og-image-feedback';
+import { useProjectImageFeedback } from '@/components/admin/use-project-image-feedback';
 import type { ProjectInfo } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -24,119 +19,24 @@ interface ProjectsDashboardProps {
 	refreshOgImage: (id: number) => Promise<ProjectImageActionResult>;
 }
 
-type Feedback = ProjectImageFeedback & { projectTitle?: string };
-
-function clearWarningUrl() {
-	const url = new URL(window.location.href);
-	clearOgImageWarningParams(url.searchParams);
-	window.history.replaceState(
-		window.history.state,
-		'',
-		`${url.pathname}${url.search}${url.hash}`,
-	);
-}
-
-function getFeedbackTitle(feedback: Feedback): string {
-	if (feedback.error.code === 'delete-failed') {
-		return feedback.operation === 'delete'
-			? 'Proyecto eliminado con una advertencia de limpieza'
-			: feedback.operation === 'refresh'
-				? 'Imagen actualizada con una advertencia de limpieza'
-				: 'Proyecto guardado con una advertencia de limpieza';
-	}
-	if (feedback.operation === 'create' || feedback.operation === 'update') {
-		return 'Proyecto guardado, pero su imagen no se pudo actualizar';
-	}
-	return feedback.operation === 'delete'
-		? 'No se pudo eliminar el proyecto'
-		: 'No se pudo actualizar la imagen Open Graph';
-}
-
-function showFeedbackToast(feedback: Feedback, type: 'warning' | 'error') {
-	toast[type](getFeedbackTitle(feedback), {
-		description: getOgImageErrorMessage(feedback.error.code),
-	});
-}
-
 export function ProjectsDashboard({
 	projects,
 	initialFeedback,
 	onDelete,
 	refreshOgImage,
 }: ProjectsDashboardProps) {
-	const [feedback, setFeedback] = useState<Feedback | undefined>(initialFeedback);
-	const [pendingProjectId, setPendingProjectId] = useState<number>();
-	const [status, setStatus] = useState('');
-	const busy = useRef(false);
-	const headingRef = useRef<HTMLHeadingElement>(null);
-	const feedbackRef = useRef<HTMLDivElement>(null);
-	const notifiedReferences = useRef(new Set<string>());
+	const {
+		feedback,
+		pendingProjectId,
+		status,
+		headingRef,
+		feedbackRef,
+		canRetry,
+		dismissFeedback,
+		reloadFeedback,
+		runOperation,
+	} = useProjectImageFeedback({ projects, initialFeedback, onDelete, refreshOgImage });
 	const feedbackId = useId();
-	const feedbackProject = projects.find((project) => project.id === feedback?.projectId);
-	const canRetry =
-		feedback &&
-		feedback.operation !== 'delete' &&
-		feedback.error.code !== 'delete-failed' &&
-		!!feedbackProject?.url;
-
-	useEffect(() => {
-		if (!initialFeedback || notifiedReferences.current.has(initialFeedback.error.reference))
-			return;
-		notifiedReferences.current.add(initialFeedback.error.reference);
-		showFeedbackToast(initialFeedback, 'warning');
-	}, [initialFeedback]);
-
-	function dismissFeedback() {
-		setFeedback(undefined);
-		clearWarningUrl();
-		headingRef.current?.focus();
-	}
-
-	async function runOperation(projectId: number, operation: 'refresh' | 'delete') {
-		if (busy.current) return;
-		busy.current = true;
-		setPendingProjectId(projectId);
-		setStatus(
-			operation === 'refresh' ? 'Actualizando imagen Open Graph…' : 'Eliminando proyecto…',
-		);
-		const projectTitle = projects.find((project) => project.id === projectId)?.title;
-		try {
-			const result = await (operation === 'refresh' ? refreshOgImage : onDelete)(projectId);
-			const error = result.ok ? result.warning : result.error;
-			if (
-				!error &&
-				(operation === 'delete' || feedbackRef.current?.contains(document.activeElement))
-			) {
-				headingRef.current?.focus();
-			}
-			clearWarningUrl();
-			const nextFeedback = error ? { projectId, projectTitle, operation, error } : undefined;
-			const successMessage =
-				operation === 'refresh' ? 'Imagen Open Graph actualizada.' : 'Proyecto eliminado.';
-			setFeedback(nextFeedback);
-			setStatus(error ? '' : successMessage);
-			if (nextFeedback) {
-				showFeedbackToast(nextFeedback, result.ok ? 'warning' : 'error');
-			} else {
-				toast.success(successMessage);
-			}
-		} catch {
-			// Client transport/auth failures are opaque; never render an exception message.
-			clearWarningUrl();
-			const nextFeedback: Feedback = {
-				projectId,
-				projectTitle,
-				operation,
-				error: { code: 'unexpected', stage: 'persistence', reference: '' },
-			};
-			setFeedback(nextFeedback);
-			setStatus('');
-			showFeedbackToast(nextFeedback, 'error');
-		} finally {
-			busy.current = false;
-			setPendingProjectId(undefined);
-		}
-	}
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -161,20 +61,26 @@ export function ProjectsDashboard({
 				</Button>
 			</div>
 			{feedback && (
-				<Alert ref={feedbackRef} id={feedbackId} aria-atomic="true">
+				<Alert ref={feedbackRef} id={feedbackId} tabIndex={-1} aria-atomic="true">
 					<AlertTriangle aria-hidden="true" />
-					<AlertTitle>{getFeedbackTitle(feedback)}</AlertTitle>
+					<AlertTitle>{feedback.title}</AlertTitle>
 					<AlertDescription>
-						<p className="wrap-break-word">
-							{feedbackProject?.title ??
-								feedback.projectTitle ??
-								`Proyecto #${feedback.projectId}`}
-						</p>
-						<p>{getOgImageErrorMessage(feedback.error.code)}</p>
-						{feedback.error.reference && (
-							<p className="break-all">Referencia: {feedback.error.reference}</p>
+						<p className="wrap-break-word">{feedback.projectTitle}</p>
+						<p>{feedback.message}</p>
+						{feedback.reference && (
+							<p className="break-all">Referencia: {feedback.reference}</p>
 						)}
 						<div className="flex flex-wrap gap-2">
+							{feedback.uncertain && (
+								<Button
+									variant="outline"
+									className="min-h-11"
+									disabled={pendingProjectId !== undefined}
+									onClick={reloadFeedback}
+								>
+									Recargar página
+								</Button>
+							)}
 							{canRetry && (
 								<Button
 									variant="outline"

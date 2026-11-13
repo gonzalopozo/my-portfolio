@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { AppDocument } from '@/components/app-document';
+import { Toaster } from '@/components/ui/sonner';
 import { getAdminCspPolicy } from '@/lib/security/csp';
 import '../globals.css';
 
@@ -14,12 +15,24 @@ export const metadata: Metadata = {
 async function NonceDocument({ children }: { children: ReactNode }) {
 	const nonce = (await headers()).get('x-nonce');
 	if (!nonce) throw new Error('Administrative document is missing its CSP nonce.');
-	return <AppDocument nonce={nonce}>{children}</AppDocument>;
+	return (
+		<AppDocument nonce={nonce}>
+			<Toaster richColors position="bottom-right" />
+			{children}
+		</AppDocument>
+	);
 }
 
 export default function AdminRootLayout({ children }: { children: ReactNode }) {
 	const policy = getAdminCspPolicy(process.env.CSP_ADMIN_POLICY, process.env.VERCEL_ENV);
-	if (policy === 'static') return <AppDocument>{children}</AppDocument>;
+	if (policy === 'static') {
+		return (
+			<AppDocument>
+				<Toaster richColors position="bottom-right" />
+				{children}
+			</AppDocument>
+		);
+	}
 	// Next.js 16.2.6 explicitly permits Suspense above the root document, with an empty shell.
 	// Wait for the request nonce before rendering the document and its framework scripts.
 	return (

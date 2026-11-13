@@ -17,3 +17,18 @@ test('navigation errors remain recoverable', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('main')).toBeVisible();
 });
+
+test('toast hosts are restricted to administrative pages', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByRole('main')).toBeVisible();
+	await expect(page.locator('[data-sonner-toaster]')).toHaveCount(0);
+	await expect(page.getByRole('region', { name: /^Notifications/ })).toHaveCount(0);
+	await page.goto('/login');
+	await expect(page.getByRole('button', { name: 'Login!' })).toBeVisible();
+	await expect(page.getByRole('region', { name: /^Notifications/ })).toHaveCount(1);
+	await page.goto('/');
+	await expect(page.getByRole('main')).toBeVisible();
+	await expect(page.locator('[data-sonner-toaster]')).toHaveCount(0);
+	await expect(page.getByRole('region', { name: /^Notifications/ })).toHaveCount(0);
+	await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+});

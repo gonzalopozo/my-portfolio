@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Fraunces, Geist, Geist_Mono } from 'next/font/google';
-import { Toaster } from 'sonner';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { ThemeProvider } from '@/components/theme-provider';
 
@@ -16,10 +15,7 @@ export function AppDocument({ children, nonce }: { children: ReactNode; nonce?: 
 				className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} font-sans antialiased`}
 			>
 				<ThemeProvider attribute="class" defaultTheme="system" enableSystem nonce={nonce}>
-					<NuqsAdapter>
-						<Toaster richColors position="bottom-right" />
-						{children}
-					</NuqsAdapter>
+					<NuqsAdapter>{children}</NuqsAdapter>
 				</ThemeProvider>
 			</body>
 		</html>

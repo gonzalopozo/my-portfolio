@@ -1,10 +1,24 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { StrictMode } from 'react';
+import { Activity, StrictMode, type MouseEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Action, ExternalToast } from 'sonner';
 import type { ProjectInfo } from '@/lib/types';
 import type { ProjectImageActionResult, ProjectImageFeedback } from '@/lib/og-image-feedback';
 
-const toasts = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
+type ToastKind = 'success' | 'warning' | 'error' | 'loading';
+interface VisibleToast {
+	kind: ToastKind;
+	title: string;
+	options: ExternalToast;
+}
+const toasts = vi.hoisted(() => ({
+	success: vi.fn(),
+	warning: vi.fn(),
+	error: vi.fn(),
+	loading: vi.fn(),
+	dismiss: vi.fn(),
+	visible: new Map<string | number, VisibleToast>(),
+}));
 vi.mock('sonner', () => ({ toast: toasts }));
 
 interface TableProps {
@@ -15,7 +29,6 @@ interface TableProps {
 	feedbackProjectId?: number;
 	feedbackId?: string;
 }
-
 vi.mock('@/components/admin/projects-table', () => ({
 	ProjectsTable: ({
 		projects,
@@ -46,7 +59,6 @@ vi.mock('@/components/admin/projects-table', () => ({
 		</div>
 	),
 }));
-
 import { ProjectsDashboard } from '@/components/admin/projects-dashboard';
 
 const project: ProjectInfo = {
@@ -76,11 +88,25 @@ const onDelete = vi.fn<(id: number) => Promise<ProjectImageActionResult>>();
 
 beforeEach(() => {
 	vi.resetAllMocks();
+	toasts.visible.clear();
+	for (const kind of ['success', 'warning', 'error', 'loading'] as const) {
+		toasts[kind].mockImplementation((title: string, options: ExternalToast) => {
+			const id = options.id!;
+			toasts.visible.set(id, { kind, title, options });
+			return id;
+		});
+	}
+	toasts.dismiss.mockImplementation((id: string | number) => toasts.visible.delete(id));
 	refresh.mockResolvedValue({ ok: true });
 	onDelete.mockResolvedValue({ ok: true });
 	window.history.replaceState(null, '', '/dashboard/projects');
 });
-afterEach(cleanup);
+afterEach(async () => {
+	await act(async () => {
+		cleanup();
+	});
+	vi.useRealTimers();
+});
 
 function dashboard(feedback?: ProjectImageFeedback, projects = [project]) {
 	return (
@@ -92,212 +118,374 @@ function dashboard(feedback?: ProjectImageFeedback, projects = [project]) {
 		/>
 	);
 }
-
-describe('accessible project image feedback', () => {
-	it('shows save warnings inline with retry and a diagnostic reference', () => {
-		render(dashboard(initialFeedback));
-		const alert = screen.getByRole('alert');
-		expect(alert.textContent).toContain('Proyecto guardado');
-		expect(alert.textContent).toContain('Portfolio');
-		expect(alert.textContent).toContain(initialFeedback.error.reference);
-		expect(within(alert).getByRole('button', { name: 'Reintentar imagen' })).toBeTruthy();
-		expect(
-			screen
-				.getByRole('button', { name: /Actualizar imagen/ })
-				.getAttribute('aria-describedby'),
-		).toBe(alert.id);
+function activeToast(): VisibleToast {
+	expect(toasts.visible.size).toBe(1);
+	return [...toasts.visible.values()][0];
+}
+async function click(name: string | RegExp) {
+	await act(async () => {
+		fireEvent.click(screen.getByRole('button', { name }));
 	});
+}
+function detailsAction() {
+	const action = activeToast().options.action as Action | undefined;
+	if (!action || typeof action.onClick !== 'function') throw new Error('Expected a toast action');
+	return action;
+}
 
-	it('clears the warning and URL metadata after a successful retry', async () => {
-		window.history.replaceState(
-			null,
-			'',
-			'/dashboard/projects?ogCode=timeout&ogProject=7&filter=active',
-		);
-		render(dashboard(initialFeedback));
-		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: 'Reintentar imagen' }));
-		});
-		expect(refresh).toHaveBeenCalledExactlyOnceWith(7);
-		expect(screen.queryByRole('alert')).toBeNull();
-		expect(screen.getByRole('status').textContent).toBe('Imagen Open Graph actualizada.');
-		expect(window.location.search).toBe('?filter=active');
-		expect(toasts.success).toHaveBeenCalledExactlyOnceWith('Imagen Open Graph actualizada.');
+describe('redirect feedback', () => {
+	it.each(['create', 'update'] as const)(
+		'shows a named %s warning with persistent details and consumes its URL metadata',
+		(operation) => {
+			window.history.replaceState(
+				null,
+				'',
+				'/dashboard/projects?ogCode=timeout&ogProject=7&filter=active',
+			);
+			render(dashboard({ ...initialFeedback, operation }));
+			const alert = screen.getByRole('alert');
+			expect(alert.textContent).toContain('Proyecto guardado');
+			expect(alert.textContent).toContain(initialFeedback.error.reference);
+			expect(within(alert).getByRole('button', { name: 'Reintentar imagen' })).toBeTruthy();
+			expect(window.location.search).toBe('?filter=active');
+			expect(activeToast()).toMatchObject({
+				kind: 'warning',
+				title: expect.stringContaining('Portfolio'),
+				options: { duration: 8000, closeButton: true },
+			});
+			expect(activeToast().title).not.toContain(initialFeedback.error.reference);
+			expect(activeToast().options.description).not.toContain(
+				initialFeedback.error.reference,
+			);
+			expect(detailsAction().label).toBe('Ver detalles');
+		},
+	);
+	it('keeps a single notification through Strict Mode and equivalent rerenders', async () => {
+		const view = render(<StrictMode>{dashboard(initialFeedback)}</StrictMode>);
+		await act(async () => {});
+		expect(toasts.dismiss).not.toHaveBeenCalled();
+		const id = activeToast().options.id;
+		view.rerender(<StrictMode>{dashboard({ ...initialFeedback })}</StrictMode>);
+		expect(activeToast().options.id).toBe(id);
+		expect(screen.getByRole('alert')).toBeTruthy();
 	});
-
-	it('dismisses a warning without losing keyboard focus', () => {
-		window.history.replaceState(null, '', '/dashboard/projects?ogCode=timeout');
-		render(dashboard(initialFeedback));
-		fireEvent.click(screen.getByRole('button', { name: 'Cerrar aviso' }));
+	it('synchronizes a genuinely new reference with both toast and inline feedback', () => {
+		const view = render(dashboard(initialFeedback));
+		const firstId = activeToast().options.id;
+		const next = {
+			...initialFeedback,
+			error: {
+				...initialFeedback.error,
+				code: 'missing-image' as const,
+				reference: '22222222-2222-4222-8222-222222222222',
+			},
+		};
+		view.rerender(dashboard(next));
+		expect(screen.getByRole('alert').textContent).toContain('no tiene una etiqueta');
+		expect(screen.getByRole('alert').textContent).toContain(next.error.reference);
+		expect(activeToast().options.id).not.toBe(firstId);
+		expect(toasts.dismiss).toHaveBeenCalledWith(firstId);
+	});
+	it('does not resurrect dismissed feedback on ordinary server rerenders', async () => {
+		const view = render(dashboard(initialFeedback));
+		await click('Cerrar aviso');
+		view.rerender(dashboard({ ...initialFeedback }));
 		expect(screen.queryByRole('alert')).toBeNull();
-		expect(window.location.search).toBe('');
+		expect(toasts.visible.size).toBe(0);
 		expect(document.activeElement).toBe(screen.getByRole('heading', { level: 1 }));
-		expect(toasts.warning).toHaveBeenCalledTimes(1);
-		expect(toasts.success).not.toHaveBeenCalled();
-		expect(toasts.error).not.toHaveBeenCalled();
 	});
-
-	it('displays failed refresh results inline', async () => {
-		refresh.mockResolvedValue({ ok: false, error: initialFeedback.error });
+	it('does not notify on an ordinary dashboard visit', () => {
 		render(dashboard());
+		expect(toasts.visible.size).toBe(0);
+	});
+});
+
+describe('operation toast lifecycle', () => {
+	it('skips loading for fast operations and names the successful project', async () => {
+		vi.useFakeTimers();
+		render(dashboard());
+		await click(/Actualizar imagen/);
 		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: /Actualizar imagen/ }));
+			await vi.advanceTimersByTimeAsync(300);
+		});
+		expect(toasts.loading).not.toHaveBeenCalled();
+		expect(activeToast()).toMatchObject({
+			kind: 'success',
+			title: expect.stringContaining('Portfolio'),
+			options: { duration: 4000 },
+		});
+		expect(screen.getByRole('status').textContent).toBe('Imagen Open Graph actualizada.');
+	});
+	it('updates the same ID from delayed loading to a persistent error', async () => {
+		vi.useFakeTimers();
+		const pending = Promise.withResolvers<ProjectImageActionResult>();
+		refresh.mockReturnValueOnce(pending.promise);
+		render(dashboard());
+		await click(/Actualizar imagen/);
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(299);
+		});
+		expect(toasts.loading).not.toHaveBeenCalled();
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(1);
+		});
+		const id = activeToast().options.id;
+		expect(activeToast()).toMatchObject({ kind: 'loading', options: { duration: Infinity } });
+		await act(async () => {
+			pending.resolve({ ok: false, error: initialFeedback.error });
+		});
+		expect(activeToast()).toMatchObject({
+			kind: 'error',
+			options: { id, duration: Infinity, closeButton: true },
 		});
 		expect(screen.getByRole('alert').textContent).toContain('tardó demasiado');
-		expect(screen.getByRole('button', { name: 'Reintentar imagen' })).toBeTruthy();
-		expect(toasts.error).toHaveBeenCalledExactlyOnceWith(
-			'No se pudo actualizar la imagen Open Graph',
-			{ description: expect.stringContaining('tardó demasiado') },
-		);
-		expect(toasts.warning).not.toHaveBeenCalled();
+		act(() => {
+			detailsAction().onClick({
+				preventDefault: vi.fn(),
+			} as unknown as MouseEvent<HTMLButtonElement>);
+		});
+		expect(document.activeElement).toBe(screen.getByRole('alert'));
 	});
-
-	it('disables image controls and prevents duplicate requests while pending', async () => {
+	it('replaces a failed attempt with retry success and does not restore old redirect feedback', async () => {
+		const view = render(dashboard(initialFeedback));
+		const id = activeToast().options.id;
+		await click('Reintentar imagen');
+		expect(activeToast()).toMatchObject({
+			kind: 'success',
+			options: { id, action: undefined, duration: 4000 },
+		});
+		expect(screen.queryByRole('alert')).toBeNull();
+		view.rerender(dashboard({ ...initialFeedback }));
+		expect(activeToast().kind).toBe('success');
+		expect(screen.queryByRole('alert')).toBeNull();
+	});
+	it('replaces an existing error with loading immediately when retrying', async () => {
 		const pending = Promise.withResolvers<ProjectImageActionResult>();
 		refresh.mockReturnValueOnce(pending.promise);
 		render(dashboard(initialFeedback));
-		fireEvent.click(screen.getByRole('button', { name: 'Reintentar imagen' }));
-		const retry = screen.getByRole<HTMLButtonElement>('button', { name: 'Reintentar imagen' });
-		expect(retry.disabled).toBe(true);
-		expect(retry.getAttribute('aria-busy')).toBe('true');
+		const id = activeToast().options.id;
+		await click('Reintentar imagen');
+		expect(activeToast()).toMatchObject({
+			kind: 'loading',
+			options: { id, closeButton: false },
+		});
+		await act(async () => {
+			pending.resolve({ ok: true });
+		});
+		expect(activeToast()).toMatchObject({ kind: 'success', options: { id } });
+	});
+	it('starts a fresh notification after the previous toast was explicitly closed', async () => {
+		render(dashboard(initialFeedback));
+		const previous = activeToast();
+		act(() => {
+			previous.options.onDismiss?.({ id: previous.options.id! });
+		});
+		await click('Reintentar imagen');
+		expect(activeToast().kind).toBe('success');
+		expect(activeToast().options.id).not.toBe(previous.options.id);
+	});
+	it('updates an existing toast on failed retries too', async () => {
+		refresh.mockResolvedValue({
+			ok: false,
+			error: { ...initialFeedback.error, code: 'missing-image' },
+		});
+		render(dashboard(initialFeedback));
+		const id = activeToast().options.id;
+		await click('Reintentar imagen');
+		expect(activeToast()).toMatchObject({ kind: 'error', options: { id, duration: Infinity } });
+		expect(screen.getByRole('alert').textContent).toContain('no tiene una etiqueta');
+	});
+	it('dismisses the previous project notification without touching unrelated admin toasts', async () => {
+		const second = { ...project, id: 8, title: 'Another project' };
+		render(dashboard(initialFeedback, [project, second]));
+		const previousId = activeToast().options.id;
+		toasts.error('Unrelated admin notification', { id: 'unrelated' });
+		await click('Actualizar imagen Open Graph de Another project');
+		expect(toasts.dismiss).toHaveBeenCalledWith(previousId);
+		expect(toasts.visible.has('unrelated')).toBe(true);
+		expect(
+			[...toasts.visible.values()].find((value) => value.kind === 'success')?.title,
+		).toContain('Another project');
+	});
+	it('closing the toast preserves the alert, and closing the alert dismisses its toast', async () => {
+		const view = render(dashboard(initialFeedback));
+		const notification = activeToast();
+		act(() => {
+			notification.options.onDismiss?.({ id: notification.options.id! });
+		});
+		expect(toasts.visible.size).toBe(0);
+		expect(screen.getByRole('alert')).toBeTruthy();
+		view.rerender(dashboard({ ...initialFeedback }));
+		expect(toasts.visible.size).toBe(0);
+		await click('Cerrar aviso');
+		expect(screen.queryByRole('alert')).toBeNull();
+	});
+	it('prevents duplicate actions while pending', async () => {
+		const pending = Promise.withResolvers<ProjectImageActionResult>();
+		refresh.mockReturnValueOnce(pending.promise);
+		render(dashboard());
+		await click(/Actualizar imagen/);
 		expect(
 			screen.getByRole<HTMLButtonElement>('button', { name: /Actualizar imagen/ }).disabled,
 		).toBe(true);
-		fireEvent.click(retry);
-		expect(refresh).toHaveBeenCalledTimes(1);
-		expect(toasts.success).not.toHaveBeenCalled();
-		expect(toasts.error).not.toHaveBeenCalled();
-		expect(toasts.warning).toHaveBeenCalledTimes(1);
+		await click(/Actualizar imagen/);
+		expect(refresh).toHaveBeenCalledExactlyOnceWith(7);
 		await act(async () => {
 			pending.resolve({ ok: true });
-			await pending.promise;
 		});
 		expect(
 			screen.getByRole<HTMLButtonElement>('button', { name: /Actualizar imagen/ }).disabled,
 		).toBe(false);
 	});
-
-	it('uses generic text for rejected requests instead of exception messages', async () => {
-		refresh.mockRejectedValueOnce(new Error('SQL credentials secret'));
-		render(dashboard());
-		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: /Actualizar imagen/ }));
-		});
-		expect(screen.getByRole('alert').textContent).toContain('No se pudo completar');
-		expect(screen.getByRole('alert').textContent).not.toContain('secret');
-		expect(screen.getByRole('alert').textContent).not.toContain('Referencia:');
-		expect(toasts.error).toHaveBeenCalledExactlyOnceWith(
-			'No se pudo actualizar la imagen Open Graph',
-			{ description: expect.stringContaining('No se pudo completar') },
-		);
-		expect(JSON.stringify(toasts.error.mock.calls)).not.toContain('secret');
-	});
-
-	it('distinguishes refresh cleanup warnings without offering another refresh', async () => {
-		refresh.mockResolvedValue({
-			ok: true,
-			warning: { ...initialFeedback.error, code: 'delete-failed', stage: 'cleanup' },
-		});
-		render(dashboard());
-		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: /Actualizar imagen/ }));
-		});
-		expect(screen.getByRole('alert').textContent).toContain('Imagen actualizada');
-		expect(screen.queryByRole('button', { name: 'Reintentar imagen' })).toBeNull();
-		expect(toasts.warning).toHaveBeenCalledExactlyOnceWith(
-			'Imagen actualizada con una advertencia de limpieza',
-			{ description: expect.stringContaining('No se pudo eliminar una imagen') },
-		);
-		expect(toasts.success).not.toHaveBeenCalled();
-		expect(toasts.error).not.toHaveBeenCalled();
-	});
-
-	it('keeps deletion cleanup warnings visible when the last project disappears', async () => {
+	it('keeps successful cleanup warnings separate from failures and retains a deleted project name', async () => {
 		onDelete.mockResolvedValue({
 			ok: true,
 			warning: { ...initialFeedback.error, code: 'delete-failed', stage: 'cleanup' },
 		});
 		const view = render(dashboard());
-		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: 'Eliminar Portfolio' }));
-		});
+		await click('Eliminar Portfolio');
 		view.rerender(dashboard(undefined, []));
+		expect(activeToast()).toMatchObject({
+			kind: 'warning',
+			title: expect.stringContaining('Portfolio'),
+			options: { duration: 8000 },
+		});
 		expect(screen.getByRole('alert').textContent).toContain('Proyecto eliminado');
 		expect(screen.getByRole('alert').textContent).toContain('Portfolio');
-		expect(screen.getByRole('heading', { name: 'No hay proyectos todavía' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Reintentar imagen' })).toBeNull();
-		expect(toasts.warning).toHaveBeenCalledExactlyOnceWith(
-			'Proyecto eliminado con una advertencia de limpieza',
-			{ description: expect.stringContaining('No se pudo eliminar una imagen') },
-		);
-		expect(toasts.success).not.toHaveBeenCalled();
-		expect(toasts.error).not.toHaveBeenCalled();
 	});
-
-	it('does not offer refresh without a source URL', () => {
+	it('does not offer an image retry without a current source', () => {
 		render(dashboard(initialFeedback, [{ ...project, url: null }]));
-		expect(screen.getByRole('alert')).toBeTruthy();
 		expect(screen.queryByRole('button', { name: 'Reintentar imagen' })).toBeNull();
 	});
 });
 
-describe('supplementary project image toasts', () => {
-	it.each(['create', 'update'] as const)(
-		'shows a warning for a %s redirect and keeps inline feedback',
-		(operation) => {
-			render(dashboard({ ...initialFeedback, operation }));
-			expect(toasts.warning).toHaveBeenCalledExactlyOnceWith(
-				'Proyecto guardado, pero su imagen no se pudo actualizar',
-				{ description: expect.stringContaining('tardó demasiado') },
+describe('uncertain outcomes', () => {
+	it.each(['refresh', 'delete'] as const)(
+		'treats rejected %s requests as unknown, without inventing a reference or a cleanup promise',
+		async (operation) => {
+			(operation === 'refresh' ? refresh : onDelete).mockRejectedValueOnce(
+				new Error('SQL credentials secret'),
 			);
-			expect(JSON.stringify(toasts.warning.mock.calls)).not.toContain(
-				initialFeedback.error.reference,
-			);
-			expect(screen.getByRole('alert')).toBeTruthy();
+			render(dashboard());
+			await click(operation === 'refresh' ? /Actualizar imagen/ : 'Eliminar Portfolio');
+			expect(activeToast()).toMatchObject({
+				kind: 'warning',
+				options: { duration: Infinity, closeButton: true },
+			});
+			expect(detailsAction().label).toBe('Recargar página');
+			const text = screen.getByRole('alert').textContent!;
+			expect(text).toContain('puede haberse completado');
+			expect(text).not.toContain('Referencia:');
+			expect(text).not.toContain('automáticamente');
+			expect(text).not.toContain('secret');
+			expect(JSON.stringify(activeToast())).not.toContain('secret');
+			expect(screen.queryByRole('button', { name: 'Reintentar imagen' })).toBeNull();
+			expect(screen.getByRole('button', { name: 'Recargar página' })).toBeTruthy();
 		},
 	);
-
-	it('does not repeat redirect warnings during Strict Mode effects or rerenders', () => {
-		const view = render(<StrictMode>{dashboard(initialFeedback)}</StrictMode>);
-		view.rerender(<StrictMode>{dashboard({ ...initialFeedback })}</StrictMode>);
-		expect(toasts.warning).toHaveBeenCalledTimes(1);
-		expect(screen.getByRole('alert')).toBeTruthy();
+	it('uses persistent warnings for server uncertainty after both saves and manual refreshes', async () => {
+		const uncertain = { ...initialFeedback.error, code: 'persistence-uncertain' as const };
+		render(dashboard({ ...initialFeedback, error: uncertain }));
+		expect(activeToast()).toMatchObject({ kind: 'warning', options: { duration: Infinity } });
+		expect(screen.getByRole('alert').textContent).toContain('Proyecto guardado;');
+		refresh.mockResolvedValue({ ok: false, error: uncertain });
+		await click(/Actualizar imagen/);
+		expect(activeToast()).toMatchObject({ kind: 'warning', options: { duration: Infinity } });
+		expect(screen.getByRole('alert').textContent).toContain('No se pudo confirmar');
 	});
+});
 
-	it('does not show a toast when the dashboard opens without feedback', () => {
-		render(dashboard());
-		expect(toasts.success).not.toHaveBeenCalled();
-		expect(toasts.warning).not.toHaveBeenCalled();
-		expect(toasts.error).not.toHaveBeenCalled();
-	});
-
-	it('shows a success toast after deletion', async () => {
-		render(dashboard());
+describe('navigation and stale responses', () => {
+	it('clears loading timers and ignores rejected responses after unmount', async () => {
+		vi.useFakeTimers();
+		const pending = Promise.withResolvers<ProjectImageActionResult>();
+		refresh.mockReturnValueOnce(pending.promise);
+		const view = render(dashboard());
+		await click(/Actualizar imagen/);
 		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: 'Eliminar Portfolio' }));
+			view.unmount();
 		});
-		expect(toasts.success).toHaveBeenCalledExactlyOnceWith('Proyecto eliminado.');
-		expect(toasts.warning).not.toHaveBeenCalled();
-		expect(toasts.error).not.toHaveBeenCalled();
-	});
-
-	it('shows a safe error toast and inline alert when deletion fails', async () => {
-		onDelete.mockResolvedValue({
-			ok: false,
-			error: {
-				...initialFeedback.error,
-				code: 'project-delete-failed',
-				stage: 'persistence',
-			},
-		});
-		render(dashboard());
 		await act(async () => {
-			fireEvent.click(screen.getByRole('button', { name: 'Eliminar Portfolio' }));
+			await vi.advanceTimersByTimeAsync(500);
+			pending.reject(new Error('response lost'));
 		});
-		expect(toasts.error).toHaveBeenCalledExactlyOnceWith('No se pudo eliminar el proyecto', {
-			description: expect.stringContaining('Recarga la página'),
+		expect(toasts.loading).not.toHaveBeenCalled();
+		expect(toasts.visible.size).toBe(0);
+	});
+	it('dismisses visible loading on unmount and ignores a late success', async () => {
+		vi.useFakeTimers();
+		const pending = Promise.withResolvers<ProjectImageActionResult>();
+		refresh.mockReturnValueOnce(pending.promise);
+		const view = render(dashboard());
+		await click(/Actualizar imagen/);
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(300);
 		});
-		expect(screen.getByRole('alert').textContent).toContain('No se pudo eliminar el proyecto');
+		const id = activeToast().options.id;
+		await act(async () => {
+			view.unmount();
+		});
+		expect(toasts.dismiss).toHaveBeenCalledWith(id);
+		await act(async () => {
+			pending.resolve({ ok: true });
+		});
 		expect(toasts.success).not.toHaveBeenCalled();
+		expect(toasts.visible.size).toBe(0);
+	});
+	it('dismisses a persistent error when leaving the dashboard', async () => {
+		refresh.mockResolvedValue({ ok: false, error: initialFeedback.error });
+		const view = render(dashboard());
+		await click(/Actualizar imagen/);
+		const id = activeToast().options.id;
+		await act(async () => {
+			view.unmount();
+		});
+		expect(toasts.dismiss).toHaveBeenCalledWith(id);
+		expect(toasts.visible.size).toBe(0);
+	});
+	it('does not revive consumed feedback when a cached page becomes visible again', async () => {
+		const view = render(<Activity mode="visible">{dashboard(initialFeedback)}</Activity>);
+		expect(activeToast().kind).toBe('warning');
+		await act(async () => {
+			view.rerender(<Activity mode="hidden">{dashboard(initialFeedback)}</Activity>);
+		});
+		expect(toasts.visible.size).toBe(0);
+		view.rerender(<Activity mode="visible">{dashboard(initialFeedback)}</Activity>);
+		expect(toasts.visible.size).toBe(0);
+		expect(screen.queryByRole('alert')).toBeNull();
+	});
+	it('allows a fresh action after returning to a cached page with an abandoned request', async () => {
+		const old = Promise.withResolvers<ProjectImageActionResult>();
+		refresh.mockReturnValueOnce(old.promise);
+		const view = render(<Activity mode="visible">{dashboard()}</Activity>);
+		await click(/Actualizar imagen/);
+		await act(async () => {
+			view.rerender(<Activity mode="hidden">{dashboard()}</Activity>);
+		});
+		view.rerender(<Activity mode="visible">{dashboard()}</Activity>);
+		expect(
+			screen.getByRole<HTMLButtonElement>('button', { name: /Actualizar imagen/ }).disabled,
+		).toBe(false);
+		await click(/Actualizar imagen/);
+		expect(activeToast().kind).toBe('success');
+		await act(async () => {
+			old.resolve({ ok: false, error: initialFeedback.error });
+		});
+		expect(activeToast().kind).toBe('success');
+	});
+	it('ignores an old attempt after accepting a newer redirect reference and completing a new attempt', async () => {
+		const old = Promise.withResolvers<ProjectImageActionResult>();
+		refresh.mockReturnValueOnce(old.promise);
+		const view = render(dashboard());
+		await click(/Actualizar imagen/);
+		view.rerender(dashboard(initialFeedback));
+		await click('Reintentar imagen');
+		expect(activeToast().kind).toBe('success');
+		await act(async () => {
+			old.resolve({ ok: false, error: initialFeedback.error });
+		});
+		expect(activeToast().kind).toBe('success');
+		expect(screen.queryByRole('alert')).toBeNull();
 	});
 });
