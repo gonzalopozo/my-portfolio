@@ -45,7 +45,9 @@ overrides:
     next@>=16.1.0-canary.0 <16.1.0-canary.17: '>=16.1.0-canary.17'
     next@>=16.1.0-canary.0 <16.1.5: '>=16.1.5'
     ajv@<8.18.0: '>=8.18.0'
-    minimatch@<10.2.1: '>=10.2.1'
+    # Keep legacy consumers on 3.x; v11 removes APIs such as makeRe.
+    # Upgrade only versions affected by CVE-2026-118764.
+    minimatch@>=7.0.0 <11.0.1: '^11.0.8'
     rollup@>=4.0.0 <4.59.0: '>=4.59.0'
     lodash@>=4.0.0 <=4.17.22: '>=4.17.23'
     hono@<4.11.7: '>=4.11.7'
