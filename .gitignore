@@ -43,6 +43,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Generated icon catalogue and atomic replacement files
+/lib/react-icons-manifest.json
+/lib/react-icons-manifest.json.*.tmp
+
 # Playwright
 node_modules/
 /test-results/

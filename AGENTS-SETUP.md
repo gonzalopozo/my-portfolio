@@ -84,10 +84,21 @@ SPOTIFY_CLIENT_SECRET=your-spotify-client-secret
 
 ```bash
 pnpm i
+pnpm icons:manifest
 pnpm run hooks:install
 ```
 
 `ignoreScripts: true` is enabled in `pnpm-workspace.yaml`, so lifecycle scripts do not run during install. Husky hooks must be installed manually with `pnpm run hooks:install`.
+
+`pnpm icons:manifest` creates the ignored `lib/react-icons-manifest.json` from the
+installed `react-icons` packs so editor imports resolve on a fresh checkout.
+Development, build, lint, type checking, dependency analysis and Vitest scripts
+generate it explicitly before consuming it. Run generation first when invoking
+those tools directly with `pnpm exec`.
+
+After updating dependencies or switching branches and installing their lockfile,
+restart `pnpm dev` or run `pnpm icons:manifest` to refresh an active development
+session. There is no background dependency watcher or install lifecycle hook.
 
 ## Making Schema Changes
 

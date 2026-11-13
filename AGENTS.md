@@ -67,6 +67,11 @@ reasoning effort `low`, and Fast Mode enabled. The subagent performs the final
 verification pass and must report every command it ran, every finding, and whether the
 commit is blocked.
 
+As setup for this authorized pass, the subagent must run `pnpm icons:manifest`
+before the checks below. The ignored JSON is required by direct commands such as
+`pnpm exec tsc --noEmit` on a fresh checkout. This preparation does not replace any
+check or authorize checks outside an explicit commit request.
+
 The pre-commit subagent must complete these checks:
 
 1. Inspect the intended commit diff with `git status --short` and `git diff --check`.
