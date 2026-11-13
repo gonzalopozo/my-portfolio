@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { Activity, StrictMode, type MouseEvent } from 'react';
+import { Activity, StrictMode, useLayoutEffect, type MouseEvent } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Action, ExternalToast } from 'sonner';
 import type { ProjectInfo } from '@/lib/types';
@@ -201,6 +201,29 @@ describe('redirect feedback', () => {
 });
 
 describe('operation toast lifecycle', () => {
+	it.each(['refresh', 'delete'] as const)(
+		'accepts a %s click as soon as the dashboard commits',
+		async (operation) => {
+			function ImmediateInteraction() {
+				useLayoutEffect(() => {
+					screen
+						.getByRole<HTMLButtonElement>('button', {
+							name:
+								operation === 'refresh'
+									? /Actualizar imagen/
+									: 'Eliminar Portfolio',
+						})
+						.click();
+				}, []);
+				return dashboard();
+			}
+			await act(async () => {
+				render(<ImmediateInteraction />);
+			});
+			expect(operation === 'refresh' ? refresh : onDelete).toHaveBeenCalledExactlyOnceWith(7);
+			expect(activeToast().kind).toBe('success');
+		},
+	);
 	it('skips loading for fast operations and names the successful project', async () => {
 		vi.useFakeTimers();
 		render(dashboard());

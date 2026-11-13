@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
 	clearOgImageWarningParams,
@@ -149,7 +149,8 @@ export function useProjectImageFeedback({
 	const ownedToast = useRef<string | undefined>(undefined);
 	const reference = initialFeedback?.error.reference;
 
-	useEffect(() => {
+	// Connect guards during the commit, before hydration can replay an input event.
+	useLayoutEffect(() => {
 		mounted.current = true;
 		const mountEpoch = epoch.current + 1;
 		epoch.current = mountEpoch;
@@ -178,7 +179,7 @@ export function useProjectImageFeedback({
 		if (reference) clearWarningUrl();
 	}, [reference]);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		if (busy.current !== model.attempt) busy.current = undefined;
 	}, [model.attempt]);
 
