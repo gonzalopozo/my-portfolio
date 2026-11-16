@@ -117,6 +117,8 @@ turbopack
 Turbopack
 WCAG
 wcag
+Liskov
+unreviewed
 
 # Lastfm / Spotify / external images
 domcontentloaded

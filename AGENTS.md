@@ -129,6 +129,184 @@ See [CI/CD](./AGENTS-CICD.md).
 | UI         | shadcn/ui, Lucide icons, react-icons, cmdk, sonner |
 | Animations | Motion, @number-flow/react, tw-animate-css         |
 
+## Engineering Principles (Robert C. Martin, Books 1–6)
+
+These are **actionable, consolidated** rules drawn from _Clean Code_, _The Clean
+Coder_, _Clean Architecture_, _Clean Agile_, _Clean Craftsmanship_, and
+_Functional Design_. Apply them to the existing codebase, not as a reason to
+replace working structures with textbook patterns. The project-specific guides
+below govern their implementation details.
+
+### Priorities and Scope
+
+- Prioritize security and data integrity, correctness, clarity, maintainability,
+  and then optimization. Do not trade away important correctness for speed.
+- Prefer the simplest design that meets current requirements and is safe to
+  change. Avoid speculative features, abstractions, frameworks, and dependencies.
+- Keep changes focused, incremental, and reviewable. Preserve unrelated behavior,
+  public contracts, data, and existing conventions unless change is required.
+- Understand the task's objective, constraints, and acceptance criteria before
+  changing code. Use the referenced implementation brief when one exists.
+- Make design decisions based on the real code and requirements, not automatic
+  application of Clean Architecture, SOLID, OOP, or functional patterns.
+- Respect established APIs, schemas, and conventions; explain meaningful
+  tradeoffs or intentional compatibility changes.
+
+### Readable, Cohesive Code
+
+- Optimize for the next reader. Prefer direct, expressive code over cleverness,
+  compressed expressions, implicit behavior, and premature generalization.
+- Use intention-revealing, accurate names for variables, functions, types,
+  modules, and components. Avoid misleading names and unexplained abbreviations.
+- Follow existing naming, formatting, file organization, and terminology.
+  Do not introduce a competing style or rename unrelated symbols.
+- Keep functions and modules cohesive: one clear responsibility or reason to
+  change. Extract code when doing so improves understanding, not to meet a
+  function-length, argument-count, or file-size quota.
+- Keep a consistent level of abstraction within an operation where practical.
+  Do not bury domain decisions in UI rendering or low-level plumbing.
+- Prefer small, clear function signatures. Use named parameter objects when
+  they improve clarity; avoid boolean flags that control unrelated behaviors.
+- Remove duplicated _knowledge_ or business rules, but do not abstract two
+  superficially similar pieces of code before their shared meaning is clear.
+- Encapsulate implementation details and expose only what callers need. Choose
+  plain data structures for data and behavior-bearing abstractions where useful;
+  do not force class hierarchies onto TypeScript modules.
+- Write code that explains what happens; comments and JSDoc should explain
+  _why_, constraints, invariants, or non-obvious tradeoffs. Keep them accurate
+  and follow `AGENTS-CONVENTIONS.md`.
+- Watch for code smells: hidden side effects, deeply nested control flow,
+  repeated decisions, too many responsibilities, broad interfaces, circular
+  imports, and unnecessary coupling. Fix problems relevant to the requested
+  change; do not start unrelated rewrites.
+- Leave touched code a little clearer when doing so stays within scope.
+  Refactor in small behavior-preserving steps rather than mixing extensive
+  restructuring with feature changes.
+
+### TypeScript, React, and Functional Design
+
+- Use TypeScript's strict types to make valid states explicit. Prefer precise
+  types and discriminated unions where they clarify behavior; avoid `any`,
+  unchecked assertions, and non-null assertions without justification.
+- Validate untrusted or external input at runtime; static types alone do not
+  validate forms, Server Action payloads, API requests, or database data.
+- Prefer pure, deterministic functions for calculations, validation decisions,
+  data transformations, and domain logic. Keep data flow and dependencies
+  explicit and minimize hidden mutable state.
+- Prefer immutable data transformations. Never mutate React props or state;
+  avoid side effects during rendering. Put necessary effects at appropriate
+  boundaries rather than scattering them through presentation code.
+- Model state transitions explicitly. Avoid redundant or contradictory state,
+  and keep UI state, server state, and persisted state distinct when practical.
+- Isolate database calls, network I/O, authentication, clocks, and other
+  side effects from pure computations where this improves testability.
+- Handle asynchronous operations deliberately: prevent stale updates,
+  duplicate writes, or race conditions when a real interaction makes them
+  possible. Do not add synchronization infrastructure without such a need.
+- Use functional composition or objects/classes pragmatically according to the
+  problem and the existing code; neither paradigm is mandatory.
+
+### Architecture, Boundaries, and SOLID
+
+- Organize code so important domain features and use cases remain discoverable.
+  Keep responsibilities aligned with the current `app/`, `components/`,
+  `lib/actions/`, `lib/queries/`, `lib/schemas/`, and `db/schema/` structure.
+- Separate domain and application decisions from presentation, transport,
+  persistence, and framework glue when a meaningful rule needs protection.
+  Next.js, Drizzle, Turso, and better-auth are implementation dependencies,
+  not reasons to duplicate business policy across layers.
+- Keep source dependencies flowing toward more stable policies at genuine
+  boundaries. Avoid circular imports and coupling stable domain decisions to
+  volatile UI or infrastructure details.
+- Apply **Single Responsibility** by grouping code that changes for the same
+  reason; keep unrelated responsibilities separate. Group related changes
+  together rather than scattering one use case across arbitrary utilities.
+- Apply **Open/Closed** when actual variants justify extension points; do not
+  invent plugin systems, strategy classes, or abstract factories for one case.
+- Apply **Liskov Substitution** when using interchangeable implementations:
+  replacements must honor documented input, output, and error contracts.
+- Apply **Interface Segregation** by keeping interfaces and exported APIs
+  narrow; consumers should not depend on operations they never use.
+- Apply **Dependency Inversion** when decoupling policy from external services
+  or unstable implementation details has a concrete benefit. Do not require
+  an interface for every function, a repository for every table, or a layer
+  for every use case.
+- Choose component boundaries for cohesion and common reasons to change;
+  avoid broad shared modules that force consumers to import unrelated code.
+- Keep high-level application behavior stable when external APIs, database
+  queries, or presentation mechanisms change. Translate data at boundaries
+  when the formats or responsibilities genuinely differ.
+- Keep nontrivial workflows/use cases explicit. Prefer composable application
+  operations over business rules buried in route handlers or React components.
+- Make complex dependencies easy to construct and replace in tests; centralize
+  wiring only when construction complexity warrants it.
+- Treat architecture as a means to reduce the cost of change, not an excuse
+  for prescribed rings, layers, classes, microservices, or deployment units.
+
+### Failures, Security, and Data Integrity
+
+- Handle expected failures explicitly, close to the correct boundary. Avoid
+  silently swallowed errors, misleading success results, and ambiguous `null`
+  or boolean error signals when a clearer contract is appropriate.
+- Keep failure handling readable and separate from the normal flow where
+  practical. Preserve actionable error context without exposing secrets or
+  implementation details to public clients.
+- Treat every CMS mutation and protected read as a trust boundary: enforce
+  authentication and authorization on the server, not merely through UI state,
+  route visibility, or middleware/proxy checks.
+- Validate and normalize inputs using the project's existing Zod conventions;
+  protect data integrity and avoid leaking unpublished/private information.
+  Follow `AGENTS-SECURITY.md` for authoritative security patterns.
+- Do not introduce data loss, unreviewed destructive changes, or unsafe
+  shortcuts to satisfy a deadline. Call out material privacy and security
+  risks rather than concealing them.
+
+### Testing, Refactoring, and Evidence
+
+- Design important logic to be testable without mounting the whole app or
+  contacting live external services. Prefer testing observable behavior over
+  fragile implementation details.
+- Create or update focused tests for important new behavior, bug regressions,
+  validation, authorization, publishing rules, and data integrity when the
+  change warrants them. Use acceptance criteria to choose test cases.
+- Use TDD / Red–Green–Refactor when it clarifies a nontrivial requirement or
+  reproduces a defect; do not mandate it for every edit or claim a red/green
+  cycle happened unless the tests actually ran.
+- Keep tests readable, deterministic, independent, and self-validating;
+  fast unit tests are preferable for pure logic, with integration/end-to-end
+  tests reserved for boundaries and complete user flows where appropriate.
+- Test pure functions directly. Use stubs, fakes, spies, or mocks only when
+  necessary for a boundary; avoid mocking implementation details.
+- Consider property-based tests for complicated invariants or transformations,
+  but do not add a dependency or a testing style without a concrete benefit.
+- Refactor in small, behavior-preserving steps. Do not knowingly leave
+  broken tests, invalid contracts, or incomplete error handling in proposed
+  code. Do not represent unexecuted checks as evidence of correctness.
+- **Authorization to run commands is controlled exclusively by the existing
+  Pre-Commit Checks, Local browser hooks, and Automated CI sections above.**
+  These engineering principles authorize writing or updating tests, but **not
+  executing** formatters, linters, type checks, test suites, builds, or other
+  verification during routine implementation. Record what was not run.
+
+### Professional Agent Conduct and Delivery
+
+- Be accountable for the scope and consequences of changes. Never conceal
+  failed work, blockers, unsupported assumptions, or known risks.
+- Distinguish an estimate or expectation from a verified result. Do not claim
+  a build, test, migration, deployment, or integration succeeded without evidence.
+- Say when a request would require unsafe shortcuts or conflicts with project
+  constraints. State alternatives and tradeoffs instead of quietly weakening
+  security, quality, or correctness.
+- Surface missing requirements and consequential uncertainty early. Ask for
+  clarification when truly necessary; otherwise take the smallest safe,
+  reversible step and state any assumptions.
+- Explain non-obvious decisions, dependency additions, observable behavior
+  changes, and limitations succinctly. Avoid ceremonial process and reports
+  that do not help review or delivery.
+- Deliver complete, reviewable changes in small increments. Preserve the
+  ability to integrate and ship, without bypassing the existing verification
+  policy or introducing unrelated cleanup.
+
 ## Project Structure
 
 ```
