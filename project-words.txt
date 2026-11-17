@@ -179,3 +179,4 @@ checkmarks
 codescanning
 cutover
 worktree
+MSW
