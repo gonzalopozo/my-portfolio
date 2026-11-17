@@ -53,6 +53,19 @@ Unit tests may mock database/auth/Next boundaries. Integration tests use
 Do not mock Drizzle in a test claiming database integration. Close clients and clean
 owned fixtures even on failure. Public cached reads must not acquire auth state.
 
+Last.fm and Spotify artwork tests use opt-in MSW Node handlers through
+`tests/fixtures/setup-network.ts`. Share provider payload builders in
+`tests/fixtures/music.ts`; declare response overrides beside each test. The helper
+starts interception once per suite, resets overrides after each test, and closes
+interception afterward. Unexpected requests fail teardown even if an application
+fallback catches the network error. Keep injected-fetch deadline tests and Spotify
+browser-search mocks at their existing boundaries.
+
+The isolated production harness loads MSW through a Node preload, never through
+Next.js instrumentation or application imports. Build workers and production test
+servers inherit that preload; pnpm, Playwright and hosted deployments do not.
+Keep MSW a development dependency and preserve the dependency boundary rule.
+
 Local production E2E internally sets `CI=true` and requires an owned temporary database, safe build/runtime
 environment, local HTTPS and no Vercel runtime. The runner initializes these. Test
 fixtures must never add public test endpoints, disable auth/CSRF/SSRF, accept arbitrary

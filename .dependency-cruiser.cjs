@@ -34,7 +34,6 @@ module.exports = {
 					String.raw`(^|/)e2e/`,
 					String.raw`(^|/)scripts/`,
 					String.raw`^proxy[.]ts$`,
-					String.raw`^instrumentation[.]ts$`,
 					String.raw`(^|/)next-env[.]d[.]ts$`,
 				],
 			},
@@ -44,6 +43,22 @@ module.exports = {
 		// -----------------------------------------------------------------
 		// Layering (matches AGENTS.md: lib → data/auth; app/components → UI & routes)
 		// -----------------------------------------------------------------
+		{
+			name: 'production-not-to-network-mocks',
+			comment: 'Keep MSW and its network fixtures outside deployed application code.',
+			severity: 'error',
+			from: {
+				path: '^(app/|components/|lib/|db/|proxy[.]ts$|next[.]config[.]ts$)',
+				pathNot: String.raw`[.](test|spec)[.]`,
+			},
+			to: {
+				path: [
+					String.raw`(^|/)msw(/|$)`,
+					String.raw`^tests/fixtures/(music|network|network-server|setup-network)[.]ts$`,
+					String.raw`^scripts/preload-network[.]mjs$`,
+				],
+			},
+		},
 		{
 			name: 'lib-not-to-app',
 			comment:

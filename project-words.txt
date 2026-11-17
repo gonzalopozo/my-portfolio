@@ -179,3 +179,5 @@ checkmarks
 codescanning
 cutover
 worktree
+MSW
+gstatic
