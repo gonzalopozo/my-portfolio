@@ -8,7 +8,15 @@ beforeEach(() => {
 	vi.resetAllMocks();
 	previousArgv = process.argv;
 	process.argv = ['node', 'scripts/run-production-e2e.mts'];
-	for (const name of ['CIRCLECI', 'GITHUB_ACTIONS', 'VERCEL', 'CI']) vi.stubEnv(name, undefined);
+	for (const name of [
+		'CIRCLECI',
+		'GITHUB_ACTIONS',
+		'VERCEL',
+		'CI',
+		'APP_ENV',
+		'PORTFOLIO_TEST_BUILD',
+	])
+		vi.stubEnv(name, undefined);
 });
 afterEach(() => {
 	process.argv = previousArgv;
@@ -16,10 +24,30 @@ afterEach(() => {
 });
 
 describe('local-only browser entry point', () => {
-	it('runs the complete suite with deterministic fixture settings', async () => {
+	it.each([undefined, 'false', 'true'])(
+		'runs the complete synthetic suite without changing CI=%s',
+		async (ci) => {
+			vi.stubEnv('CI', ci);
+			await import('../../scripts/run-production-e2e.mjs');
+			expect(harness).toHaveBeenCalledWith([]);
+			expect(process.env.CI).toBe(ci);
+			expect(process.env.APP_ENV).toBe('test');
+			expect(process.env.PORTFOLIO_TEST_BUILD).toBe('true');
+		},
+	);
+	it('forwards project selection, worker overrides and test filters unchanged', async () => {
+		const arguments_ = ['--project=api', '--workers=1', '--grep', 'foreign origins'];
+		process.argv.push(...arguments_);
 		await import('../../scripts/run-production-e2e.mjs');
-		expect(harness).toHaveBeenCalledWith([]);
-		expect(process.env.CI).toBe('true');
+		expect(harness).toHaveBeenCalledWith(arguments_);
+	});
+	it('initializes the browser-free smoke entry point without fabricating CI', async () => {
+		vi.stubEnv('CIRCLECI', 'true');
+		await import('../../scripts/build-production.mjs');
+		expect(harness).toHaveBeenCalledWith();
+		expect(process.env.CI).toBeUndefined();
+		expect(process.env.APP_ENV).toBe('test');
+		expect(process.env.PORTFOLIO_TEST_BUILD).toBe('true');
 	});
 	it.each(['CIRCLECI', 'GITHUB_ACTIONS', 'VERCEL'])(
 		'rejects browser execution in %s before starting a fixture',
@@ -29,6 +57,13 @@ describe('local-only browser entry point', () => {
 				'local only',
 			);
 			expect(harness).not.toHaveBeenCalled();
+		},
+	);
+	it.each(['CIRCLECI', 'GITHUB_ACTIONS', 'VERCEL'])(
+		'rejects direct test discovery in %s',
+		async (provider) => {
+			vi.stubEnv(provider, 'true');
+			await expect(import('../../e2e/fixtures')).rejects.toThrow('never in hosted');
 		},
 	);
 	it('propagates browser failure so a Git hook cannot continue', async () => {

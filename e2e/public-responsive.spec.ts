@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 
 test.describe('server-rendered portfolio', () => {
+	test.describe.configure({ mode: 'parallel' });
 	test.use({ javaScriptEnabled: false });
 
 	for (const width of [390, 820, 1440]) {
@@ -41,6 +42,7 @@ test.describe('server-rendered portfolio', () => {
 });
 
 test.describe('public responsive layout', () => {
+	test.describe.configure({ mode: 'parallel' });
 	for (const colorScheme of ['light', 'dark'] as const) {
 		for (const width of [320, 390, 430, 767, 768, 1024, 1440]) {
 			test(`reflows at ${width}px in ${colorScheme} mode`, async ({ page }) => {
@@ -76,6 +78,7 @@ test.describe('public responsive layout', () => {
 });
 
 test.describe('mobile section navigation', () => {
+	test.describe.configure({ mode: 'parallel' });
 	test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
 	test.beforeEach(async ({ page }) => {

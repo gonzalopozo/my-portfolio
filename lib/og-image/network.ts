@@ -81,7 +81,7 @@ export function pinnedLookup(addresses: Address[]): NonNullable<RequestOptions['
 async function fetchPinned(url: URL, addresses: Address[], signal: AbortSignal): Promise<Response> {
 	// The same strict isolation gate as Blob fixtures; DNS policy has already run.
 	if (
-		process.env.CI === 'true' &&
+		process.env.PORTFOLIO_TEST_BUILD === 'true' &&
 		process.env.APP_ENV === 'test' &&
 		!process.env.VERCEL &&
 		process.env.TEST_FIXTURE_DIRECTORY

@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
 beforeEach(async () => {
 	await mkdir('.ci', { recursive: true });
 	directory = await mkdtemp(resolve('.ci/database-'));
-	vi.stubEnv('CI', 'true');
+	vi.stubEnv('CI', undefined);
 	vi.stubEnv('APP_ENV', 'test');
 	vi.stubEnv('PORTFOLIO_TEST_BUILD', 'true');
 	vi.stubEnv('VERCEL', undefined);
@@ -32,6 +32,17 @@ afterEach(async () => {
 });
 
 describe('isolated MSW fixtures', () => {
+	it.each([undefined, 'false', 'true'])(
+		'intercepts providers independently of CI=%s',
+		async (ci) => {
+			vi.stubEnv('CI', ci);
+			server = startFixtureNetwork();
+			expect(await (await fetch(LASTFM_ENDPOINT)).json()).toEqual({
+				recenttracks: { track: [] },
+			});
+			expect(await readFile(`${directory}/network-failures.txt`, 'utf8')).toBe('');
+		},
+	);
 	it.each(['build', 'runtime'])(
 		'preloads fixtures into a %s process and its worker',
 		async (phase) => {
@@ -72,7 +83,7 @@ describe('isolated MSW fixtures', () => {
 	);
 
 	it.each([
-		['CI', 'false'],
+		['PORTFOLIO_TEST_BUILD', undefined],
 		['APP_ENV', 'production'],
 		['PORTFOLIO_TEST_BUILD', 'false'],
 		['VERCEL', '1'],

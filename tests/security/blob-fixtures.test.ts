@@ -10,8 +10,9 @@ let directory: string;
 beforeEach(async () => {
 	await mkdir('.ci', { recursive: true });
 	directory = await mkdtemp(resolve('.ci/database-'));
-	vi.stubEnv('CI', 'true');
+	vi.stubEnv('CI', undefined);
 	vi.stubEnv('APP_ENV', 'test');
+	vi.stubEnv('PORTFOLIO_TEST_BUILD', 'true');
 	vi.stubEnv('VERCEL', undefined);
 	vi.stubEnv('TEST_FIXTURE_DIRECTORY', directory);
 });
@@ -22,6 +23,14 @@ afterEach(async () => {
 });
 
 describe('Blob fixture path boundaries', () => {
+	it.each([undefined, 'false', 'true'])(
+		'uses owned fixtures independently of CI=%s',
+		async (ci) => {
+			vi.stubEnv('CI', ci);
+			const blob = await putFixture('skill-icons/test.svg', '<svg/>', options);
+			expect(await (await readFixture(new URL(blob.url))).text()).toBe('<svg/>');
+		},
+	);
 	it.each(['skill-icons/icon.svg', 'og-images/7-123.png'])(
 		'writes, reads and deletes %s inside the fixture store',
 		async (pathname) => {
@@ -70,7 +79,8 @@ describe('Blob fixture path boundaries', () => {
 	});
 
 	it.each([
-		['CI', 'false'],
+		['PORTFOLIO_TEST_BUILD', undefined],
+		['PORTFOLIO_TEST_BUILD', 'false'],
 		['APP_ENV', 'production'],
 		['VERCEL', '1'],
 		['TEST_FIXTURE_DIRECTORY', undefined],

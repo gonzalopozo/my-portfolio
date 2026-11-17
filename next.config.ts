@@ -4,8 +4,8 @@ import { getBlobPublicHostname } from './lib/blob-environment';
 
 const isIsolatedProductionBuild =
 	process.env.PORTFOLIO_TEST_BUILD === 'true' &&
-	process.env.CI === 'true' &&
-	process.env.APP_ENV === 'test';
+	process.env.APP_ENV === 'test' &&
+	!process.env.VERCEL;
 
 const nextConfig: NextConfig = {
 	distDir: isIsolatedProductionBuild ? '.ci/next-production' : '.next',

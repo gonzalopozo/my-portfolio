@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures';
 
+test.describe.configure({ mode: 'parallel' });
+
 test('public and login pages have no automated WCAG A/AA violations', async ({ page }) => {
 	for (const path of ['/', '/login']) {
 		await page.goto(path);

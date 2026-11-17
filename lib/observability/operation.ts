@@ -7,7 +7,7 @@ export async function observeOperation<T>(operation: string, task: () => Promise
 	let failed = false;
 	try {
 		if (
-			process.env.CI === 'true' &&
+			process.env.PORTFOLIO_TEST_BUILD === 'true' &&
 			process.env.APP_ENV === 'test' &&
 			!process.env.VERCEL &&
 			process.env.TEST_FIXTURE_DIRECTORY

@@ -5,7 +5,7 @@ import sharp from 'sharp';
 export async function ogImageFixture(url: URL): Promise<Response> {
 	const directory = resolve(/* turbopackIgnore: true */ process.env.TEST_FIXTURE_DIRECTORY ?? '');
 	if (
-		process.env.CI !== 'true' ||
+		process.env.PORTFOLIO_TEST_BUILD !== 'true' ||
 		process.env.APP_ENV !== 'test' ||
 		process.env.VERCEL ||
 		!directory.startsWith(`${resolve('.ci')}/database-`)

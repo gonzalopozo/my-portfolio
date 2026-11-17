@@ -9,6 +9,9 @@ export default defineConfig({
 		?.filter((project) => project.name !== 'api')
 		.map(({ name, use }) => ({ name, use })),
 	workers: 1,
+	forbidOnly: true,
+	failOnFlakyTests: true,
+	retries: 1,
 	webServer: undefined,
 	use: { ...config.use, baseURL: process.env.CSP_TEST_BASE_URL, trace: 'off', screenshot: 'off' },
 });

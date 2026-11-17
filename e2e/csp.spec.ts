@@ -1,5 +1,7 @@
 import { expect, test } from './fixtures';
 
+test.describe.configure({ mode: 'parallel' });
+
 type Violation = { directive: string; source: string; disposition: string; route: string };
 type EvidenceWindow = Window & {
 	cspEvidence?: Violation[];
