@@ -3,6 +3,7 @@ import { request as httpsRequest } from 'node:https';
 import { readFile, writeFile, rm, mkdir } from 'node:fs/promises';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
+import { createRequire } from 'node:module';
 import { temporaryDatabase, fixtureUser } from '../tests/fixtures/database';
 
 export async function productionHarness(browserArguments?: string[]) {
@@ -59,6 +60,19 @@ export async function productionHarness(browserArguments?: string[]) {
 		// Next.js follows Server Action redirects over this harness's HTTPS origin.
 		NODE_EXTRA_CA_CERTS: `${database.directory}/cert.pem`,
 	};
+	const nextCli = createRequire(import.meta.url).resolve('next/dist/bin/next');
+	function networkEnvironment(phase: 'build' | 'runtime'): NodeJS.ProcessEnv {
+		return {
+			...environment,
+			TEST_NETWORK_PHASE: phase,
+			// Only Next processes inherit the preload, including their build workers.
+			NODE_OPTIONS: `--import=${new URL('./preload-network.mjs', import.meta.url).href}`,
+		};
+	}
+	async function assertNetworkIsolation() {
+		const failures = await readFile(`${database.directory}/network-failures.txt`, 'utf8');
+		if (failures.trim()) throw new Error(`Unexpected isolated network requests:\n${failures}`);
+	}
 
 	let activeCommand: ReturnType<typeof spawn> | undefined;
 	let interrupted = false;
@@ -72,11 +86,11 @@ export async function productionHarness(browserArguments?: string[]) {
 		});
 	}
 
-	async function run(command: string, arguments_: string[]) {
+	async function run(command: string, arguments_: string[], childEnvironment = environment) {
 		if (interrupted) throw new Error('Production harness interrupted.');
 		const child = spawn(command, arguments_, {
 			stdio: 'inherit',
-			env: environment,
+			env: childEnvironment,
 			detached: process.platform !== 'win32',
 		});
 		activeCommand = child;
@@ -90,9 +104,9 @@ export async function productionHarness(browserArguments?: string[]) {
 
 	function start(arguments_: string[]) {
 		if (interrupted) throw new Error('Production harness interrupted.');
-		return spawn('pnpm', arguments_, {
+		return spawn(process.execPath, arguments_, {
 			stdio: 'inherit',
-			env: environment,
+			env: networkEnvironment('runtime'),
 			detached: process.platform !== 'win32',
 		});
 	}
@@ -132,6 +146,7 @@ export async function productionHarness(browserArguments?: string[]) {
 		await requireAvailablePort(3001, '127.0.0.1');
 		await requireAvailablePort(3443, 'localhost');
 		await writeFile(`${database.directory}/music.txt`, 'empty');
+		await writeFile(`${database.directory}/network-failures.txt`, '');
 		await run('openssl', [
 			'req',
 			'-x509',
@@ -152,9 +167,12 @@ export async function productionHarness(browserArguments?: string[]) {
 		const certificate = await readFile(`${database.directory}/cert.pem`);
 		// Fresh output only; never restore build artifacts or .next/cache.
 		await rm('.ci/next-production', { recursive: true, force: true });
-		await run('pnpm', ['build']);
+		// Match pnpm build while confining the preload to Next, not pnpm or code generation.
+		await run('pnpm', ['icons:manifest']);
+		await run(process.execPath, [nextCli, 'build'], networkEnvironment('build'));
+		await assertNetworkIsolation();
 		await requireAvailablePort(3001, '127.0.0.1');
-		application = start(['start', '--hostname', '127.0.0.1', '--port', '3001']);
+		application = start([nextCli, 'start', '--hostname', '127.0.0.1', '--port', '3001']);
 		let cliReady = false;
 		for (let attempt = 0; attempt < 60 && !cliReady; attempt++) {
 			if (interrupted) throw new Error('Production harness interrupted.');
@@ -179,8 +197,9 @@ export async function productionHarness(browserArguments?: string[]) {
 			await response.arrayBuffer();
 		}
 		await stop(application);
+		await assertNetworkIsolation();
 		await requireAvailablePort(3443, 'localhost');
-		application = start(['exec', 'tsx', 'scripts/production-server.mts']);
+		application = start(['scripts/production-server.mts']);
 		let ready = false;
 		for (let attempt = 0; attempt < 60 && !ready; attempt++) {
 			if (interrupted) throw new Error('Production harness interrupted.');
@@ -208,6 +227,8 @@ export async function productionHarness(browserArguments?: string[]) {
 		if (!ready) throw new Error('Production server did not become healthy.');
 		if (browserArguments)
 			await run('pnpm', ['exec', 'playwright', 'test', ...browserArguments]);
+		await stop(application);
+		await assertNetworkIsolation();
 	} finally {
 		process.removeListener('SIGINT', interrupt);
 		process.removeListener('SIGTERM', interrupt);

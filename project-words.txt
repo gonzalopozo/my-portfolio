@@ -180,3 +180,4 @@ codescanning
 cutover
 worktree
 MSW
+gstatic

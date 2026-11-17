@@ -60,7 +60,8 @@ Every CircleCI job using the shared install command generates its own catalogue
 after its frozen install. CircleCI does not publish that JSON to Vercel.
 Preview and production candidate builds generate it independently through
 `pnpm build`, which runs generation before Next.js. The isolated production
-harness uses the same build command. Each build workspace stores the source JSON
+harness runs the same generation and Next.js build steps separately so only Next.js
+receives its network preload. Each build workspace stores the source JSON
 at `lib/react-icons-manifest.json`; Next.js compiles its imported data into the
 application assets. The raw JSON is not a public endpoint or persistent runtime
 file. No database or Blob storage is used.
@@ -121,10 +122,53 @@ leave invalidated entries temporarily fresh. The monotonic duration clock and th
 application's wall clock retain their normal behavior. This adjustment is confined
 to the guarded synthetic server and does not change deployed caching.
 
-Last.fm/Blob fixtures, synthetic Carto responses, real public-DNS/SSRF validation
-for the explicit example URL and unexpected-network failures remain intact.
+Last.fm/Blob fixtures, synthetic Carto responses and real public-DNS/SSRF validation
+for the explicit example URL remain intact.
 Remote contracts create empty owned nonproduction Turso resources and Blob objects;
 SQLite fixtures do not establish remote transport fidelity.
+
+## Network fixture ownership
+
+MSW is a development dependency. The Last.fm and Spotify artwork suites opt into
+`tests/fixtures/setup-network.ts`, using shared endpoint constants and typed payload
+builders from `tests/fixtures/music.ts`. Tests declare exceptional responses beside
+their assertions. Interception starts before the suite, response overrides reset
+after every test, and interception closes afterward. Unexpected HTTP destinations
+and handler exceptions are recorded independently of application error handling
+and fail teardown. Diagnostics contain methods and origins, without credentials,
+query strings or request bodies. Provider success, parsing, validation and fallback
+code runs normally; Spotify browser search remains mocked at its browser boundary.
+Injected-fetch deadline tests remain independent of MSW.
+
+The shared production fixtures use the same response definitions and strict network
+server. `scripts/preload-network.mjs` registers the existing TypeScript loader and
+starts interception once in each isolated Next.js process. The harness passes this
+preload through child-specific `NODE_OPTIONS` to its build, inherited build workers,
+HTTP server and HTTPS server. Package installation, icon generation, Playwright,
+ordinary development and hosted deployment commands receive no preload.
+There is no application instrumentation import or browser worker asset. A dependency
+boundary rule prevents deployed source from importing MSW or its network helpers.
+
+Startup requires `CI=true`, `APP_ENV=test`, `PORTFOLIO_TEST_BUILD=true`, no `VERCEL`,
+an owned `.ci/database-*` fixture directory and an explicit build/runtime network
+phase. Last.fm reads `music.txt` on every request, preserving empty/failure/recovery
+scenarios. Blob and exact OG URL handlers delegate to the existing guarded fixtures.
+Local application requests pass through. Only the build phase allows HTTPS GETs to
+`fonts.googleapis.com` and `fonts.gstatic.com` for Next.js font downloads; runtime
+font requests and other unexpected destinations fail.
+
+The harness initializes `network-failures.txt` inside its temporary fixture directory.
+Blocked requests and handler exceptions append sanitized diagnostics synchronously.
+The parent checks that file after the build and after stopping each application
+server, preventing a caught request error from yielding a successful harness run.
+Normal fixture cleanup removes it with the database directory.
+
+Verification follows the root explicit-commit policy: all nine checks through the
+required dedicated subagent, plus a fresh complete local Playwright gate for each
+commit. Changes to preload startup must include the child-process and worker
+fixture tests. Inspect the ordinary production build's browser assets, server chunks
+and deployment trace files for MSW/network-preload inclusion; the isolated build
+intentionally uses the external preload.
 
 ## Hosted Preview acceptance
 
