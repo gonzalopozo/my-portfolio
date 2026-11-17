@@ -98,9 +98,9 @@ false positives and documented in the commit notes.
 ## Local browser hooks
 
 Install Husky explicitly with `pnpm hooks:install` in every clone/worktree because
-package lifecycle scripts are disabled. Both pre-commit (after lint-staged) and
-pre-push run `pnpm test:e2e:local`, the complete isolated production Playwright
-suite. Every commit and push needs a fresh successful run; no result reuse or
+package lifecycle scripts are disabled. Pre-commit runs lint-staged. Pre-push
+runs `pnpm test:e2e:local`, the complete isolated production Playwright
+suite. Every push needs a fresh successful run; no result reuse or
 documentation-only exemption. Keep hosted Preview acceptance local too. CircleCI
 must never execute Playwright or download browsers.
 

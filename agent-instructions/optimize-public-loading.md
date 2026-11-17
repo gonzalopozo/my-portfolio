@@ -59,6 +59,6 @@ the complete root pre-commit sequence: `git status --short`, `git diff --check`,
 `pnpm format:check`, `pnpm lint`, `pnpm exec tsc --noEmit`,
 `pnpm exec vitest run`, `pnpm spellcheck`, `pnpm knip`, `pnpm depcruise`, and
 `pnpm build`. CircleCI runs the browser-free `pnpm ci:build`; full production E2E runs
-locally through commit/push hooks with `pnpm test:e2e:local`.
+locally through pre-push with `pnpm test:e2e:local`.
 Production bundle inspection and repeated performance captures also remain
 subject to the root local-verification restriction.

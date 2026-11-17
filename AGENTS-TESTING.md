@@ -21,7 +21,7 @@ Current configuration/source takes precedence over older skill version examples.
 
 Preserve colocated tests as well as `tests/`. `pnpm test` stays watch mode. CircleCI uses
 one-shot commands and a browser-free synthetic production build/smoke harness.
-The complete production Playwright suite is local at both commit and push hooks,
+The complete production Playwright suite runs locally in the pre-push hook,
 never just `next dev` and never cloud browser execution.
 
 ## Required levels

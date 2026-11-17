@@ -1,3 +1,2 @@
-# Format staged changes before testing the final working tree.
+# Format staged changes before committing.
 pnpm run lint:staged
-pnpm test:e2e:local
