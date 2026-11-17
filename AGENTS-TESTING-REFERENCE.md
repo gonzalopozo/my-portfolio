@@ -56,6 +56,14 @@ login flows use semantic labels. Auth storage state is not persisted as an artif
 If adding reusable state later, use ignored paths, synthetic accounts and appropriate
 per-worker/session isolation; never a real administrator's state.
 
+The runner supplies `APP_ENV=test` and `PORTFOLIO_TEST_BUILD=true`, independently of
+`CI`. Eight workers share the HTTPS server and migrated database. `e2e/fixture-support.ts`
+derives attempt-specific content/client identities and atomically replaces scenarios.
+The shared `extraHTTPHeaders` fixture reaches browser and API contexts; browser
+network interception is lazy so request-only API tests do not launch a browser.
+Preserve the [named resource locks](./docs/operations/testing.md#parallel-browser-resources)
+when adding tests, including readers affected by another test's fault injection.
+
 Remote CSP acceptance requires an explicit API-verified Preview origin and synthetic
 credentials. Bootstrap a bypass cookie against that exact origin with redirects
 disabled. Never configure global `extraHTTPHeaders` with a bypass secret. Keep remote

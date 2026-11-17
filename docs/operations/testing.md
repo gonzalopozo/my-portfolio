@@ -92,8 +92,12 @@ matching its own installed dependencies.
 
 CircleCI has no restore caches and no browser execution/downloads. The complete
 local browser suite retains Chromium, Firefox, WebKit, mobile Chromium and the
-API project, one worker, one diagnostic retry and `failOnFlakyTests`. Missing
+API project, eight shared workers, one diagnostic retry and `failOnFlakyTests`. Missing
 required auth/CSP prerequisites fail; do not add skips or retries to hide failures.
+Global/project `fullyParallel` remains false; audited specs/describes explicitly opt
+into parallel execution. The source inventory contains 192 project executions:
+API 4, CMS 68, CSP 20, public accessibility/navigation 12 and responsive behavior 88.
+This is the expected discovery count, not a new recorded execution result.
 
 The shared harness uses `.ci/next-production` instead of deleting `.next`, restores
 `next-env.d.ts`, and removes its owned database/build/lock on normal success,
@@ -106,9 +110,13 @@ manual cleanup of only that invocation's resources.
 
 Each integration fixture owns a temporary migrated file DB, synthetic users with
 real better-auth hashing and foreign keys. Build/runtime receive explicit fixture
-settings, not production credentials. The local runner sets `CI=true` internally
-for deterministic fixture guards, plus `APP_ENV=test`, an owned `.ci/database-*`
-directory and no Vercel runtime. Cloud build uses the same safe guards.
+settings, not production credentials. Both production entry points set `APP_ENV=test`
+and `PORTFOLIO_TEST_BUILD=true` for fixture guards, with an owned `.ci/database-*`
+directory and no Vercel runtime. Neither fabricates `CI`; inherited CI metadata does
+not select fixture behavior. Cloud build uses the same guards without Playwright.
+The isolated build retains its explicit one-CPU setting and fresh output.
+`NEXT_TELEMETRY_DISABLED=1` prevents host telemetry preferences from changing the
+allowed network behavior.
 
 The harness probes `next start`, then starts the same build with a local one-day
 certificate at the correct HTTPS origin. Only the local probe/browser trusts that
@@ -126,6 +134,105 @@ Last.fm/Blob fixtures, synthetic Carto responses and real public-DNS/SSRF valida
 for the explicit example URL remain intact.
 Remote contracts create empty owned nonproduction Turso resources and Blob objects;
 SQLite fixtures do not establish remote transport fidelity.
+
+## Parallel browser resources
+
+One HTTPS production server and one temporary database serve all five projects.
+Native Playwright locks apply across files, workers and projects. Keep names global,
+without project/worker suffixes. Locks are declared on individual parallel tests,
+covering setup, assertions and restoration; default/serial groups can hold locks
+for their entire execution group. No current test requires an exclusive suite lock
+or depends on a previous test having run.
+
+- `cms-projects`: project CRUD, project keyboard ordering, OG image replacement,
+  delayed public cache miss, admin read failure/recovery, OG error/pending
+  notifications and rejected OG requests. These are every current authenticated
+  project-list workflow affected by the admin fault, collection ordering and every
+  current OG-directory writer. The existing lock also protects OG-directory deltas;
+  do not add a redundant Blob lock.
+- `cms-social-links`: link CRUD, icon selection/public rendering and link keyboard
+  ordering. These share collection positions and order allocation.
+- `cms-settings`: settings save/cache invalidation and unauthorized replay. All
+  browser copies edit the singleton row and assert the exact saved value.
+- `blob-skill-icons`: invalid SVG, normalized upload, replacement and deletion in
+  the custom SVG journey. Whole-directory assertions require coordination among
+  its four browser copies; ordinary skill CRUD does not upload files.
+- `music-scenario`: provider failure/recovery and administrative music status.
+  Restore the empty provider scenario and refresh the shared cache before release.
+
+Public tests remain unlocked: they assert valid layout, document-local navigation,
+accessibility and policy rather than exact mutable CMS values. Shallow section
+navigation retains each document's card data. Both music scenarios return a null
+public track. Add coordination if future assertions require an exact shared value.
+
+Project reads use distinct `db.projects.read.admin` and `db.projects.read.public`
+operation names. The failure scenario affects only admin reads protected by
+`cms-projects`; public latency remains bounded to 2000 ms and returns real SQL data.
+Scenario changes and resets atomically rename complete files into place, avoiding
+partial JSON or unknown provider scenarios under concurrent reads.
+
+Each attempt derives its content namespace and synthetic client address from project,
+test ID, repetition and retry. Client headers apply to browser/API contexts, including
+the independent replay context. IPv6 identities differ within their `/64` prefixes
+because better-auth normalizes that range. Cookies and sessions remain per context;
+logout invalidates only the presented session. No shared auth storage file is used.
+API-only tests create no browser context. CMS cleanup deletes only owned rows,
+restores settings through real actions and restores ordering before deleting its row.
+
+## Local execution timing and acceptance
+
+These commands remain subject to the root commit/push verification policy; editing
+or approving implementation does not authorize running them. All complete browser
+acceptance remains local, including repeated runs. Never reuse a benchmark as the
+fresh gate required for a later push.
+
+Authorized discovery without CI:
+
+```sh
+env -u CI APP_ENV=test PORTFOLIO_TEST_BUILD=true \
+  PLAYWRIGHT_BASE_URL=https://localhost:3443 \
+  CSP_TEST_BASE_URL=https://localhost:3443 \
+  pnpm exec playwright test --list
+```
+
+Expect API 4 and 47 cases per browser, with no unexpected skips or missing cases.
+Project and grep filters remain available; production runner arguments are forwarded
+unchanged. `--workers=1` remains available for an explicit diagnostic comparison,
+while an ordinary pre-push invocation uses eight workers in one Playwright run.
+
+```sh
+env -u CI pnpm test:e2e:local
+env -u CI pnpm test:e2e:local --workers=1
+env -u CI pnpm test:e2e:local --workers=8 --repeat-each=3 --shuffle=5800
+```
+
+Record shell wall-clock time for the complete command, for example
+`time env -u CI pnpm test:e2e:local`, as the total pre-push gate measurement. The
+internal harness total excludes package-manager/loader startup and report writing.
+
+Use three fresh complete runs per comparison configuration and one repeated/shuffled
+run (576 cases). Require zero unexpected failures, skips or flaky outcomes. Compare
+the previous sequential revision with equivalent instrumentation and conditions;
+the current revision with `--workers=1` is an additional scheduling control.
+Keep the same hardware/power conditions, dependencies, browsers and complete test
+selection, and run harnesses sequentially. Do not restore build caches or omit phases.
+
+The harness records sanitized monotonic phase durations in `.ci/e2e-timings.json`:
+fixture database, certificate, icon generation, build, HTTP startup/smoke, HTTPS
+readiness, Playwright, application shutdown and cleanup, plus harness duration/status. Preserve the file
+after each successful run before the next invocation overwrites it. The isolated
+JSON reporter writes `test-results/playwright.json` alongside HTML/JUnit evidence.
+Use result start times/durations to confirm intra-file overlap, the eight-worker
+budget and non-overlapping locked tests across projects, including setup/teardown.
+Keep reports local; never copy fixture databases, TLS keys, environment files or
+browser storage state into benchmark artifacts.
+
+Report medians/ranges separately for build, startup/readiness, Playwright and total
+gate duration. Verify cleanup and shared-state restoration under repetitions, and
+confirm lock refusal and handled-interruption cleanup during authorized acceptance.
+Do not increase retries/timeouts or weaken assertions to obtain a performance result.
+Build duration is a fixed cost of this architecture; build optimization is separate.
+No new performance or concurrency acceptance result is claimed by this source change.
 
 ## Network fixture ownership
 
@@ -149,7 +256,7 @@ ordinary development and hosted deployment commands receive no preload.
 There is no application instrumentation import or browser worker asset. A dependency
 boundary rule prevents deployed source from importing MSW or its network helpers.
 
-Startup requires `CI=true`, `APP_ENV=test`, `PORTFOLIO_TEST_BUILD=true`, no `VERCEL`,
+Startup requires `APP_ENV=test`, `PORTFOLIO_TEST_BUILD=true`, no `VERCEL`,
 an owned `.ci/database-*` fixture directory and an explicit build/runtime network
 phase. Last.fm reads `music.txt` on every request, preserving empty/failure/recovery
 scenarios. Blob and exact OG URL handlers delegate to the existing guarded fixtures.
@@ -165,7 +272,7 @@ Normal fixture cleanup removes it with the database directory.
 
 Verification follows the root explicit-commit policy: all nine checks through the
 required dedicated subagent, plus a fresh complete local Playwright gate for each
-commit. Changes to preload startup must include the child-process and worker
+push. Changes to preload startup must include the child-process and worker
 fixture tests. Inspect the ordinary production build's browser assets, server chunks
 and deployment trace files for MSW/network-preload inclusion; the isolated build
 intentionally uses the external preload.

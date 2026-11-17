@@ -54,9 +54,11 @@ using numeric CircleCI build identity plus an ownership fingerprint. Cleanup may
 delete only that exact resource. Never copy production records into fixtures.
 Preview and production have separate DB/auth/Blob credentials and identities.
 
-Synthetic fixtures still require `CI=true`, `APP_ENV=test`, an owned temporary
-directory and no Vercel runtime. The local browser runner sets deterministic CI
-semantics internally; those flags do not mean browsers run in CircleCI. Preserve
+Synthetic production fixtures require `APP_ENV=test`, `PORTFOLIO_TEST_BUILD=true`,
+an owned temporary directory and no Vercel runtime. Both harness entry points set
+the explicit test flags; neither fabricates `CI`. CircleCI retains its real CI
+metadata for browser-free build/smoke execution. Local Playwright uses one shared
+HTTPS server and an eight-worker budget, independent of CI detection. Preserve
 real SQL/auth/CSRF/SSRF behavior and avoid production test endpoints.
 
 ## Diagnostics and evidence

@@ -35,7 +35,8 @@ In **Settings → Build and Deployment**:
 - Framework: Next.js. Root directory: repository root. Node.js version: **24.x**.
 - Use the committed install/build commands from `vercel.json`; remove conflicting
   dashboard overrides. They bootstrap verified pnpm 12.18.0 natively on Linux x64.
-- Do not set `CI` test fixtures, `APP_ENV=test`, or `TEST_FIXTURE_DIRECTORY` on Vercel.
+- Do not set `APP_ENV=test`, `PORTFOLIO_TEST_BUILD=true`, or `TEST_FIXTURE_DIRECTORY`
+  on Vercel. `CI` alone never enables synthetic fixtures.
 - In **Environment Variables**, enable **Enable access to System Environment Variables**
   so the application receives Vercel's deployment hostname and environment metadata.
 - Set `VERCEL_FORCE_NO_BUILD_CACHE=1` independently for Preview and Production.
