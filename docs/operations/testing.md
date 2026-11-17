@@ -34,10 +34,10 @@ Husky must be installed explicitly in each clone/worktree because lifecycle
 scripts are disabled. These instructions do not authorize agents to run checks
 on implementation approval.
 
-The pre-commit hook runs lint-staged first, then `pnpm test:e2e:local`. Pre-push
-runs the same complete suite again. There is no previous-result reuse,
-documentation-only exemption or browser subset at either hook. Missing browsers,
-ports, certificates or a failed test blocks the Git operation. Do not work around
+The pre-commit hook runs lint-staged. Pre-push runs `pnpm test:e2e:local`, the
+complete production suite. There is no previous-result reuse,
+documentation-only exemption or browser subset at pre-push. Missing browsers,
+ports, certificates or a failed test blocks the push. Do not work around
 failures with `HUSKY=0` or `--no-verify`. GitHub web edits/bot-created commits do
 not invoke local hooks; arrange local verification during owner review.
 
@@ -78,11 +78,11 @@ matching its own installed dependencies.
   under the root explicit-commit policy.
 - `pnpm test:e2e:local` builds once, probes production HTTP, then runs every
   configured API/desktop/mobile/CSP project through local HTTPS. It runs at every
-  commit and push. `test:e2e:prod` remains a local compatibility alias.
+  push. `test:e2e:prod` remains a local compatibility alias.
 - `pnpm test:api` uses that local production runner with only the API project for
-  explicitly authorized diagnosis; neither hook uses that subset.
+  explicitly authorized diagnosis; pre-push does not use that subset.
 - `pnpm test:e2e` remains the local public development test entry point. It does
-  not replace complete production verification before commit/push.
+  not replace complete production verification before push.
 - `pnpm ci:build` runs the same synthetic build/HTTP/HTTPS lifecycle without
   Playwright, only in automated CI or explicitly authorized verification.
 - `pnpm migrate:check` replays migration prefixes and schema drift in CircleCI.

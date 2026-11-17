@@ -4,7 +4,7 @@
 
 Replace all six custom GitHub Actions workflows with native CircleCI workflows,
 while running the full isolated production Playwright suite locally before every
-commit and push. Follow the confirmed free-plan, automatic-Preview, no-fork scope.
+push. Follow the confirmed free-plan, automatic-Preview, no-fork scope.
 
 ## Context
 
@@ -17,8 +17,9 @@ the original checklist is preserved as `ci-cd-github-actions-history.md`.
 
 - Same-repository PRs and actual merged main receive seven cloud gates, including
   browser-free production build/HTTP smoke and external CodeQL CLI analysis.
-- Husky runs the complete API/desktop/mobile/CSP production browser suite at both
-  commit and push; a failure blocks the operation and no result is reused.
+- Husky pre-commit runs lint-staged. Pre-push runs the complete
+  API/desktop/mobile/CSP production browser suite; a failure blocks the push and
+  no result is reused.
 - Automatic Preview HTTP smoke uses a separate fixed-main webhook project.
   Authenticated Preview browser acceptance is explicit and local.
 - Release/migration/baseline/rollback verify immutable source, current SHA where
@@ -42,7 +43,8 @@ This brief supersedes the provider/fork/browser details of `implement-ci-cd.md`.
 ## Acceptance criteria
 
 - No custom `.github/workflows` remain and no cloud job runs Playwright/downloads browsers.
-- Both local hooks run the full isolated suite, preserve the development build and clean up.
+- Pre-commit runs lint-staged; pre-push runs the full isolated suite, preserves
+  the development build and cleans up.
 - Missing/failed/skipped/cancelled/stale gates, mismatched source and wrong/missing
   owner approval fail closed. Newer failed scans cannot be hidden by old successes.
 - Tokens cannot be sent to arbitrary platform URLs or used for automatic approval.
@@ -54,7 +56,8 @@ This brief supersedes the provider/fork/browser details of `implement-ci-cd.md`.
 CircleCI runs `pnpm ci:quality`, `pnpm test:coverage`, `pnpm migrate:check`,
 `pnpm ci:build`, `pnpm audit --audit-level high`, `pnpm ci:secrets` and
 `pnpm ci:codeql`. Protected workflows handle remote contracts/releases separately.
-Local `pnpm test:e2e:local` runs from commit/push hooks; `pnpm test:preview` is
+Local `pnpm test:e2e:local` runs from pre-push; `pnpm test:preview` is
 owner-operated hosted acceptance. When a commit is explicitly requested, perform
-all nine root checks through the required dedicated subagent, plus the browser
-gate. Validation/config compilation and account-side drills require actual evidence.
+all nine root checks through the required dedicated subagent. The browser gate
+runs before every push. Validation/config compilation and account-side drills
+require actual evidence.
