@@ -77,10 +77,14 @@ documented in the inventory.
 The complete suite shares eight workers across all five projects and one production
 server. Keep global and project `fullyParallel: false`; opt into parallel mode only
 in audited files/describes. Named native locks coordinate project workflows, social
-links, settings, SVG-directory assertions and music scenarios across browsers.
+links, SVG-directory assertions and music scenarios across browsers.
 Acquire the same resource lock for conflicting readers and writers; keep restoration
 inside the locked test. Do not put resource locks on a default/serial file or add
 shared `beforeAll` pages/auth state. See the [resource inventory](./docs/operations/testing.md#parallel-browser-resources).
+Exact public freshness journeys and the delayed cache-miss fault-injection test use
+`-exclusive-`: requests can otherwise join an earlier render of the shared public
+route. Cleanup must wait for the collection to render and confirm deletion after
+reloading before releasing its lock.
 
 Use semantic Playwright locators; use structural selectors only where the thing
 under test has no semantic role (e.g. rendered SVG). Avoid fixed sleeps. One retry

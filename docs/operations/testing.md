@@ -141,43 +141,66 @@ One HTTPS production server and one temporary database serve all five projects.
 Native Playwright locks apply across files, workers and projects. Keep names global,
 without project/worker suffixes. Locks are declared on individual parallel tests,
 covering setup, assertions and restoration; default/serial groups can hold locks
-for their entire execution group. No current test requires an exclusive suite lock
-or depends on a previous test having run.
+for their entire execution group. No test depends on a previous test having run.
 
 - `cms-projects`: project CRUD, project keyboard ordering, OG image replacement,
-  delayed public cache miss, admin read failure/recovery, OG error/pending
-  notifications and rejected OG requests. These are every current authenticated
-  project-list workflow affected by the admin fault, collection ordering and every
-  current OG-directory writer. The existing lock also protects OG-directory deltas;
-  do not add a redundant Blob lock.
-- `cms-social-links`: link CRUD, icon selection/public rendering and link keyboard
-  ordering. These share collection positions and order allocation.
-- `cms-settings`: settings save/cache invalidation and unauthorized replay. All
-  browser copies edit the singleton row and assert the exact saved value.
+  admin read failure/recovery, OG error/pending notifications and rejected OG requests.
+  This covers authenticated project-list workflows affected by the admin fault,
+  collection ordering and every current OG-directory writer. The existing lock also
+  protects OG-directory deltas; do not add a redundant Blob lock.
+- `cms-social-links`: link CRUD and link keyboard ordering. These share collection
+  positions and order allocation.
 - `blob-skill-icons`: invalid SVG, normalized upload, replacement and deletion in
   the custom SVG journey. Whole-directory assertions require coordination among
   its four browser copies; ordinary skill CRUD does not upload files.
 - `music-scenario`: provider failure/recovery and administrative music status.
   Restore the empty provider scenario and refresh the shared cache before release.
+- `-exclusive-`: the following three journeys in each browser project:
+  `CMS icon changes render publicly without loading icon catalogs in the browser`,
+  `settings updates invalidate cached public content and unauthorized replay cannot mutate it`,
+  and `a delayed cache miss returns public card HTML before hydration`. They assert
+  exact public freshness or deliberately hold a public render open with delayed SQL.
+  Ordinary CMS writes also invalidate the shared `/` route; concurrent requests can
+  join a snapshot started before another collection's mutation. These twelve cases
+  require exclusive access to public route regeneration, including setup and cleanup.
+  Collection locks cannot coordinate unrelated public readers that trigger renders.
+  All other tests retain ordinary parallel execution with their named resource locks
+  where needed. Do not extend exclusivity to unrelated CMS or public journeys.
 
-Public tests remain unlocked: they assert valid layout, document-local navigation,
-accessibility and policy rather than exact mutable CMS values. Shallow section
-navigation retains each document's card data. Both music scenarios return a null
-public track. Add coordination if future assertions require an exact shared value.
+Public tests declare no resource locks: they assert valid layout, document-local
+navigation, accessibility and policy rather than exact mutable CMS values. Shallow
+section navigation retains each document's card data. Both music scenarios return a
+null public track. Add coordination if future assertions require an exact shared value.
 
 Project reads use distinct `db.projects.read.admin` and `db.projects.read.public`
 operation names. The failure scenario affects only admin reads protected by
-`cms-projects`; public latency remains bounded to 2000 ms and returns real SQL data.
-Scenario changes and resets atomically rename complete files into place, avoiding
-partial JSON or unknown provider scenarios under concurrent reads.
+`cms-projects`; the exclusive cache-miss journey injects a 2000 ms delay before a
+real public SQL read. Scenario changes and resets atomically rename complete files
+into place, avoiding partial JSON or unknown provider scenarios under concurrent reads.
 
 Each attempt derives its content namespace and synthetic client address from project,
 test ID, repetition and retry. Client headers apply to browser/API contexts, including
 the independent replay context. IPv6 identities differ within their `/64` prefixes
 because better-auth normalizes that range. Cookies and sessions remain per context;
 logout invalidates only the presented session. No shared auth storage file is used.
-API-only tests create no browser context. CMS cleanup deletes only owned rows,
+API-only tests create no browser context. CMS cleanup waits for the baseline table
+before checking whether an owned row exists. It awaits the delete response and
+reloads to confirm persistence before releasing the lock. It deletes only owned rows,
 restores settings through real actions and restores ordering before deleting its row.
+Ordering uses measured row distances and the actual collection size rather than
+assuming there are exactly two rows.
+
+The icon picker and settings controls remain disabled until hydration attaches their
+handlers. Settings also disables controls during a save and announces completion only
+after its action resolves. Browser setup and restoration await that acknowledgement
+and the end of the React transition before reloading; HTTP completion alone is not
+enough. Preserve immediate public freshness assertions rather than retrying navigation
+until another test happens to invalidate the cache.
+
+Unexpected synthetic browser failures also attach script errors, failed request paths,
+the JavaScript option and bootstrap/layout state, including on the first attempt.
+These diagnostics stay local; ordinary development and hosted Preview acceptance
+do not record them.
 
 ## Local execution timing and acceptance
 
