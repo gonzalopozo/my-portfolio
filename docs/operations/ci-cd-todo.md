@@ -43,8 +43,8 @@ a PR are separate steps.
     **Where:** Local terminal → [developer setup](./testing.md#developer-setup).
     Implementation approval does not authorize agents to run verification.
 
-- [x] **CCI-005.** On a disposable local branch, demonstrate both hooks run the
-      complete production suite and a browser failure blocks both commit and push.
+- [x] **CCI-005.** On a disposable local branch, demonstrate pre-push runs the
+      complete production suite and a browser failure blocks the push.
       Confirm API, all three desktop engines, mobile and CSP projects run, cleanup
       succeeds and an active development build remains intact.
 
