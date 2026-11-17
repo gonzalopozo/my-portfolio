@@ -1,3 +1,4 @@
+// cspell:ignore pageerror requestfailed
 import { test as base, expect } from '@playwright/test';
 import { getTestClientHeaders } from './fixture-support';
 
@@ -18,6 +19,56 @@ export const test = base.extend<{ clientHeaders: Record<string, string> }>({
 	extraHTTPHeaders: async ({ extraHTTPHeaders, clientHeaders }, provideFixture) => {
 		// Both the browser context and the independent API request fixture consume this option.
 		await provideFixture({ ...extraHTTPHeaders, ...clientHeaders });
+	},
+	page: async ({ page, javaScriptEnabled }, provideFixture, testInfo) => {
+		if (process.env.APP_ENV !== 'test' || process.env.PORTFOLIO_TEST_BUILD !== 'true') {
+			await provideFixture(page);
+			return;
+		}
+		const errors: string[] = [];
+		page.on('pageerror', (error) => errors.push(error.message));
+		page.on('console', (message) => {
+			if (message.type() === 'error') errors.push(message.text());
+		});
+		page.on('requestfailed', (request) => {
+			const url = new URL(request.url());
+			errors.push(`${request.failure()?.errorText} ${url.origin}${url.pathname}`);
+		});
+		page.on('response', (response) => {
+			if (response.status() >= 400) {
+				const url = new URL(response.url());
+				errors.push(`${response.status()} ${url.origin}${url.pathname}`);
+			}
+		});
+		try {
+			await provideFixture(page);
+		} finally {
+			if (testInfo.status !== testInfo.expectedStatus) {
+				const state = await page
+					.evaluate(() => ({
+						readyState: document.readyState,
+						gridLayout: document
+							.querySelector('[data-portfolio-grid]')
+							?.getAttribute('data-layout'),
+						gridReady: document
+							.querySelector('[data-portfolio-grid]')
+							?.getAttribute('data-grid-ready'),
+						flightStarted: '__next_f' in window,
+						scripts: Array.from(document.scripts, (script) => script.src).filter(
+							Boolean,
+						),
+					}))
+					.catch(() => ({ closed: page.isClosed() }));
+				await testInfo.attach('synthetic-browser-diagnostics', {
+					body: JSON.stringify(
+						{ javaScriptEnabled: javaScriptEnabled ?? true, errors, state },
+						null,
+						2,
+					),
+					contentType: 'application/json',
+				});
+			}
+		}
 	},
 	context: async ({ context, baseURL }, provideFixture) => {
 		if (process.env.CSP_TEST_PREVIEW_BYPASS) {

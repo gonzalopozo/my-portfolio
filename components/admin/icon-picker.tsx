@@ -16,6 +16,7 @@ import { useEffect, useId, useState } from 'react';
 import type { IconType } from 'react-icons';
 import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
+import { useHydrated } from '@/lib/use-hydrated';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const PACK_LOADERS: Record<string, () => Promise<Record<string, any>>> = {
@@ -119,6 +120,7 @@ interface IconPickerProps {
 }
 
 export function IconPicker({ fullName }: IconPickerProps) {
+	const hydrated = useHydrated();
 	const [open, setOpen] = useState(false);
 	const [selectedIcon, setSelectedIcon] = useState<string | null>(fullName ?? null);
 	const [debouncedQuery, setDebouncedQuery] = useState<string | null>(null);
@@ -145,6 +147,7 @@ export function IconPicker({ fullName }: IconPickerProps) {
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
 					<Button
+						disabled={!hydrated}
 						variant="outline"
 						role="combobox"
 						aria-controls={listId}

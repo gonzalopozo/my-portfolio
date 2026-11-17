@@ -10,16 +10,32 @@ type EntityPath = 'projects' | 'experiences' | 'skills' | 'social-links';
 
 async function deleteOwnedRows(page: Page, path: EntityPath, names: string[]) {
 	await page.goto(`/dashboard/${path}`);
+	// An unfinished streamed document is not evidence that an owned row is absent.
+	// Each collection retains its deterministic baseline row, so its table must exist.
+	await expect(page.getByRole('table')).toBeVisible();
 	for (const name of names) {
 		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
 		if ((await row.count()) === 0) continue;
 		page.once('dialog', (dialog) => dialog.accept());
-		await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(response) =>
+					response.request().method() === 'POST' &&
+					new URL(response.url()).pathname === `/dashboard/${path}`,
+			),
+			row.getByRole('button', { name: 'Eliminar', exact: true }).click(),
+		]);
+		expect(response.ok()).toBe(true);
+		await response.finished();
+		await expect(row).toHaveCount(0);
+		await page.reload();
+		await expect(page.getByRole('table')).toBeVisible();
 		await expect(row).toHaveCount(0);
 	}
 }
 
 async function saveSettings(page: Page) {
+	const form = page.getByRole('form', { name: 'Configuración del portfolio' });
 	const [response] = await Promise.all([
 		page.waitForResponse(
 			(response) =>
@@ -30,6 +46,9 @@ async function saveSettings(page: Page) {
 	]);
 	expect(response.ok()).toBe(true);
 	await response.finished();
+	// A completed response can precede React's form reset and refreshed server content.
+	await expect(form).toHaveAttribute('aria-busy', 'false');
+	await expect(form.getByRole('status')).toHaveText('Configuración guardada.');
 }
 
 async function restoreTrailingRow(
@@ -39,15 +58,20 @@ async function restoreTrailingRow(
 	name: string,
 ) {
 	await page.goto(`/dashboard/${path}`);
+	await expect(page.getByRole('table')).toBeVisible();
 	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
 	if ((await row.count()) === 0) return;
+	const finalOrder = (await page.getByRole('row').count()) - 1;
 	const lastRow = page.getByRole('row').last();
 	if ((await lastRow.getByText(name, { exact: true }).count()) > 0) return;
 	const bounds = await row.boundingBox();
-	if (!bounds) throw new Error('The ordering fixture has no visible row during cleanup.');
+	const lastBounds = await lastRow.boundingBox();
+	if (!bounds || !lastBounds)
+		throw new Error('The ordering fixture has no visible row during cleanup.');
+	const distance = lastBounds.y + lastBounds.height / 2 - bounds.y - bounds.height / 2;
 	await page.getByRole('button', { name: `Reordenar ${label} "${name}"`, exact: true }).focus();
 	await page.keyboard.press('Space');
-	for (let step = 0; step <= Math.ceil(bounds.height / 10); step++) {
+	for (let step = 0; step <= Math.ceil(distance / 10); step++) {
 		await page.keyboard.press('ArrowDown');
 	}
 	await Promise.all([
@@ -61,7 +85,7 @@ async function restoreTrailingRow(
 	await expect(page.getByRole('table')).toHaveAttribute('aria-busy', 'false');
 	await page.reload();
 	await expect(page.getByRole('row').last()).toContainText(name);
-	await expect(row.getByText('2', { exact: true })).toBeVisible();
+	await expect(row.getByRole('cell').nth(1)).toHaveText(String(finalOrder));
 }
 
 async function login(page: Page, user = fixtureUser) {
@@ -92,7 +116,8 @@ async function snapshotBlobDirectory(folder: 'skill-icons' | 'og-images') {
 
 test(
 	'CMS icon changes render publicly without loading icon catalogs in the browser',
-	{ lock: 'cms-social-links' },
+	// Exact freshness requires a public render that cannot join another test's snapshot.
+	{ lock: '-exclusive-' },
 	async ({ page, context }, testInfo) => {
 		await login(page);
 		const name = `CMS icon selection ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
@@ -124,11 +149,13 @@ test(
 						.toBe(savedSvg);
 				}
 				await picker.click();
+				await expect(picker).toHaveAttribute('aria-expanded', 'true');
 				await page.getByPlaceholder('Search icons…').fill(iconName);
 				const option = page.getByRole('option', { name: new RegExp(`^${iconName}\\b`) });
 				await expect(option.locator('svg')).toHaveCount(1);
 				const expectedSvg = await option.locator('svg').evaluate((svg) => svg.innerHTML);
 				await option.click();
+				await expect(picker).toHaveAccessibleName(`Selected icon: ${iconName}`);
 				await page
 					.getByRole('button', {
 						name: index === 0 ? 'Crear enlace' : 'Guardar cambios',
@@ -265,7 +292,8 @@ for (const entity of [
 
 test(
 	'settings updates invalidate cached public content and unauthorized replay cannot mutate it',
-	{ lock: 'cms-settings' },
+	// Other collections also invalidate the shared public route, including in-flight renders.
+	{ lock: '-exclusive-' },
 	async ({ page, playwright, baseURL, clientHeaders }, testInfo) => {
 		await login(page);
 		const value = `Public cache freshness ${getTestNamespace(testInfo)}`;
@@ -485,7 +513,9 @@ test(
 
 test(
 	'a delayed cache miss returns public card HTML before hydration',
-	{ lock: 'cms-projects' },
+	// The injected delay holds a snapshot of the shared public route. Concurrent requests
+	// can join that render even after another test has invalidated its own collection.
+	{ lock: '-exclusive-' },
 	async ({ page }, testInfo) => {
 		await login(page);
 		const name = `Streaming fixture ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
@@ -613,7 +643,14 @@ for (const entity of [
 				await expect(row).toBeVisible();
 				await expectDashboardToFitViewport(page);
 				const initialBounds = await row.boundingBox();
-				if (!initialBounds) throw new Error('The ordering fixture has no visible row.');
+				const firstBounds = await page.getByRole('row').nth(1).boundingBox();
+				if (!initialBounds || !firstBounds)
+					throw new Error('The ordering fixture has no visible row.');
+				const distance =
+					initialBounds.y +
+					initialBounds.height / 2 -
+					firstBounds.y -
+					firstBounds.height / 2;
 				const handle = page.getByRole('button', {
 					name: `Reordenar ${entity.label} "${name}"`,
 					exact: true,
@@ -624,7 +661,7 @@ for (const entity of [
 				await expect(handle).toHaveAttribute('aria-pressed', 'true');
 				// The keyboard sensor moves in 10px steps; cross the preceding row's center
 				// before dropping instead of assuming one key press moves an entire row.
-				for (let step = 0; step <= Math.ceil(initialBounds.height / 10); step++) {
+				for (let step = 0; step <= Math.ceil(distance / 10); step++) {
 					await page.keyboard.press('ArrowUp');
 				}
 				await expect

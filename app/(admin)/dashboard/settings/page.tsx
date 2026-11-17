@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { SettingsForm } from '@/components/admin/settings-form';
 import { getSiteSettings } from '@/lib/queries/settings';
 import { updateSiteSettings } from '@/lib/actions/settings';
 import { type Settings } from '@/lib/types';
@@ -44,7 +45,7 @@ export default async function SettingsDashboardPage() {
 			</div>
 
 			{/* Form */}
-			<form action={updateSiteSettings} className="max-w-2xl space-y-6">
+			<SettingsForm action={updateSiteSettings}>
 				{/* Employment Status Card */}
 				<Card>
 					<CardHeader>
@@ -130,7 +131,7 @@ export default async function SettingsDashboardPage() {
 						Guardar configuración
 					</Button>
 				</div>
-			</form>
+			</SettingsForm>
 		</div>
 	);
 }
