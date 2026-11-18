@@ -80,6 +80,8 @@ jobs:
             - run: pnpm migrate:check
     build:
         executor: node
+        # Give Next.js compilation and type checking more memory on CircleCI.
+        resource_class: medium+
         steps:
             - install
             - run:

@@ -66,11 +66,30 @@ Next.js instrumentation or application imports. Build workers and production tes
 servers inherit that preload; pnpm, Playwright and hosted deployments do not.
 Keep MSW a development dependency and preserve the dependency boundary rule.
 
-Local production E2E internally sets `CI=true` and requires an owned temporary database, safe build/runtime
-environment, local HTTPS and no Vercel runtime. The runner initializes these. Test
-fixtures must never add public test endpoints, disable auth/CSRF/SSRF, accept arbitrary
-runtime hosts, or write to production Turso/Blob. The real SQL and better-auth paths
-remain active. Network/provider/Blob fixture limits are documented in the inventory.
+Local production E2E sets `APP_ENV=test` and `PORTFOLIO_TEST_BUILD=true`; it does not
+fabricate `CI`. It requires an owned temporary database, safe build/runtime
+environment, local HTTPS and no Vercel runtime. The runner initializes these.
+Test fixtures must never add public test endpoints, disable auth/CSRF/SSRF, accept
+arbitrary runtime hosts, or write to production Turso/Blob. The real SQL and
+better-auth paths remain active. Network/provider/Blob fixture limits are
+documented in the inventory.
+
+The complete suite shares eight workers across all five projects and one production
+server. Keep global and project `fullyParallel: false`; opt into parallel mode only
+in audited files/describes. Named native locks coordinate project workflows, social
+links, SVG-directory assertions and music scenarios across browsers.
+The CMS spec is a deliberate exception: use default mode with `-exclusive-` for
+the entire file after streaming/bootstrap failures reproduced even with one CMS
+test running alongside public tests. Each browser's CMS group runs sequentially
+and without other files. Public and API files remain parallel.
+Acquire the same resource lock for conflicting readers and writers; keep restoration
+inside the locked test. Outside the CMS exception, do not put resource locks on a
+default/serial file or add shared `beforeAll` pages/auth state.
+See the [resource inventory](./docs/operations/testing.md#parallel-browser-resources).
+Exact public freshness journeys and the delayed cache-miss fault-injection test use
+`-exclusive-`: requests can otherwise join an earlier render of the shared public
+route. Cleanup must wait for the collection to render and confirm deletion after
+reloading before releasing its lock.
 
 Use semantic Playwright locators; use structural selectors only where the thing
 under test has no semantic role (e.g. rendered SVG). Avoid fixed sleeps. One retry

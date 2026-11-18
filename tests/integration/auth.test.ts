@@ -30,6 +30,38 @@ function jsonRequest(path: string, data: unknown, origin = baseURL) {
 }
 
 describe('real better-auth and migrated libSQL', () => {
+	it('signing out one session preserves another session for the same administrator', async () => {
+		const auth = authentication();
+		const cookies: string[] = [];
+		for (let index = 0; index < 2; index++) {
+			const login = await auth.handler(
+				jsonRequest('sign-in/email', {
+					email: fixtureUser.email,
+					password: fixtureUser.password,
+				}),
+			);
+			expect(login.status).toBe(200);
+			cookies.push(
+				login.headers
+					.getSetCookie()
+					.map((value) => value.split(';')[0])
+					.join('; '),
+			);
+		}
+		const logout = await auth.handler(
+			new Request(`${baseURL}/api/auth/sign-out`, {
+				method: 'POST',
+				headers: { origin: baseURL, cookie: cookies[0] },
+			}),
+		);
+		expect(logout.status).toBe(200);
+		const remaining = await auth.handler(
+			new Request(`${baseURL}/api/auth/get-session`, { headers: { cookie: cookies[1] } }),
+		);
+		expect((await remaining.json()).user.id).toBe(fixtureUser.id);
+		expect(await fixture.db.select().from(sessions)).toHaveLength(1);
+	});
+
 	it('signs in, reads the session, and invalidates it on logout', async () => {
 		const auth = authentication();
 		const login = await auth.handler(

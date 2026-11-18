@@ -474,23 +474,15 @@ if (isNaN(numericId)) notFound();
 
 **File**: `instrumentation.ts` — Runs once when a new Next.js server instance starts.
 
-**Used in project**: Yes — registers guarded network fixtures for isolated CI production tests.
+**Used in project**: No. Production test networking uses the external
+`scripts/preload-network.mjs` preload, supplied by `scripts/production-harness.mts`
+through child-specific `NODE_OPTIONS`. It runs in isolated Next.js build workers and
+production servers, never through deployed application instrumentation.
 
-**Rule**: Fixture activation requires the Node.js runtime, `CI=true`, `APP_ENV=test`, and no Vercel runtime.
-
-```typescript
-// instrumentation.ts
-export async function register() {
-	if (
-		process.env.NEXT_RUNTIME === 'nodejs' &&
-		process.env.CI === 'true' &&
-		process.env.APP_ENV === 'test' &&
-		!process.env.VERCEL
-	) {
-		await import('./tests/fixtures/network');
-	}
-}
-```
+**Rule**: Fixture activation requires `APP_ENV=test`, `PORTFOLIO_TEST_BUILD=true`,
+an owned `.ci/database-*` directory, an explicit build/runtime network phase and no
+Vercel runtime. `CI` is metadata, not fixture authorization. Keep MSW outside
+application imports and preserve the dependency boundary rule.
 
 ---
 

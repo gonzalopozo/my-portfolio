@@ -296,7 +296,8 @@ repository files.
 - Automated security workflows audit before release; no unresolved high/critical findings. The root restriction still governs agent-run local checks.
 - **`pnpm up` weekly** (within semver ranges), `pnpm dlx npm-check-updates` monthly (check majors)
 - **Lock file is your friend** — always commit `pnpm-lock.yaml`
-- **Ignore unfixable CVEs explicitly** in `auditConfig.ignoreCves` rather than ignoring the entire audit
+- **Ignore unfixable advisories by GHSA ID** using `audit.ignore` in
+  `pnpm-workspace.yaml`. Keep the audit enabled.
 
 > Full audit commands and workflow: [AGENTS-SECURITY-REFERENCE.md](./AGENTS-SECURITY-REFERENCE.md#dependency-audit-commands)
 

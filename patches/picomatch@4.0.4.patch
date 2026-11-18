@@ -1,0 +1,19 @@
+diff --git a/lib/parse.js b/lib/parse.js
+index 57d994a87896b384ecf2f5260f7ffa5814628162..afb4ac6899b747e3fcac6ba1c2c3aa5042563772 100644
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -509,4 +509,13 @@ const parse = (input, options) => {
+   const extglobClose = token => {
+     const literal = input.slice(token.startIndex, state.index + 1);
+     const body = input.slice(token.startIndex + 2, state.index);
+-    const analysis = analyzeRepeatedExtglob(body, opts);
++    // GHSA-fc5q-39xc-vjpf: one wildcard branch can also nest unbounded repeats.
++    // Inspect parsed tokens so escaped, quoted and bracketed stars stay literal.
++    // This guard also applies when the recursion limit is explicitly disabled.
++    const hasRepeatedWildcard = (token.type === 'plus' || token.type === 'star') &&
++      tokens.slice(token.tokensIndex + 2).some(part =>
++        (part.type === 'star' || part.type === 'globstar') &&
++        part.output && part.output.includes('*'));
++    const analysis = hasRepeatedWildcard
++      ? { risky: true }
++      : analyzeRepeatedExtglob(body, opts);

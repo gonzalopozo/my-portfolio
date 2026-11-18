@@ -7,10 +7,33 @@ import { createRequire } from 'node:module';
 import { temporaryDatabase, fixtureUser } from '../tests/fixtures/database';
 
 export async function productionHarness(browserArguments?: string[]) {
-	if (process.env.CI !== 'true' || process.env.VERCEL)
+	if (
+		process.env.APP_ENV !== 'test' ||
+		process.env.PORTFOLIO_TEST_BUILD !== 'true' ||
+		process.env.VERCEL
+	)
 		throw new Error('The production harness requires an isolated synthetic process.');
 	if (browserArguments && (process.env.CIRCLECI || process.env.GITHUB_ACTIONS))
 		throw new Error('Playwright runs locally before commits and pushes, never in cloud CI.');
+	const started = performance.now();
+	const timings: { phase: string; durationMs: number; status: 'passed' | 'failed' }[] = [];
+	async function measure<T>(phase: string, operation: () => Promise<T>): Promise<T> {
+		const phaseStarted = performance.now();
+		let status: 'passed' | 'failed' = 'failed';
+		try {
+			const result = await operation();
+			status = 'passed';
+			return result;
+		} finally {
+			const timing = {
+				phase,
+				durationMs: Math.round(performance.now() - phaseStarted),
+				status,
+			};
+			timings.push(timing);
+			console.info(JSON.stringify({ event: 'production-harness-phase', ...timing }));
+		}
+	}
 	await mkdir('.ci', { recursive: true });
 	await mkdir('.ci/production-harness.lock').catch(() => {
 		throw new Error('Another production harness owns the lock. See the local testing runbook.');
@@ -21,7 +44,8 @@ export async function productionHarness(browserArguments?: string[]) {
 			'.ci/production-harness.lock/owner.json',
 			JSON.stringify({ pid: process.pid }),
 		);
-		database = await temporaryDatabase();
+		await rm('.ci/e2e-timings.json', { force: true });
+		database = await measure('fixture-database', () => temporaryDatabase());
 	} catch (error) {
 		await rm('.ci/production-harness.lock', { recursive: true, force: true });
 		throw error;
@@ -32,9 +56,10 @@ export async function productionHarness(browserArguments?: string[]) {
 		PATH: process.env.PATH,
 		HOME: process.env.HOME,
 		TMPDIR: process.env.TMPDIR,
-		CI: 'true',
+		...(process.env.CI === undefined ? {} : { CI: process.env.CI }),
 		APP_ENV: 'test',
 		NODE_ENV: 'production',
+		NEXT_TELEMETRY_DISABLED: '1',
 		RELEASE_SHA: process.env.CIRCLE_SHA1 ?? 'local',
 		PORTFOLIO_TEST_BUILD: 'true',
 		TURSO_DATABASE_URL: database.url,
@@ -95,8 +120,13 @@ export async function productionHarness(browserArguments?: string[]) {
 		});
 		activeCommand = child;
 		try {
-			const [code] = await once(child, 'exit');
-			if (code !== 0 || interrupted) throw new Error(`Isolated command failed: ${command}`);
+			await once(child, 'exit');
+			if (interrupted) throw new Error('Production harness interrupted.');
+			const { exitCode, signalCode } = child;
+			if (exitCode !== 0) {
+				const reason = signalCode ? `signal ${signalCode}` : `exit code ${exitCode}`;
+				throw new Error(`Isolated command failed (${reason}): ${command}`);
+			}
 		} finally {
 			activeCommand = undefined;
 		}
@@ -135,6 +165,7 @@ export async function productionHarness(browserArguments?: string[]) {
 	}
 
 	let application: ReturnType<typeof spawn> | undefined;
+	let completed = false;
 	const interrupt = () => {
 		interrupted = true;
 		void stop(activeCommand).catch(() => undefined);
@@ -146,102 +177,131 @@ export async function productionHarness(browserArguments?: string[]) {
 		await requireAvailablePort(3001, '127.0.0.1');
 		await requireAvailablePort(3443, 'localhost');
 		await writeFile(`${database.directory}/music.txt`, 'empty');
+		await writeFile(`${database.directory}/query.json`, '{}');
 		await writeFile(`${database.directory}/network-failures.txt`, '');
-		await run('openssl', [
-			'req',
-			'-x509',
-			'-newkey',
-			'rsa:2048',
-			'-nodes',
-			'-keyout',
-			`${database.directory}/key.pem`,
-			'-out',
-			`${database.directory}/cert.pem`,
-			'-days',
-			'1',
-			'-subj',
-			'/CN=localhost',
-			'-addext',
-			'subjectAltName=DNS:localhost',
-		]);
+		await measure('certificate', () =>
+			run('openssl', [
+				'req',
+				'-x509',
+				'-newkey',
+				'rsa:2048',
+				'-nodes',
+				'-keyout',
+				`${database.directory}/key.pem`,
+				'-out',
+				`${database.directory}/cert.pem`,
+				'-days',
+				'1',
+				'-subj',
+				'/CN=localhost',
+				'-addext',
+				'subjectAltName=DNS:localhost',
+			]),
+		);
 		const certificate = await readFile(`${database.directory}/cert.pem`);
 		// Fresh output only; never restore build artifacts or .next/cache.
 		await rm('.ci/next-production', { recursive: true, force: true });
 		// Match pnpm build while confining the preload to Next, not pnpm or code generation.
-		await run('pnpm', ['icons:manifest']);
-		await run(process.execPath, [nextCli, 'build'], networkEnvironment('build'));
+		await measure('icons', () => run('pnpm', ['icons:manifest']));
+		await measure('build', () =>
+			run(process.execPath, [nextCli, 'build'], networkEnvironment('build')),
+		);
 		await assertNetworkIsolation();
-		await requireAvailablePort(3001, '127.0.0.1');
-		application = start([nextCli, 'start', '--hostname', '127.0.0.1', '--port', '3001']);
-		let cliReady = false;
-		for (let attempt = 0; attempt < 60 && !cliReady; attempt++) {
-			if (interrupted) throw new Error('Production harness interrupted.');
-			if (application.exitCode !== null || application.signalCode !== null)
-				throw new Error('next start exited before readiness.');
-			cliReady = await fetch('http://127.0.0.1:3001/api/health', {
-				redirect: 'error',
-				signal: AbortSignal.timeout(1000),
-			}).then(
-				(response) => response.status === 200,
-				() => false,
-			);
-			if (!cliReady) await new Promise((resolve) => setTimeout(resolve, 500));
-		}
-		if (!cliReady) throw new Error('next start did not become ready.');
-		for (const path of ['/', '/api/auth/ok']) {
-			const response = await fetch(`http://127.0.0.1:3001${path}`, {
-				redirect: 'error',
-				signal: AbortSignal.timeout(15000),
-			});
-			if (response.status !== 200) throw new Error('next start smoke check failed.');
-			await response.arrayBuffer();
-		}
-		await stop(application);
-		await assertNetworkIsolation();
-		await requireAvailablePort(3443, 'localhost');
-		application = start(['scripts/production-server.mts']);
-		let ready = false;
-		for (let attempt = 0; attempt < 60 && !ready; attempt++) {
-			if (interrupted) throw new Error('Production harness interrupted.');
-			if (application.exitCode !== null || application.signalCode !== null)
-				throw new Error('Production server exited before readiness.');
-			ready = await new Promise<boolean>((resolve) => {
-				// Trust this harness's certificate while preserving TLS and hostname validation.
-				const probe = httpsRequest(
-					`${baseURL}/api/health`,
-					{ ca: certificate, rejectUnauthorized: true },
-					(response) => {
-						response.resume();
-						resolve(response.statusCode === 200);
-					},
+		await measure('http-smoke', async () => {
+			await requireAvailablePort(3001, '127.0.0.1');
+			application = start([nextCli, 'start', '--hostname', '127.0.0.1', '--port', '3001']);
+			let cliReady = false;
+			for (let attempt = 0; attempt < 60 && !cliReady; attempt++) {
+				if (interrupted) throw new Error('Production harness interrupted.');
+				if (application.exitCode !== null || application.signalCode !== null)
+					throw new Error('next start exited before readiness.');
+				cliReady = await fetch('http://127.0.0.1:3001/api/health', {
+					redirect: 'error',
+					signal: AbortSignal.timeout(1000),
+				}).then(
+					(response) => response.status === 200,
+					() => false,
 				);
-				probe.on('error', () => resolve(false));
-				probe.setTimeout(1000, () => {
-					probe.destroy();
-					resolve(false);
+				if (!cliReady) await new Promise((resolve) => setTimeout(resolve, 500));
+			}
+			if (!cliReady) throw new Error('next start did not become ready.');
+			for (const path of ['/', '/api/auth/ok']) {
+				const response = await fetch(`http://127.0.0.1:3001${path}`, {
+					redirect: 'error',
+					signal: AbortSignal.timeout(15000),
 				});
-				probe.end();
-			});
-			if (!ready) await new Promise((resolve) => setTimeout(resolve, 500));
-		}
-		if (!ready) throw new Error('Production server did not become healthy.');
+				if (response.status !== 200) throw new Error('next start smoke check failed.');
+				await response.arrayBuffer();
+			}
+			await stop(application);
+			await assertNetworkIsolation();
+		});
+		await measure('https-readiness', async () => {
+			await requireAvailablePort(3443, 'localhost');
+			application = start(['scripts/production-server.mts']);
+			let ready = false;
+			for (let attempt = 0; attempt < 60 && !ready; attempt++) {
+				if (interrupted) throw new Error('Production harness interrupted.');
+				if (application.exitCode !== null || application.signalCode !== null)
+					throw new Error('Production server exited before readiness.');
+				ready = await new Promise<boolean>((resolve) => {
+					// Trust this harness's certificate while preserving TLS and hostname validation.
+					const probe = httpsRequest(
+						`${baseURL}/api/health`,
+						{ ca: certificate, rejectUnauthorized: true },
+						(response) => {
+							response.resume();
+							resolve(response.statusCode === 200);
+						},
+					);
+					probe.on('error', () => resolve(false));
+					probe.setTimeout(1000, () => {
+						probe.destroy();
+						resolve(false);
+					});
+					probe.end();
+				});
+				if (!ready) await new Promise((resolve) => setTimeout(resolve, 500));
+			}
+			if (!ready) throw new Error('Production server did not become healthy.');
+		});
 		if (browserArguments)
-			await run('pnpm', ['exec', 'playwright', 'test', ...browserArguments]);
-		await stop(application);
-		await assertNetworkIsolation();
+			await measure('playwright', () =>
+				run('pnpm', ['exec', 'playwright', 'test', ...browserArguments]),
+			);
+		await measure('application-shutdown', async () => {
+			await stop(application);
+			await assertNetworkIsolation();
+		});
+		completed = true;
 	} finally {
+		let cleanupCompleted = false;
 		process.removeListener('SIGINT', interrupt);
 		process.removeListener('SIGTERM', interrupt);
 		try {
-			await stop(activeCommand);
-			await stop(application);
+			await measure('cleanup', async () => {
+				const stopped = await Promise.allSettled([stop(activeCommand), stop(application)]);
+				const cleaned = await Promise.allSettled([
+					database.close(),
+					previousTypes !== undefined
+						? writeFile('next-env.d.ts', previousTypes)
+						: rm('next-env.d.ts', { force: true }),
+					rm('.ci/next-production', { recursive: true, force: true }),
+				]);
+				for (const result of [...stopped, ...cleaned])
+					if (result.status === 'rejected') throw result.reason;
+			});
+			cleanupCompleted = true;
 		} finally {
+			const summary = {
+				status: completed && cleanupCompleted ? 'passed' : 'failed',
+				durationMs: Math.round(performance.now() - started),
+				phases: timings,
+			};
 			try {
-				await database.close();
+				await writeFile('.ci/e2e-timings.json', JSON.stringify(summary, null, 2));
+				console.info(JSON.stringify({ event: 'production-harness-complete', ...summary }));
 			} finally {
-				if (previousTypes !== undefined) await writeFile('next-env.d.ts', previousTypes);
-				else await rm('next-env.d.ts', { force: true });
-				await rm('.ci/next-production', { recursive: true, force: true });
 				await rm('.ci/production-harness.lock', { recursive: true, force: true });
 			}
 		}

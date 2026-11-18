@@ -16,7 +16,6 @@ const child = spawn(
 			PATH: process.env.PATH,
 			HOME: process.env.HOME,
 			TMPDIR: process.env.TMPDIR,
-			CI: 'true',
 			NODE_ENV: 'production',
 			CSP_TEST_BASE_URL: origin,
 			PLAYWRIGHT_BASE_URL: origin,

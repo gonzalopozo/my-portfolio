@@ -45,6 +45,7 @@ docs(agents): define commit convention
 
 Rules:
 
+- Format requested pull request names using this same Conventional Commits convention.
 - Use imperative mood: `add`, `fix`, `remove`, `update`.
 - Keep the summary short and specific.
 - Avoid vague commits like `update`, `changes`, `fix stuff`, or `wip`.

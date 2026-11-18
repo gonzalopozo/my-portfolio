@@ -11,6 +11,7 @@ import { ColorPickerField } from '@/components/admin/color-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { SocialLinkActionState } from '@/lib/actions/social-links';
 import { getColorVariants } from '@/lib/social-link-colors';
+import { useHydrated } from '@/lib/use-hydrated';
 
 const IconPicker = dynamic(
 	() => import('@/components/admin/icon-picker').then((mod) => mod.IconPicker),
@@ -29,6 +30,8 @@ interface SocialLinkFormProps {
 }
 
 export function SocialLinkForm({ action, initialValues, defaultColor }: SocialLinkFormProps) {
+	// Avoid document submissions before React has attached the form action handler.
+	const hydrated = useHydrated();
 	const [state, formAction, pending] = useActionState(action, { error: null });
 	const [color, setColor] = useState(() => {
 		const initialColor = initialValues?.color ?? defaultColor;
@@ -47,6 +50,7 @@ export function SocialLinkForm({ action, initialValues, defaultColor }: SocialLi
 					id="name"
 					placeholder="Ej: GitHub, LinkedIn, Twitter..."
 					defaultValue={initialValues?.name}
+					disabled={!hydrated || pending}
 					required
 				/>
 			</div>
@@ -59,6 +63,7 @@ export function SocialLinkForm({ action, initialValues, defaultColor }: SocialLi
 					id="url"
 					placeholder="https://..."
 					defaultValue={initialValues?.url}
+					disabled={!hydrated || pending}
 				/>
 				<p className="text-xs text-muted-foreground">Enlace a tu perfil en la red social</p>
 			</div>
@@ -113,7 +118,7 @@ export function SocialLinkForm({ action, initialValues, defaultColor }: SocialLi
 			)}
 
 			<div className="flex items-center gap-3 pt-4">
-				<Button type="submit" disabled={pending} className="gap-2">
+				<Button type="submit" disabled={!hydrated || pending} className="gap-2">
 					{editing ? <Save aria-hidden="true" /> : <Plus aria-hidden="true" />}
 					{editing ? 'Guardar cambios' : 'Crear enlace'}
 				</Button>

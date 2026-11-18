@@ -7,8 +7,8 @@ import { PUBLIC_PROJECTS_CACHE_TAG } from '@/lib/cache-tags';
 import { type ProjectInfo } from '@/lib/types';
 import { entityIdSchema } from '@/lib/schemas/common';
 
-async function findProjects(): Promise<ProjectInfo[]> {
-	return await observeOperation('db.projects.read', () =>
+async function findProjects(audience: 'admin' | 'public'): Promise<ProjectInfo[]> {
+	return await observeOperation(`db.projects.read.${audience}`, () =>
 		db.query.projects.findMany({
 			with: {
 				projectSkills: {
@@ -32,7 +32,7 @@ async function findProjects(): Promise<ProjectInfo[]> {
 
 export async function getProjects(): Promise<ProjectInfo[]> {
 	await requireAdminPage();
-	return await findProjects();
+	return await findProjects('admin');
 }
 
 export async function getPublicProjects(): Promise<ProjectInfo[]> {
@@ -40,7 +40,7 @@ export async function getPublicProjects(): Promise<ProjectInfo[]> {
 	cacheLife('hours');
 	cacheTag(PUBLIC_PROJECTS_CACHE_TAG);
 
-	return await findProjects();
+	return await findProjects('public');
 }
 
 export async function getProjectById(id: number): Promise<ProjectInfo | undefined> {

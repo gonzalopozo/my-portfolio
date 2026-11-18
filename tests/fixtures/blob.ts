@@ -4,10 +4,10 @@ import { randomUUID } from 'node:crypto';
 import type { put, PutBlobResult } from '@vercel/blob';
 
 function fixturePath(pathname: string) {
-	// CI creates these files at runtime; they must never enter deployment tracing.
+	// The harness creates these files at runtime; keep them outside deployment tracing.
 	const directory = resolve(/* turbopackIgnore: true */ process.env.TEST_FIXTURE_DIRECTORY ?? '');
 	if (
-		process.env.CI !== 'true' ||
+		process.env.PORTFOLIO_TEST_BUILD !== 'true' ||
 		process.env.APP_ENV !== 'test' ||
 		process.env.VERCEL ||
 		!directory.startsWith(`${resolve('.ci')}/database-`) ||

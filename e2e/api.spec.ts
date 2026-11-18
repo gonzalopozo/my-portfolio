@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures';
 import { fixtureUser } from '../tests/fixtures/database';
 
+test.describe.configure({ mode: 'parallel' });
+
 test('liveness is uncached and correlates the built release', async ({ request }) => {
 	const response = await request.get('/api/health');
 	expect(response.status()).toBe(200);

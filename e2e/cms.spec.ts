@@ -1,7 +1,94 @@
 import type { Page, Response } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { fixtureUser, fixtureVisitor } from '../tests/fixtures/database';
-import { readFile, writeFile, readdir, mkdir } from 'node:fs/promises';
+import { readFile, readdir, mkdir } from 'node:fs/promises';
+import { getTestNamespace, writeFixtureScenario } from './fixture-support';
+
+// Keep CMS workflows sequential and isolated from other files while exercising
+// mutations, fault injection, and the shared server's streamed action responses.
+test.describe.configure({ mode: 'default', lock: '-exclusive-' });
+
+type EntityPath = 'projects' | 'experiences' | 'skills' | 'social-links';
+
+async function deleteOwnedRows(page: Page, path: EntityPath, names: string[]) {
+	await page.goto(`/dashboard/${path}`);
+	// An unfinished streamed document is not evidence that an owned row is absent.
+	// Each collection retains its deterministic baseline row, so its table must exist.
+	await expect(page.getByRole('table')).toBeVisible();
+	for (const name of names) {
+		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+		if ((await row.count()) === 0) continue;
+		page.once('dialog', (dialog) => dialog.accept());
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(response) =>
+					response.request().method() === 'POST' &&
+					new URL(response.url()).pathname === `/dashboard/${path}`,
+			),
+			row.getByRole('button', { name: 'Eliminar', exact: true }).click(),
+		]);
+		expect(response.ok()).toBe(true);
+		await response.finished();
+		await expect(row).toHaveCount(0);
+		await page.reload();
+		await expect(page.getByRole('table')).toBeVisible();
+		await expect(row).toHaveCount(0);
+	}
+}
+
+async function saveSettings(page: Page) {
+	const form = page.getByRole('form', { name: 'Configuración del portfolio' });
+	const [response] = await Promise.all([
+		page.waitForResponse(
+			(response) =>
+				response.request().method() === 'POST' &&
+				new URL(response.url()).pathname === '/dashboard/settings',
+		),
+		page.getByRole('button', { name: 'Guardar configuración' }).click(),
+	]);
+	expect(response.ok()).toBe(true);
+	await response.finished();
+	// A completed response can precede React's form reset and refreshed server content.
+	await expect(form).toHaveAttribute('aria-busy', 'false');
+	await expect(form.getByRole('status')).toHaveText('Configuración guardada.');
+}
+
+async function restoreTrailingRow(
+	page: Page,
+	path: 'projects' | 'social-links',
+	label: string,
+	name: string,
+) {
+	await page.goto(`/dashboard/${path}`);
+	await expect(page.getByRole('table')).toBeVisible();
+	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
+	if ((await row.count()) === 0) return;
+	const finalOrder = (await page.getByRole('row').count()) - 1;
+	const lastRow = page.getByRole('row').last();
+	if ((await lastRow.getByText(name, { exact: true }).count()) > 0) return;
+	const bounds = await row.boundingBox();
+	const lastBounds = await lastRow.boundingBox();
+	if (!bounds || !lastBounds)
+		throw new Error('The ordering fixture has no visible row during cleanup.');
+	const distance = lastBounds.y + lastBounds.height / 2 - bounds.y - bounds.height / 2;
+	await page.getByRole('button', { name: `Reordenar ${label} "${name}"`, exact: true }).focus();
+	await page.keyboard.press('Space');
+	for (let step = 0; step <= Math.ceil(distance / 10); step++) {
+		await page.keyboard.press('ArrowDown');
+	}
+	await Promise.all([
+		page.waitForResponse(
+			(response) =>
+				response.request().method() === 'POST' &&
+				new URL(response.url()).pathname === `/dashboard/${path}`,
+		),
+		page.keyboard.press('Space'),
+	]);
+	await expect(page.getByRole('table')).toHaveAttribute('aria-busy', 'false');
+	await page.reload();
+	await expect(page.getByRole('row').last()).toContainText(name);
+	await expect(row.getByRole('cell').nth(1)).toHaveText(String(finalOrder));
+}
 
 async function login(page: Page, user = fixtureUser) {
 	await page.goto('/login');
@@ -29,88 +116,92 @@ async function snapshotBlobDirectory(folder: 'skill-icons' | 'og-images') {
 	return { directory, existing };
 }
 
-test('CMS icon changes render publicly without loading icon catalogs in the browser', async ({
-	page,
-	context,
-}, testInfo) => {
-	await login(page);
-	const name = `CMS icon selection ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-	const publicPage = await context.newPage();
-	let editUrl = '';
-	let savedSvg = '';
+test(
+	'CMS icon changes render publicly without loading icon catalogs in the browser',
+	// Exact freshness requires a public render that cannot join another test's snapshot.
+	{ lock: '-exclusive-' },
+	async ({ page, context }, testInfo) => {
+		await login(page);
+		const name = `CMS icon selection ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+		const publicPage = await context.newPage();
+		let editUrl = '';
+		let savedSvg = '';
 
-	try {
-		for (const [index, iconName] of ['TbAbacus', 'BiAlarm'].entries()) {
-			await page.goto(index === 0 ? '/dashboard/social-links/new' : editUrl);
-			if (index === 0) {
-				await page.getByLabel('Nombre', { exact: true }).fill(name);
-				await page.getByLabel('URL', { exact: true }).fill('https://example.test/cms-icon');
-			}
-			const picker = page.getByRole('combobox', { name: /Select an icon|Selected icon:/ });
-			if (savedSvg) {
-				// The saved preview loads after hydration; wait before interacting with the picker.
-				await expect
-					.poll(() =>
-						picker
-							.locator('svg')
-							.first()
-							.evaluate((svg) => svg.innerHTML),
-					)
-					.toBe(savedSvg);
-			}
-			await picker.click();
-			await page.getByPlaceholder('Search icons…').fill(iconName);
-			const option = page.getByRole('option', { name: new RegExp(`^${iconName}\\b`) });
-			await expect(option.locator('svg')).toHaveCount(1);
-			const expectedSvg = await option.locator('svg').evaluate((svg) => svg.innerHTML);
-			await option.click();
-			await page
-				.getByRole('button', {
-					name: index === 0 ? 'Crear enlace' : 'Guardar cambios',
-					exact: true,
-				})
-				.click();
-			await expect(page).toHaveURL(/\/dashboard\/social-links$/);
-			const row = page
-				.getByRole('row')
-				.filter({ has: page.getByText(name, { exact: true }) });
-			await expect(row).toBeVisible();
-			await expectDashboardToFitViewport(page);
-			editUrl = (await row
-				.getByRole('link', { name: 'Editar', exact: true })
-				.getAttribute('href'))!;
-			savedSvg = expectedSvg;
+		try {
+			for (const [index, iconName] of ['TbAbacus', 'BiAlarm'].entries()) {
+				await page.goto(index === 0 ? '/dashboard/social-links/new' : editUrl);
+				if (index === 0) {
+					await page.getByLabel('Nombre', { exact: true }).fill(name);
+					await page
+						.getByLabel('URL', { exact: true })
+						.fill('https://example.test/cms-icon');
+				}
+				const picker = page.getByRole('combobox', {
+					name: /Select an icon|Selected icon:/,
+				});
+				if (savedSvg) {
+					// The saved preview loads after hydration; wait before interacting with the picker.
+					await expect
+						.poll(() =>
+							picker
+								.locator('svg')
+								.first()
+								.evaluate((svg) => svg.innerHTML),
+						)
+						.toBe(savedSvg);
+				}
+				await picker.click();
+				await expect(picker).toHaveAttribute('aria-expanded', 'true');
+				await page.getByPlaceholder('Search icons…').fill(iconName);
+				const option = page.getByRole('option', { name: new RegExp(`^${iconName}\\b`) });
+				await expect(option.locator('svg')).toHaveCount(1);
+				const expectedSvg = await option.locator('svg').evaluate((svg) => svg.innerHTML);
+				await option.click();
+				await expect(picker).toHaveAccessibleName(`Selected icon: ${iconName}`);
+				await page
+					.getByRole('button', {
+						name: index === 0 ? 'Crear enlace' : 'Guardar cambios',
+						exact: true,
+					})
+					.click();
+				await expect(page).toHaveURL(/\/dashboard\/social-links$/);
+				const row = page
+					.getByRole('row')
+					.filter({ has: page.getByText(name, { exact: true }) });
+				await expect(row).toBeVisible();
+				await expectDashboardToFitViewport(page);
+				editUrl = (await row
+					.getByRole('link', { name: 'Editar', exact: true })
+					.getAttribute('href'))!;
+				savedSvg = expectedSvg;
 
-			const scripts: Promise<string>[] = [];
-			const collectScript = (response: Response) => {
-				if (response.request().resourceType() === 'script') scripts.push(response.text());
-			};
-			publicPage.on('response', collectScript);
-			await publicPage.goto('/?section=About+me');
-			const card = publicPage.locator('[data-portfolio-card]').filter({
-				has: publicPage.getByRole('link', { name: `Visit ${name}`, exact: true }),
-			});
-			const icon = card.locator('svg').first();
-			await expect(icon).toBeVisible();
-			await expect.poll(() => icon.evaluate((svg) => svg.innerHTML)).toBe(expectedSvg);
-			publicPage.off('response', collectScript);
-			const source = (await Promise.all(scripts)).join('\n');
-			// Full react-icons packs export their catalogs by name, even in minified chunks.
-			expect(source).not.toMatch(/\bTbAbacus\b|\bBiAlarm\b|Selected icon:|Search icons…/);
+				const scripts: Promise<string>[] = [];
+				const collectScript = (response: Response) => {
+					if (response.request().resourceType() === 'script')
+						scripts.push(response.text());
+				};
+				publicPage.on('response', collectScript);
+				await publicPage.goto('/?section=About+me');
+				const card = publicPage.locator('[data-portfolio-card]').filter({
+					has: publicPage.getByRole('link', { name: `Visit ${name}`, exact: true }),
+				});
+				const icon = card.locator('svg').first();
+				await expect(icon).toBeVisible();
+				await expect.poll(() => icon.evaluate((svg) => svg.innerHTML)).toBe(expectedSvg);
+				publicPage.off('response', collectScript);
+				const source = (await Promise.all(scripts)).join('\n');
+				// Full react-icons packs export their catalogs by name, even in minified chunks.
+				expect(source).not.toMatch(/\bTbAbacus\b|\bBiAlarm\b|Selected icon:|Search icons…/);
+			}
+		} finally {
+			try {
+				await publicPage.close();
+			} finally {
+				await deleteOwnedRows(page, 'social-links', [name]);
+			}
 		}
-	} finally {
-		await publicPage.close();
-		if (editUrl) {
-			await page.goto('/dashboard/social-links');
-			const row = page
-				.getByRole('row')
-				.filter({ has: page.getByText(name, { exact: true }) });
-			page.once('dialog', (dialog) => dialog.accept());
-			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
-			await expect(row).toHaveCount(0);
-		}
-	}
-});
+	},
+);
 
 test('unauthenticated and non-admin sessions cannot access the CMS', async ({ page }) => {
 	await page.goto('/dashboard/projects');
@@ -133,6 +224,7 @@ test('invalid login has accessible feedback and restores the submit button', asy
 for (const entity of [
 	{
 		path: 'projects',
+		lock: 'cms-projects',
 		field: 'Título',
 		create: 'Crear proyecto',
 		name: 'Browser project',
@@ -140,6 +232,7 @@ for (const entity of [
 	},
 	{
 		path: 'experiences',
+		lock: undefined,
 		field: 'Puesto / Cargo',
 		create: 'Crear experiencia',
 		name: 'Browser role',
@@ -147,6 +240,7 @@ for (const entity of [
 	},
 	{
 		path: 'skills',
+		lock: undefined,
 		field: 'Nombre',
 		create: 'Crear habilidad',
 		name: 'Browser skill',
@@ -154,285 +248,364 @@ for (const entity of [
 	},
 	{
 		path: 'social-links',
+		lock: 'cms-social-links',
 		field: 'Nombre',
 		create: 'Crear enlace',
 		name: 'Browser social link',
 		fields: { URL: 'https://example.test/browser' },
 	},
 ] as const) {
-	test(`${entity.path} create, edit and delete through real Server Actions`, async ({
-		page,
-	}, testInfo) => {
-		await login(page);
-		const name = `${entity.name} ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-		await page.goto(`/dashboard/${entity.path}/new`);
-		await page.getByRole('button', { name: entity.create, exact: true }).click();
-		await expect(page.getByLabel(entity.field, { exact: true })).toBeFocused();
-		await page.getByLabel(entity.field, { exact: true }).fill(name);
-		for (const [label, value] of Object.entries(entity.fields))
-			await page.getByLabel(label, { exact: true }).fill(value);
-		await page.getByRole('button', { name: entity.create, exact: true }).click();
-		await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
-		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-		await expect(row).toBeVisible();
-		await expectDashboardToFitViewport(page);
-		await row.getByRole('link', { name: 'Editar', exact: true }).click();
-		await page.getByRole('textbox', { name: entity.field }).fill(`${name} edited`);
-		await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
-		const edited = page
-			.getByRole('row')
-			.filter({ has: page.getByText(`${name} edited`, { exact: true }) });
-		await expect(edited).toBeVisible();
-		page.once('dialog', (dialog) => dialog.accept());
-		await edited.getByRole('button', { name: 'Eliminar', exact: true }).click();
-		await expect(page.getByText(`${name} edited`, { exact: true })).toHaveCount(0);
-	});
+	test(
+		`${entity.path} create, edit and delete through real Server Actions`,
+		{ lock: entity.lock },
+		async ({ page }, testInfo) => {
+			await login(page);
+			const name = `${entity.name} ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+			try {
+				await page.goto(`/dashboard/${entity.path}/new`);
+				await page.getByRole('button', { name: entity.create, exact: true }).click();
+				await expect(page.getByLabel(entity.field, { exact: true })).toBeFocused();
+				await page.getByLabel(entity.field, { exact: true }).fill(name);
+				for (const [label, value] of Object.entries(entity.fields))
+					await page.getByLabel(label, { exact: true }).fill(value);
+				await page.getByRole('button', { name: entity.create, exact: true }).click();
+				await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
+				const row = page
+					.getByRole('row')
+					.filter({ has: page.getByText(name, { exact: true }) });
+				await expect(row).toBeVisible();
+				await expectDashboardToFitViewport(page);
+				await row.getByRole('link', { name: 'Editar', exact: true }).click();
+				await page.getByRole('textbox', { name: entity.field }).fill(`${name} edited`);
+				await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
+				const edited = page
+					.getByRole('row')
+					.filter({ has: page.getByText(`${name} edited`, { exact: true }) });
+				await expect(edited).toBeVisible();
+				page.once('dialog', (dialog) => dialog.accept());
+				await edited.getByRole('button', { name: 'Eliminar', exact: true }).click();
+				await expect(page.getByText(`${name} edited`, { exact: true })).toHaveCount(0);
+			} finally {
+				await deleteOwnedRows(page, entity.path, [name, `${name} edited`]);
+			}
+		},
+	);
 }
 
-test('settings updates invalidate cached public content and unauthorized replay cannot mutate it', async ({
-	page,
-	playwright,
-	baseURL,
-}, testInfo) => {
-	await login(page);
-	const value = `Public cache freshness ${testInfo.project.name}`;
-	await page.goto('/dashboard/settings');
-	await page.getByLabel('Mensaje de estado').click();
-	await page.getByLabel('Mensaje de estado').fill(value);
-	await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
-	const action = page.waitForRequest(
-		(request) =>
-			request.method() === 'POST' &&
-			new URL(request.url()).pathname === '/dashboard/settings',
-	);
-	await page.getByRole('button', { name: 'Guardar configuración' }).click();
-	const submitted = await action;
-	await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
-	const anonymous = await playwright.request.newContext({
-		baseURL,
-		ignoreHTTPSErrors: baseURL === 'https://localhost:3443',
-	});
-	try {
-		const headers = await submitted.allHeaders();
-		const replayHeaders: Record<string, string> = {
-			origin: baseURL!,
-			cookie: '__Secure-better-auth.session_token=forged',
+test(
+	'settings updates invalidate cached public content and unauthorized replay cannot mutate it',
+	// Other collections also invalidate the shared public route, including in-flight renders.
+	{ lock: '-exclusive-' },
+	async ({ page, playwright, baseURL, clientHeaders }, testInfo) => {
+		await login(page);
+		const value = `Public cache freshness ${getTestNamespace(testInfo)}`;
+		await page.goto('/dashboard/settings');
+		const original = {
+			statusMessage: await page.getByLabel('Mensaje de estado').inputValue(),
+			resumeUrl: await page.getByLabel('URL del currículum').inputValue(),
+			isEmployed: await page.getByRole('switch').isChecked(),
 		};
-		for (const key of ['content-type', 'next-action', 'next-router-state-tree'])
-			if (headers[key]) replayHeaders[key] = headers[key];
-		const originalBody = submitted.postDataBuffer()!.toString('utf8');
-		const alteredBody = originalBody
-			.replace(value, `Unauthorized ${value}`)
-			.replace(encodeURIComponent(value), encodeURIComponent(`Unauthorized ${value}`));
-		if (alteredBody === originalBody)
-			throw new Error('The replay did not contain the expected mutation payload.');
-		const response = await anonymous.post('/dashboard/settings', {
-			headers: replayHeaders,
-			data: Buffer.from(alteredBody),
-			maxRedirects: 0,
-		});
-		expect(await response.text()).not.toContain(fixtureUser.email);
-		const visitor = await anonymous.post('/api/auth/sign-in/email', {
-			headers: { origin: baseURL! },
-			data: { email: fixtureVisitor.email, password: fixtureVisitor.password },
-		});
-		expect(visitor.status()).toBe(200);
-		delete replayHeaders.cookie;
-		await anonymous.post('/dashboard/settings', {
-			headers: replayHeaders,
-			data: Buffer.from(alteredBody),
-			maxRedirects: 0,
-		});
-		await page.reload();
-		await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
-	} finally {
-		await anonymous.dispose();
-	}
-	await page.goto('/');
-	await page.getByRole('button', { name: 'About Me', exact: true }).first().click();
-	await expect(page.getByRole('status').filter({ hasText: value })).toBeVisible();
-});
+		try {
+			await page.getByLabel('Mensaje de estado').click();
+			await page.getByLabel('Mensaje de estado').fill(value);
+			await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
+			const action = page.waitForRequest(
+				(request) =>
+					request.method() === 'POST' &&
+					new URL(request.url()).pathname === '/dashboard/settings',
+			);
+			await saveSettings(page);
+			const submitted = await action;
+			await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
+			const anonymous = await playwright.request.newContext({
+				baseURL,
+				ignoreHTTPSErrors: baseURL === 'https://localhost:3443',
+				extraHTTPHeaders: clientHeaders,
+			});
+			try {
+				const headers = await submitted.allHeaders();
+				const replayHeaders: Record<string, string> = {
+					origin: baseURL!,
+					cookie: '__Secure-better-auth.session_token=forged',
+				};
+				for (const key of ['content-type', 'next-action', 'next-router-state-tree'])
+					if (headers[key]) replayHeaders[key] = headers[key];
+				const originalBody = submitted.postDataBuffer()!.toString('utf8');
+				const alteredBody = originalBody
+					.replace(value, `Unauthorized ${value}`)
+					.replace(
+						encodeURIComponent(value),
+						encodeURIComponent(`Unauthorized ${value}`),
+					);
+				if (alteredBody === originalBody)
+					throw new Error('The replay did not contain the expected mutation payload.');
+				const response = await anonymous.post('/dashboard/settings', {
+					headers: replayHeaders,
+					data: Buffer.from(alteredBody),
+					maxRedirects: 0,
+				});
+				expect(await response.text()).not.toContain(fixtureUser.email);
+				const visitor = await anonymous.post('/api/auth/sign-in/email', {
+					headers: { origin: baseURL! },
+					data: { email: fixtureVisitor.email, password: fixtureVisitor.password },
+				});
+				expect(visitor.status()).toBe(200);
+				delete replayHeaders.cookie;
+				await anonymous.post('/dashboard/settings', {
+					headers: replayHeaders,
+					data: Buffer.from(alteredBody),
+					maxRedirects: 0,
+				});
+				await page.reload();
+				await expect(page.getByLabel('Mensaje de estado')).toHaveValue(value);
+			} finally {
+				await anonymous.dispose();
+			}
+			await page.goto('/');
+			await page.getByRole('button', { name: 'About Me', exact: true }).first().click();
+			await expect(page.getByRole('status').filter({ hasText: value })).toBeVisible();
+		} finally {
+			await page.goto('/dashboard/settings');
+			await page.getByLabel('Mensaje de estado').fill(original.statusMessage);
+			await page.getByLabel('URL del currículum').fill(original.resumeUrl);
+			await page.getByRole('switch').setChecked(original.isEmployed);
+			await saveSettings(page);
+			await page.reload();
+			await expect(page.getByLabel('Mensaje de estado')).toHaveValue(original.statusMessage);
+			await expect(page.getByLabel('URL del currículum')).toHaveValue(original.resumeUrl);
+			await expect(page.getByRole('switch')).toBeChecked({ checked: original.isEmployed });
+		}
+	},
+);
 
-test('custom SVG uploads are normalized, replaced and cleaned after deletion', async ({
-	page,
-}, testInfo) => {
-	await login(page);
-	const name = `SVG fixture ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-	const { directory, existing } = await snapshotBlobDirectory('skill-icons');
-	await page.goto('/dashboard/skills/new');
-	await page.getByLabel('Nombre', { exact: true }).fill(name);
-	await page.getByRole('switch', { name: 'Usar icono personalizado', exact: true }).check();
-	await page.getByLabel('Archivo del icono').setInputFiles({
-		name: 'invalid.svg',
-		mimeType: 'image/svg+xml',
-		buffer: Buffer.from(
-			'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
-		),
-	});
-	await page.getByRole('button', { name: 'Crear habilidad', exact: true }).click();
-	await expect(page.getByRole('alert').filter({ hasText: /SVG/ })).toBeVisible();
-	expect((await readdir(directory)).sort()).toEqual(existing);
-	await page.getByLabel('Nombre', { exact: true }).fill(name);
-	await page.getByLabel('Archivo del icono').setInputFiles({
-		name: 'icon.svg',
-		mimeType: 'image/svg+xml',
-		buffer: Buffer.from(
-			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="red" d="M1 1h20v20H1z"/></svg>',
-		),
-	});
-	await page.getByRole('button', { name: 'Crear habilidad', exact: true }).click();
-	await expect(page).toHaveURL(/\/dashboard\/skills$/);
-	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-	await expect(row.locator('svg').first()).toBeVisible();
-	await expectDashboardToFitViewport(page);
-	const before = (await readdir(directory)).filter((file) => !existing.includes(file));
-	expect(before).toHaveLength(1);
-	expect(await readFile(`${directory}/${before[0]}`, 'utf8')).not.toContain('fill="red"');
-	await row.getByRole('link', { name: 'Editar', exact: true }).click();
-	await expect(
-		page.getByRole('heading', { name: 'Editar Habilidad', exact: true }),
-	).toBeVisible();
-	await page
-		.getByLabel('Archivo del icono')
-		.filter({ visible: true })
-		.setInputFiles({
-			name: 'replacement.svg',
-			mimeType: 'image/svg+xml',
-			buffer: Buffer.from(
-				'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>',
-			),
-		});
-	await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
-	await expect(page).toHaveURL(/\/dashboard\/skills$/);
-	await expectDashboardToFitViewport(page);
-	const after = (await readdir(directory)).filter((file) => !existing.includes(file));
-	expect(after).toHaveLength(1);
-	expect(after[0]).not.toBe(before[0]);
-	await page
-		.getByRole('row')
-		.filter({ has: page.getByText(name, { exact: true }) })
-		.getByRole('button', { name: 'Eliminar', exact: true })
-		.click();
-	await expect(row).toHaveCount(0);
-	await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
-});
+test(
+	'custom SVG uploads are normalized, replaced and cleaned after deletion',
+	{ lock: 'blob-skill-icons' },
+	async ({ page }, testInfo) => {
+		await login(page);
+		const name = `SVG fixture ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+		const { directory, existing } = await snapshotBlobDirectory('skill-icons');
+		try {
+			await page.goto('/dashboard/skills/new');
+			await page.getByLabel('Nombre', { exact: true }).fill(name);
+			await page
+				.getByRole('switch', { name: 'Usar icono personalizado', exact: true })
+				.check();
+			await page.getByLabel('Archivo del icono').setInputFiles({
+				name: 'invalid.svg',
+				mimeType: 'image/svg+xml',
+				buffer: Buffer.from(
+					'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+				),
+			});
+			await page.getByRole('button', { name: 'Crear habilidad', exact: true }).click();
+			await expect(page.getByRole('alert').filter({ hasText: /SVG/ })).toBeVisible();
+			expect((await readdir(directory)).sort()).toEqual(existing);
+			await page.getByLabel('Nombre', { exact: true }).fill(name);
+			await page.getByLabel('Archivo del icono').setInputFiles({
+				name: 'icon.svg',
+				mimeType: 'image/svg+xml',
+				buffer: Buffer.from(
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="red" d="M1 1h20v20H1z"/></svg>',
+				),
+			});
+			await page.getByRole('button', { name: 'Crear habilidad', exact: true }).click();
+			await expect(page).toHaveURL(/\/dashboard\/skills$/);
+			const row = page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) });
+			await expect(row.locator('svg').first()).toBeVisible();
+			await expectDashboardToFitViewport(page);
+			const before = (await readdir(directory)).filter((file) => !existing.includes(file));
+			expect(before).toHaveLength(1);
+			expect(await readFile(`${directory}/${before[0]}`, 'utf8')).not.toContain('fill="red"');
+			await row.getByRole('link', { name: 'Editar', exact: true }).click();
+			await expect(
+				page.getByRole('heading', { name: 'Editar Habilidad', exact: true }),
+			).toBeVisible();
+			await page
+				.getByLabel('Archivo del icono')
+				.filter({ visible: true })
+				.setInputFiles({
+					name: 'replacement.svg',
+					mimeType: 'image/svg+xml',
+					buffer: Buffer.from(
+						'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>',
+					),
+				});
+			await page.getByRole('button', { name: 'Guardar cambios', exact: true }).click();
+			await expect(page).toHaveURL(/\/dashboard\/skills$/);
+			await expectDashboardToFitViewport(page);
+			const after = (await readdir(directory)).filter((file) => !existing.includes(file));
+			expect(after).toHaveLength(1);
+			expect(after[0]).not.toBe(before[0]);
+			await page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) })
+				.getByRole('button', { name: 'Eliminar', exact: true })
+				.click();
+			await expect(row).toHaveCount(0);
+			await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
+		} finally {
+			await deleteOwnedRows(page, 'skills', [name]);
+		}
+	},
+);
 
-test('project OG refresh persists its new image and deletes the replaced object', async ({
-	page,
-}, testInfo) => {
-	await login(page);
-	const name = `OG fixture ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-	const { directory, existing } = await snapshotBlobDirectory('og-images');
-	await page.goto('/dashboard/projects/new');
-	await page.getByLabel('Título', { exact: true }).fill(name);
-	await page.getByLabel('Descripción', { exact: true }).fill('Synthetic Open Graph journey');
-	await page
-		.getByLabel('URL del proyecto', { exact: true })
-		.fill('https://example.com/ci-og-page');
-	await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
-	await expect(page).toHaveURL(/\/dashboard\/projects$/);
-	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-	await expect(row).toBeVisible();
-	await expectDashboardToFitViewport(page);
-	const previous = (await readdir(directory)).filter((file) => !existing.includes(file));
-	expect(previous).toHaveLength(1);
-	await Promise.all([
-		page.waitForResponse(
-			(response) =>
-				response.request().method() === 'POST' &&
-				new URL(response.url()).pathname === '/dashboard/projects',
-		),
-		row
-			.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true })
-			.click(),
-	]);
-	await expect(
-		row.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true }),
-	).toBeEnabled();
-	await expect(
-		page.locator('[data-sonner-toast][data-type="success"]').filter({ hasText: name }),
-	).toBeVisible();
-	const readImages = async () =>
-		(await readdir(directory)).filter((file) => !existing.includes(file));
-	await expect.poll(readImages).not.toEqual(previous);
-	expect(await readImages()).toHaveLength(1);
-	page.once('dialog', (dialog) => dialog.accept());
-	await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
-	await expect(page.getByText(name, { exact: true })).toHaveCount(0);
-	await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
-});
+test(
+	'project OG refresh persists its new image and deletes the replaced object',
+	{ lock: 'cms-projects' },
+	async ({ page }, testInfo) => {
+		await login(page);
+		const name = `OG fixture ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+		const { directory, existing } = await snapshotBlobDirectory('og-images');
+		try {
+			await page.goto('/dashboard/projects/new');
+			await page.getByLabel('Título', { exact: true }).fill(name);
+			await page
+				.getByLabel('Descripción', { exact: true })
+				.fill('Synthetic Open Graph journey');
+			await page
+				.getByLabel('URL del proyecto', { exact: true })
+				.fill('https://example.com/ci-og-page');
+			await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
+			await expect(page).toHaveURL(/\/dashboard\/projects$/);
+			const row = page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) });
+			await expect(row).toBeVisible();
+			await expectDashboardToFitViewport(page);
+			const previous = (await readdir(directory)).filter((file) => !existing.includes(file));
+			expect(previous).toHaveLength(1);
+			await Promise.all([
+				page.waitForResponse(
+					(response) =>
+						response.request().method() === 'POST' &&
+						new URL(response.url()).pathname === '/dashboard/projects',
+				),
+				row
+					.getByRole('button', {
+						name: `Actualizar imagen Open Graph de ${name}`,
+						exact: true,
+					})
+					.click(),
+			]);
+			await expect(
+				row.getByRole('button', {
+					name: `Actualizar imagen Open Graph de ${name}`,
+					exact: true,
+				}),
+			).toBeEnabled();
+			await expect(
+				page.locator('[data-sonner-toast][data-type="success"]').filter({ hasText: name }),
+			).toBeVisible();
+			const readImages = async () =>
+				(await readdir(directory)).filter((file) => !existing.includes(file));
+			await expect.poll(readImages).not.toEqual(previous);
+			expect(await readImages()).toHaveLength(1);
+			page.once('dialog', (dialog) => dialog.accept());
+			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
+			await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+			await expect.poll(async () => (await readdir(directory)).sort()).toEqual(existing);
+		} finally {
+			await deleteOwnedRows(page, 'projects', [name]);
+		}
+	},
+);
 
-test('a delayed cache miss returns public card HTML before hydration', async ({
-	page,
-}, testInfo) => {
-	await login(page);
-	const name = `Streaming fixture ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-	const scenario = `${process.env.TEST_FIXTURE_DIRECTORY}/query.json`;
-	try {
-		await page.goto('/dashboard/projects/new');
-		await page.getByLabel('Título', { exact: true }).fill(name);
-		await page.getByLabel('Descripción', { exact: true }).fill('Delayed real SQL read');
-		await writeFile(scenario, JSON.stringify({ operation: 'db.projects.read', delayMs: 2000 }));
-		await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
-		await expect(page).toHaveURL(/\/dashboard\/projects$/);
-		await expectDashboardToFitViewport(page);
-		const response = await page.request.get('/');
-		expect(response.status()).toBe(200);
-		const html = await response.text();
-		expect(html).toContain('data-portfolio-grid="true"');
-		expect(html).toContain(name);
-		await page.goto('/?section=Projects');
-		await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
-	} finally {
-		await writeFile(scenario, '{}');
-		await page.goto('/dashboard/projects');
-		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-		await expect(row).toBeVisible();
-		await expectDashboardToFitViewport(page);
-		page.once('dialog', (dialog) => dialog.accept());
-		await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
-		await expect(row).toHaveCount(0);
-	}
-});
+test(
+	'a delayed cache miss returns public card HTML before hydration',
+	// The injected delay holds a snapshot of the shared public route. Concurrent requests
+	// can join that render even after another test has invalidated its own collection.
+	{ lock: '-exclusive-' },
+	async ({ page }, testInfo) => {
+		await login(page);
+		const name = `Streaming fixture ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+		try {
+			await page.goto('/dashboard/projects/new');
+			await page.getByLabel('Título', { exact: true }).fill(name);
+			await page.getByLabel('Descripción', { exact: true }).fill('Delayed real SQL read');
+			await writeFixtureScenario(
+				'query.json',
+				JSON.stringify({ operation: 'db.projects.read.public', delayMs: 2000 }),
+			);
+			await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
+			await expect(page).toHaveURL(/\/dashboard\/projects$/);
+			await expectDashboardToFitViewport(page);
+			const response = await page.request.get('/');
+			expect(response.status()).toBe(200);
+			const html = await response.text();
+			expect(html).toContain('data-portfolio-grid="true"');
+			expect(html).toContain(name);
+			await page.goto('/?section=Projects');
+			await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+		} finally {
+			await writeFixtureScenario('query.json', '{}');
+			try {
+				await page.goto('/dashboard/projects');
+				const row = page
+					.getByRole('row')
+					.filter({ has: page.getByText(name, { exact: true }) });
+				await expect(row).toBeVisible();
+				await expectDashboardToFitViewport(page);
+			} finally {
+				await deleteOwnedRows(page, 'projects', [name]);
+			}
+		}
+	},
+);
 
-test('a server read failure shows generic feedback and recovers after reset', async ({ page }) => {
-	await login(page);
-	const scenario = `${process.env.TEST_FIXTURE_DIRECTORY}/query.json`;
-	try {
-		await writeFile(scenario, JSON.stringify({ operation: 'db.projects.read', fail: true }));
-		await page.goto('/dashboard/projects');
-		await expect(
-			page.getByRole('alert').filter({ hasText: 'The request could not be completed' }),
-		).toBeVisible();
-		await expect(
-			page.getByText('Synthetic database read failure', { exact: true }),
-		).toHaveCount(0);
-	} finally {
-		await writeFile(scenario, '{}');
-	}
-	await page.getByRole('button', { name: 'Try again', exact: true }).click();
-	await expect(page.getByRole('heading', { name: 'Proyectos', exact: true })).toBeVisible();
-});
+test(
+	'a server read failure shows generic feedback and recovers after reset',
+	{ lock: 'cms-projects' },
+	async ({ page }) => {
+		await login(page);
+		try {
+			await writeFixtureScenario(
+				'query.json',
+				JSON.stringify({ operation: 'db.projects.read.admin', fail: true }),
+			);
+			await page.goto('/dashboard/projects');
+			await expect(
+				page.getByRole('alert').filter({ hasText: 'The request could not be completed' }),
+			).toBeVisible();
+			await expect(
+				page.getByText('Synthetic database read failure', { exact: true }),
+			).toHaveCount(0);
+		} finally {
+			await writeFixtureScenario('query.json', '{}');
+		}
+		await page.getByRole('button', { name: 'Try again', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Proyectos', exact: true })).toBeVisible();
+	},
+);
 
-test('music refresh handles a provider failure and subsequent recovery', async ({ page }) => {
-	await login(page);
-	const scenario = `${process.env.TEST_FIXTURE_DIRECTORY}/music.txt`;
-	try {
-		await writeFile(scenario, 'failure');
-		await page.goto('/dashboard/music-status');
-		await page.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
-		await expect(page.getByText('No disponible', { exact: true })).toBeVisible();
-		await writeFile(scenario, 'empty');
-		await page.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
-		await expect(page.getByText('Sin canciones recientes', { exact: true })).toBeVisible();
-	} finally {
-		await writeFile(scenario, 'empty');
-	}
-});
+test(
+	'music refresh handles a provider failure and subsequent recovery',
+	{ lock: 'music-scenario' },
+	async ({ page }) => {
+		await login(page);
+		try {
+			await writeFixtureScenario('music.txt', 'failure');
+			await page.goto('/dashboard/music-status');
+			await page.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
+			await expect(page.getByText('No disponible', { exact: true })).toBeVisible();
+			await writeFixtureScenario('music.txt', 'empty');
+			await page.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
+			await expect(page.getByText('Sin canciones recientes', { exact: true })).toBeVisible();
+		} finally {
+			await writeFixtureScenario('music.txt', 'empty');
+			await page.goto('/dashboard/music-status');
+			await page.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
+			await expect(page.getByText('Sin canciones recientes', { exact: true })).toBeVisible();
+		}
+	},
+);
 
 for (const entity of [
 	{
 		path: 'projects',
+		lock: 'cms-projects',
 		label: 'proyecto',
 		name: 'Ordered project',
 		field: 'Título',
@@ -440,171 +613,207 @@ for (const entity of [
 	},
 	{
 		path: 'social-links',
+		lock: 'cms-social-links',
 		label: 'enlace',
 		name: 'Ordered link',
 		field: 'Nombre',
 		create: 'Crear enlace',
 	},
 ] as const) {
-	test(`${entity.path} can be reordered with the keyboard and persist after reload`, async ({
-		page,
-	}, testInfo) => {
-		await login(page);
-		const name = `${entity.name} ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-		await page.goto(`/dashboard/${entity.path}/new`);
-		await page.getByLabel(entity.field, { exact: true }).fill(name);
-		if (entity.path === 'projects')
-			await page.getByLabel('Descripción', { exact: true }).fill('Keyboard ordering fixture');
-		else await page.getByLabel('URL', { exact: true }).fill('https://example.test/ordered');
-		await page.getByRole('button', { name: entity.create, exact: true }).click();
-		await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
-		const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-		await expect(row).toBeVisible();
-		await expectDashboardToFitViewport(page);
-		const initialBounds = await row.boundingBox();
-		if (!initialBounds) throw new Error('The ordering fixture has no visible row.');
-		const handle = page.getByRole('button', {
-			name: `Reordenar ${entity.label} "${name}"`,
-			exact: true,
-		});
-		await expect(handle).toHaveAttribute('aria-pressed', 'false');
-		await handle.focus();
-		await page.keyboard.press('Space');
-		await expect(handle).toHaveAttribute('aria-pressed', 'true');
-		// The keyboard sensor moves in 10px steps; cross the preceding row's center
-		// before dropping instead of assuming one key press moves an entire row.
-		for (let step = 0; step <= Math.ceil(initialBounds.height / 10); step++) {
-			await page.keyboard.press('ArrowUp');
-		}
-		await expect
-			.poll(async () => (await row.boundingBox())?.y ?? Infinity)
-			.toBeLessThan(initialBounds.y - initialBounds.height / 2);
-		await page.keyboard.press('Space');
-		await expect(handle).toHaveAttribute('aria-pressed', 'false');
-		await expect(row.getByText('1', { exact: true })).toBeVisible();
-		await expect(page.getByRole('table')).toHaveAttribute('aria-busy', 'false');
-		await page.reload();
-		await expectDashboardToFitViewport(page);
-		await expect(
-			page
-				.getByRole('row')
-				.filter({ has: page.getByText(name, { exact: true }) })
-				.getByText('1', { exact: true }),
-		).toBeVisible();
-		page.once('dialog', (dialog) => dialog.accept());
-		await page
-			.getByRole('row')
-			.filter({ has: page.getByText(name, { exact: true }) })
-			.getByRole('button', { name: 'Eliminar', exact: true })
-			.click();
-		await expect(page.getByText(name, { exact: true })).toHaveCount(0);
-	});
+	test(
+		`${entity.path} can be reordered with the keyboard and persist after reload`,
+		{ lock: entity.lock },
+		async ({ page }, testInfo) => {
+			await login(page);
+			const name = `${entity.name} ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+			try {
+				await page.goto(`/dashboard/${entity.path}/new`);
+				await page.getByLabel(entity.field, { exact: true }).fill(name);
+				if (entity.path === 'projects')
+					await page
+						.getByLabel('Descripción', { exact: true })
+						.fill('Keyboard ordering fixture');
+				else
+					await page
+						.getByLabel('URL', { exact: true })
+						.fill('https://example.test/ordered');
+				await page.getByRole('button', { name: entity.create, exact: true }).click();
+				await expect(page).toHaveURL(new RegExp(`/dashboard/${entity.path}$`));
+				const row = page
+					.getByRole('row')
+					.filter({ has: page.getByText(name, { exact: true }) });
+				await expect(row).toBeVisible();
+				await expectDashboardToFitViewport(page);
+				const initialBounds = await row.boundingBox();
+				const firstBounds = await page.getByRole('row').nth(1).boundingBox();
+				if (!initialBounds || !firstBounds)
+					throw new Error('The ordering fixture has no visible row.');
+				const distance =
+					initialBounds.y +
+					initialBounds.height / 2 -
+					firstBounds.y -
+					firstBounds.height / 2;
+				const handle = page.getByRole('button', {
+					name: `Reordenar ${entity.label} "${name}"`,
+					exact: true,
+				});
+				await expect(handle).toHaveAttribute('aria-pressed', 'false');
+				await handle.focus();
+				await page.keyboard.press('Space');
+				await expect(handle).toHaveAttribute('aria-pressed', 'true');
+				// The keyboard sensor moves in 10px steps; cross the preceding row's center
+				// before dropping instead of assuming one key press moves an entire row.
+				for (let step = 0; step <= Math.ceil(distance / 10); step++) {
+					await page.keyboard.press('ArrowUp');
+				}
+				await expect
+					.poll(async () => (await row.boundingBox())?.y ?? Infinity)
+					.toBeLessThan(initialBounds.y - initialBounds.height / 2);
+				await Promise.all([
+					page.waitForResponse(
+						(response) =>
+							response.request().method() === 'POST' &&
+							new URL(response.url()).pathname === `/dashboard/${entity.path}`,
+					),
+					page.keyboard.press('Space'),
+				]);
+				await expect(handle).toHaveAttribute('aria-pressed', 'false');
+				await expect(row.getByText('1', { exact: true })).toBeVisible();
+				await expect(page.getByRole('table')).toHaveAttribute('aria-busy', 'false');
+				await page.reload();
+				await expectDashboardToFitViewport(page);
+				await expect(
+					page
+						.getByRole('row')
+						.filter({ has: page.getByText(name, { exact: true }) })
+						.getByText('1', { exact: true }),
+				).toBeVisible();
+			} finally {
+				try {
+					await restoreTrailingRow(page, entity.path, entity.label, name);
+				} finally {
+					await deleteOwnedRows(page, entity.path, [name]);
+				}
+				await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+			}
+		},
+	);
 }
 
-test('OG errors expose details and pending notifications disappear on public navigation', async ({
-	page,
-}, testInfo) => {
-	await login(page);
-	const name = `OG notification ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-	await page.goto('/dashboard/projects/new');
-	await page.getByLabel('Título', { exact: true }).fill(name);
-	await page.getByLabel('Descripción', { exact: true }).fill('Project without an image source');
-	await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
-	await expect(page).toHaveURL(/\/dashboard\/projects$/);
-	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-	const refresh = row.getByRole('button', {
-		name: `Actualizar imagen Open Graph de ${name}`,
-		exact: true,
-	});
-	const release = Promise.withResolvers<void>();
-	try {
-		await refresh.click();
-		const errorToast = page
-			.locator('[data-sonner-toast][data-type="error"]')
-			.filter({ hasText: name });
-		await expect(errorToast).toBeVisible();
-		await errorToast.getByRole('button', { name: 'Ver detalles' }).click();
-		const alert = page.getByRole('alert').filter({ hasText: name });
-		await expect(alert).toBeFocused();
-		await expect(alert).toContainText('no tiene un enlace de origen');
-		await alert.getByRole('button', { name: 'Cerrar aviso' }).click();
-		await expect(errorToast).toHaveCount(0);
+test(
+	'OG errors expose details and pending notifications disappear on public navigation',
+	{ lock: 'cms-projects' },
+	async ({ page }, testInfo) => {
+		await login(page);
+		const name = `OG notification ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+		const release = Promise.withResolvers<void>();
+		try {
+			await page.goto('/dashboard/projects/new');
+			await page.getByLabel('Título', { exact: true }).fill(name);
+			await page
+				.getByLabel('Descripción', { exact: true })
+				.fill('Project without an image source');
+			await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
+			await expect(page).toHaveURL(/\/dashboard\/projects$/);
+			const row = page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) });
+			const refresh = row.getByRole('button', {
+				name: `Actualizar imagen Open Graph de ${name}`,
+				exact: true,
+			});
+			await refresh.click();
+			const errorToast = page
+				.locator('[data-sonner-toast][data-type="error"]')
+				.filter({ hasText: name });
+			await expect(errorToast).toBeVisible();
+			await errorToast.getByRole('button', { name: 'Ver detalles' }).click();
+			const alert = page.getByRole('alert').filter({ hasText: name });
+			await expect(alert).toBeFocused();
+			await expect(alert).toContainText('no tiene un enlace de origen');
+			await alert.getByRole('button', { name: 'Cerrar aviso' }).click();
+			await expect(errorToast).toHaveCount(0);
 
-		const arrived = Promise.withResolvers<void>();
-		await page.route('**/dashboard/projects', async (route) => {
-			if (route.request().method() !== 'POST' || !route.request().headers()['next-action']) {
+			const arrived = Promise.withResolvers<void>();
+			await page.route('**/dashboard/projects', async (route) => {
+				if (
+					route.request().method() !== 'POST' ||
+					!route.request().headers()['next-action']
+				) {
+					return route.continue();
+				}
+				arrived.resolve();
+				await release.promise;
+				await route.abort().catch(() => {});
+			});
+			await refresh.click();
+			await arrived.promise;
+			await expect(
+				page.locator('[data-sonner-toast][data-type="loading"]').filter({ hasText: name }),
+			).toBeVisible();
+			await page.goto('/');
+			release.resolve();
+			await expect(page.getByRole('main')).toBeVisible();
+			await expect(page.locator('[data-sonner-toaster]')).toHaveCount(0);
+			await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
+		} finally {
+			release.resolve();
+			await page.unroute('**/dashboard/projects');
+			await deleteOwnedRows(page, 'projects', [name]);
+		}
+	},
+);
+
+test(
+	'a rejected OG request asks for reload without claiming that the mutation failed',
+	{ lock: 'cms-projects' },
+	async ({ page }, testInfo) => {
+		await login(page);
+		const name = `OG uncertain notification ${testInfo.project.name} ${getTestNamespace(testInfo)}`;
+		try {
+			await page.goto('/dashboard/projects/new');
+			await page.getByLabel('Título', { exact: true }).fill(name);
+			await page
+				.getByLabel('Descripción', { exact: true })
+				.fill('Lost response notification journey');
+			await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
+			await expect(page).toHaveURL(/\/dashboard\/projects$/);
+			const row = page
+				.getByRole('row')
+				.filter({ has: page.getByText(name, { exact: true }) });
+			await page.route('**/dashboard/projects', (route) => {
+				if (route.request().method() === 'POST' && route.request().headers()['next-action'])
+					return route.abort();
 				return route.continue();
-			}
-			arrived.resolve();
-			await release.promise;
-			await route.abort().catch(() => {});
-		});
-		await refresh.click();
-		await arrived.promise;
-		await expect(
-			page.locator('[data-sonner-toast][data-type="loading"]').filter({ hasText: name }),
-		).toBeVisible();
-		await page.goto('/');
-		release.resolve();
-		await expect(page.getByRole('main')).toBeVisible();
-		await expect(page.locator('[data-sonner-toaster]')).toHaveCount(0);
-		await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
-	} finally {
-		release.resolve();
-		await page.unroute('**/dashboard/projects');
-		await page.goto('/dashboard/projects');
-		if (await row.isVisible()) {
-			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
-			await expect(row).toHaveCount(0);
+			});
+			await row
+				.getByRole('button', {
+					name: `Actualizar imagen Open Graph de ${name}`,
+					exact: true,
+				})
+				.click();
+			const warning = page
+				.locator('[data-sonner-toast][data-type="warning"]')
+				.filter({ hasText: name });
+			await expect(warning).toBeVisible();
+			const alert = page.getByRole('alert').filter({ hasText: name });
+			await expect(alert).toContainText('puede haberse completado');
+			await expect(alert).not.toContainText('automáticamente');
+			await expect(alert).not.toContainText('Referencia:');
+			await expect(alert.getByRole('button', { name: 'Reintentar imagen' })).toHaveCount(0);
+			await page.unroute('**/dashboard/projects');
+			await Promise.all([
+				page.waitForEvent('load'),
+				warning.getByRole('button', { name: 'Recargar página' }).click(),
+			]);
+			await expect(row).toBeVisible();
+			await expect(page.getByRole('alert').filter({ hasText: name })).toHaveCount(0);
+			await expect(page.locator('[data-sonner-toast]').filter({ hasText: name })).toHaveCount(
+				0,
+			);
+		} finally {
+			await page.unroute('**/dashboard/projects');
+			await deleteOwnedRows(page, 'projects', [name]);
 		}
-	}
-});
-
-test('a rejected OG request asks for reload without claiming that the mutation failed', async ({
-	page,
-}, testInfo) => {
-	await login(page);
-	const name = `OG uncertain notification ${testInfo.project.name} ${testInfo.repeatEachIndex}-${testInfo.retry}`;
-	await page.goto('/dashboard/projects/new');
-	await page.getByLabel('Título', { exact: true }).fill(name);
-	await page
-		.getByLabel('Descripción', { exact: true })
-		.fill('Lost response notification journey');
-	await page.getByRole('button', { name: 'Crear proyecto', exact: true }).click();
-	await expect(page).toHaveURL(/\/dashboard\/projects$/);
-	const row = page.getByRole('row').filter({ has: page.getByText(name, { exact: true }) });
-	try {
-		await page.route('**/dashboard/projects', (route) => {
-			if (route.request().method() === 'POST' && route.request().headers()['next-action'])
-				return route.abort();
-			return route.continue();
-		});
-		await row
-			.getByRole('button', { name: `Actualizar imagen Open Graph de ${name}`, exact: true })
-			.click();
-		const warning = page
-			.locator('[data-sonner-toast][data-type="warning"]')
-			.filter({ hasText: name });
-		await expect(warning).toBeVisible();
-		const alert = page.getByRole('alert').filter({ hasText: name });
-		await expect(alert).toContainText('puede haberse completado');
-		await expect(alert).not.toContainText('automáticamente');
-		await expect(alert).not.toContainText('Referencia:');
-		await expect(alert.getByRole('button', { name: 'Reintentar imagen' })).toHaveCount(0);
-		await page.unroute('**/dashboard/projects');
-		await Promise.all([
-			page.waitForEvent('load'),
-			warning.getByRole('button', { name: 'Recargar página' }).click(),
-		]);
-		await expect(row).toBeVisible();
-		await expect(page.getByRole('alert').filter({ hasText: name })).toHaveCount(0);
-		await expect(page.locator('[data-sonner-toast]').filter({ hasText: name })).toHaveCount(0);
-	} finally {
-		await page.unroute('**/dashboard/projects');
-		await page.goto('/dashboard/projects');
-		if (await row.isVisible()) {
-			await row.getByRole('button', { name: 'Eliminar', exact: true }).click();
-			await expect(row).toHaveCount(0);
-		}
-	}
-});
+	},
+);

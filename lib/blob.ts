@@ -2,10 +2,10 @@ import 'server-only';
 import { put as sdkPut, del as sdkDelete } from '@vercel/blob';
 import { getBlobReadWriteToken } from './blob-environment';
 
-/** Offline fixtures are available only in an explicitly isolated, non-hosted CI process. */
+/** Offline fixtures are available only in an explicitly isolated, non-hosted test process. */
 function isolated() {
 	return (
-		process.env.CI === 'true' &&
+		process.env.PORTFOLIO_TEST_BUILD === 'true' &&
 		process.env.APP_ENV === 'test' &&
 		!process.env.VERCEL &&
 		Boolean(process.env.TEST_FIXTURE_DIRECTORY)
