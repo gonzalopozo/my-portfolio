@@ -25,11 +25,10 @@ pnpm applies the patches during installation with lifecycle scripts disabled.
 Do not edit installed files manually or replace package versions to disguise
 their advisory status.
 
-`pnpm audit` still reports this advisory because it checks the published package
-versions rather than the patched source. No advisory ignore, audit threshold
-change or CI exemption is added. The dependency audit gate therefore continues
-to report this finding until a fixed release is available or an explicit,
-reviewed exception is approved.
+`pnpm audit` checks the published package versions, so it cannot see the local
+patches. The temporary `audit.ignore` entry in `pnpm-workspace.yaml` filters
+only GHSA-fc5q-39xc-vjpf. The CircleCI dependency job still audits all other
+high and critical findings.
 
 Regression coverage in `tests/security/picomatch-patches.test.ts` resolves the
 actual copies used by ESLint, dependency-cruiser and Vitest. Adversarial matching
@@ -40,5 +39,6 @@ verification pass; adding the patch does not authorize local checks by itself.
 
 When upstream publishes a fix, review its advisory coverage, update each affected
 consumer within its supported major version, remove the obsolete patch entries
-and files, and regenerate the lockfile with pnpm. Then rerun the audit and the
-regression coverage as part of authorized verification.
+and files, remove the `audit.ignore` entry, and regenerate the lockfile with
+pnpm. Then rerun the audit and the regression coverage as part of authorized
+verification.
