@@ -52,3 +52,7 @@ overrides:
     lodash@>=4.0.0 <=4.17.22: '>=4.17.23'
     hono@<4.11.7: '>=4.11.7'
     hono@<4.11.10: '>=4.11.10'
+patchedDependencies:
+    picomatch@2.3.2: patches/picomatch@2.3.2.patch
+    picomatch@4.0.4: patches/picomatch@4.0.4.patch
+    picomatch@4.0.7: patches/picomatch@4.0.7.patch

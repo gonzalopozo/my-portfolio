@@ -95,6 +95,10 @@ subcomponents
 unrs
 unstub
 
+# Glob parser terminology
+extglobs
+fastpaths
+
 # Documentation (AGENTS-*.md) — acronyms & product terms
 bento
 clickjacking
