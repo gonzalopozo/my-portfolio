@@ -4,7 +4,9 @@ import { fixtureUser, fixtureVisitor } from '../tests/fixtures/database';
 import { readFile, readdir, mkdir } from 'node:fs/promises';
 import { getTestNamespace, writeFixtureScenario } from './fixture-support';
 
-test.describe.configure({ mode: 'parallel' });
+// Keep CMS workflows sequential and isolated from other files while exercising
+// mutations, fault injection, and the shared server's streamed action responses.
+test.describe.configure({ mode: 'default', lock: '-exclusive-' });
 
 type EntityPath = 'projects' | 'experiences' | 'skills' | 'social-links';
 

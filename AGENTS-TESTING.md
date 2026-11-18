@@ -78,9 +78,14 @@ The complete suite shares eight workers across all five projects and one product
 server. Keep global and project `fullyParallel: false`; opt into parallel mode only
 in audited files/describes. Named native locks coordinate project workflows, social
 links, SVG-directory assertions and music scenarios across browsers.
+The CMS spec is a deliberate exception: use default mode with `-exclusive-` for
+the entire file after streaming/bootstrap failures reproduced even with one CMS
+test running alongside public tests. Each browser's CMS group runs sequentially
+and without other files. Public and API files remain parallel.
 Acquire the same resource lock for conflicting readers and writers; keep restoration
-inside the locked test. Do not put resource locks on a default/serial file or add
-shared `beforeAll` pages/auth state. See the [resource inventory](./docs/operations/testing.md#parallel-browser-resources).
+inside the locked test. Outside the CMS exception, do not put resource locks on a
+default/serial file or add shared `beforeAll` pages/auth state.
+See the [resource inventory](./docs/operations/testing.md#parallel-browser-resources).
 Exact public freshness journeys and the delayed cache-miss fault-injection test use
 `-exclusive-`: requests can otherwise join an earlier render of the shared public
 route. Cleanup must wait for the collection to render and confirm deletion after

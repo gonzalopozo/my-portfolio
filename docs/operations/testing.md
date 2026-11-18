@@ -143,6 +143,13 @@ without project/worker suffixes. Locks are declared on individual parallel tests
 covering setup, assertions and restoration; default/serial groups can hold locks
 for their entire execution group. No test depends on a previous test having run.
 
+- CMS file isolation: `cms.spec.ts` uses default mode and `-exclusive-` for its entire
+  execution group. Each browser's CMS tests run sequentially, without other files.
+  This conservative fallback addresses streamed response/bootstrap failures that
+  reproduced even with one CMS workflow running alongside public tests. Public and
+  API files retain their parallel execution and the shared eight-worker budget.
+  Retain narrower resource declarations as ownership rules; restoring CMS parallelism
+  requires repeated complete-suite evidence.
 - `cms-projects`: project CRUD, project keyboard ordering, OG image replacement,
   admin read failure/recovery, OG error/pending notifications and rejected OG requests.
   This covers authenticated project-list workflows affected by the admin fault,
@@ -164,8 +171,9 @@ for their entire execution group. No test depends on a previous test having run.
   join a snapshot started before another collection's mutation. These twelve cases
   require exclusive access to public route regeneration, including setup and cleanup.
   Collection locks cannot coordinate unrelated public readers that trigger renders.
-  All other tests retain ordinary parallel execution with their named resource locks
-  where needed. Do not extend exclusivity to unrelated CMS or public journeys.
+  Their individual declarations remain as ownership rules, while the enclosing CMS
+  file currently holds the exclusive lock for all of its tests. Public and API files
+  retain ordinary parallel execution.
 
 Public tests declare no resource locks: they assert valid layout, document-local
 navigation, accessibility and policy rather than exact mutable CMS values. Shallow
@@ -190,8 +198,11 @@ restores settings through real actions and restores ordering before deleting its
 Ordering uses measured row distances and the actual collection size rather than
 assuming there are exactly two rows.
 
-The icon picker and settings controls remain disabled until hydration attaches their
-handlers. Settings also disables controls during a save and announces completion only
+The icon picker, social-link text fields and submit button, and settings controls
+remain disabled until hydration attaches their handlers. Social-link text entry and
+submission wait for the hydrated action handler, avoiding an early document submission
+while bootstrap scripts load. They also stay disabled while the action is pending.
+Settings disables controls during a save and announces completion only
 after its action resolves. Browser setup and restoration await that acknowledgement
 and the end of the React transition before reloading; HTTP completion alone is not
 enough. Preserve immediate public freshness assertions rather than retrying navigation
