@@ -120,8 +120,13 @@ export async function productionHarness(browserArguments?: string[]) {
 		});
 		activeCommand = child;
 		try {
-			const [code] = await once(child, 'exit');
-			if (code !== 0 || interrupted) throw new Error(`Isolated command failed: ${command}`);
+			await once(child, 'exit');
+			if (interrupted) throw new Error('Production harness interrupted.');
+			const { exitCode, signalCode } = child;
+			if (exitCode !== 0) {
+				const reason = signalCode ? `signal ${signalCode}` : `exit code ${exitCode}`;
+				throw new Error(`Isolated command failed (${reason}): ${command}`);
+			}
 		} finally {
 			activeCommand = undefined;
 		}

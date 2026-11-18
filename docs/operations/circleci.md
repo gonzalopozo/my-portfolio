@@ -394,17 +394,17 @@ the unchanged current main commit; reused jobs older than 24 hours are rejected.
 A new failed/pending manual or scheduled scan
 blocks release until fresh successful validation supersedes it.
 
-Keep `medium` as the default and `large` for CodeQL. There are no dependency,
-Docker layer, browser or build caches. Review Usage after the first PR/main pair
-and first scheduled scans; project monthly compute and storage from actual usage.
+Keep `medium` as the default, `medium+` for the build job and `large` for CodeQL.
+There are no dependency, Docker layer, browser or build caches. Review Usage after
+the first PR/main pair and first scheduled scans; project monthly compute and
+storage from actual usage.
 Do not enable paid features or reruns that hide flaky failures to stay green.
 
-If the build prints `Killed` and exits with code 137 after compilation/type checking,
-inspect the job's Resources memory graph for an out-of-memory kill. Confirm the
-run includes the isolated-build worker limit before considering a larger executor.
-The expected Next.js warning about a missing build cache does not establish the
-cause of that failure. Retain the worker count, peak memory and SHA with the run
-evidence. See [CircleCI's exit-137 guidance](https://support.circleci.com/en/articles/15090919-exit-code-137-out-of-memory).
+If the build reports `signal SIGKILL` or `exit code 137`, inspect the job's
+Resources memory graph for an out-of-memory kill. Confirm the run includes the
+isolated-build worker limit before considering a larger executor. Retain the
+worker count, peak memory and SHA with the run evidence.
+See [CircleCI's exit-137 guidance](https://support.circleci.com/en/articles/15090919-exit-code-137-out-of-memory).
 
 ## Production activation and evidence
 
