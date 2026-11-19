@@ -35,6 +35,7 @@ gideon
 
 # MapLibre / maps
 Arroyomolinos
+arroyomolinos
 Carto
 redireccionar
 redirecciones

@@ -1,7 +1,13 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
 	// Extra entry points not covered by the Next.js plugin (see https://knip.dev/explanations/entry-files)
-	"entry": ["components/ui/**/*.{ts,tsx}", "lib/queries/**/*.ts", "scripts/**/*.{mts,ts,mjs}"],
+	"entry": [
+		"components/ui/**/*.{ts,tsx}",
+		"lib/queries/**/*.ts",
+		"scripts/**/*.{mts,ts,mjs}",
+		"playwright/gallery/app/**/{page,layout}.tsx",
+		"playwright/gallery/{next,postcss}.config.mjs",
+	],
 	// Include CSS imports and keep disposable build traces outside the project scope.
 	"project": ["**/*.{js,jsx,ts,tsx,mts,css}", "!.tmp/**"],
 	// Retained shadcn/admin/map/testing packages and CSS-only imports that Knip cannot prove from the current graph.
@@ -23,8 +29,12 @@
 	"drizzle": {
 		"config": ["db/drizzle.config.ts"],
 	},
-	// Hosted Preview acceptance passes this config through the programmatic runner.
+	// Hosted Preview acceptance and the local component gallery use separate Playwright configs.
 	"playwright": {
-		"config": ["playwright.config.ts", "playwright.csp.config.ts"],
+		"config": [
+			"playwright.config.ts",
+			"playwright.csp.config.ts",
+			"playwright.component.config.ts",
+		],
 	},
 }
