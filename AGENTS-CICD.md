@@ -3,11 +3,12 @@
 The root local-verification policy is authoritative. Implementation approval does
 not authorize local checks. Preserve the dedicated pre-commit subagent, its
 model/effort/Fast Mode requirements and all nine checks. An explicit push request
-additionally authorizes the mandatory local production Playwright gate.
+additionally authorizes both phases of the mandatory local Playwright gate.
 
 CircleCI validates PRs and merged commits automatically in its separate context.
-All Playwright execution, including API projects and hosted Preview acceptance,
-is local. Never introduce browser downloads or browser execution into cloud CI.
+All Playwright execution is local, including API projects, the component gallery
+and hosted Preview acceptance. Never introduce browser downloads or browser
+execution into cloud CI.
 
 ## Ownership
 

@@ -42,6 +42,7 @@
 		"test:run": "pnpm icons:manifest && vitest run",
 		"test:unit": "pnpm icons:manifest && vitest run --project unit",
 		"test:component": "pnpm icons:manifest && vitest run --project component",
+		"test:component:browser": "playwright test --config playwright.component.config.ts",
 		"test:integration": "pnpm icons:manifest && vitest run --project integration",
 		"test:coverage": "pnpm icons:manifest && vitest run --coverage",
 		"test:e2e": "playwright test",
