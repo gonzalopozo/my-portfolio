@@ -60,8 +60,8 @@ linting, type checking, tests, spellchecking, unused-code analysis, dependency
 boundary validation, builds, and verification commands from other guides or skills.
 Do not run checks during routine implementation or automatically after edits.
 The only additional authorization is an explicit push request, which runs the
-full local Playwright gate described below, including its isolated build/smoke;
-it does not authorize the other checks.
+full local Playwright gate described below, including the isolated production
+build/smoke and the component gallery build. It does not authorize the other checks.
 
 Once the user requests a commit, before creating it, run a dedicated Codex subagent with model `gpt-6-luna`,
 reasoning effort `low`, and Fast Mode enabled. The subagent performs the final
@@ -100,9 +100,9 @@ false positives and documented in the commit notes.
 
 Install Husky explicitly with `pnpm hooks:install` in every clone/worktree because
 package lifecycle scripts are disabled. Pre-commit runs lint-staged. Pre-push
-runs `pnpm test:e2e:local`, the complete isolated production Playwright
-suite. Every push needs a fresh successful run; no result reuse or
-documentation-only exemption. Keep hosted Preview acceptance local too. CircleCI
+runs the complete isolated production suite with `pnpm test:e2e:local`. After it
+passes, the hook runs `pnpm test:component:browser`. Every push needs a fresh
+successful run of both phases. Keep hosted Preview acceptance local too. CircleCI
 must never execute Playwright or download browsers.
 
 The dedicated nine-check pre-commit subagent policy above remains unchanged.

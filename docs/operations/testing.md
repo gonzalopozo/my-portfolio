@@ -35,9 +35,9 @@ scripts are disabled. These instructions do not authorize agents to run checks
 on implementation approval.
 
 The pre-commit hook runs lint-staged. Pre-push runs `pnpm test:e2e:local`, the
-complete production suite. There is no previous-result reuse,
-documentation-only exemption or browser subset at pre-push. Missing browsers,
-ports, certificates or a failed test blocks the push. Do not work around
+complete production suite. After it passes, pre-push runs `pnpm test:component:browser`,
+the full component suite. Both phases must pass on every push. Missing browsers,
+occupied ports, certificate errors or a failed test block the push. Do not work around
 failures with `HUSKY=0` or `--no-verify`. GitHub web edits/bot-created commits do
 not invoke local hooks; arrange local verification during owner review.
 
@@ -80,6 +80,9 @@ matching its own installed dependencies.
 - `pnpm test:e2e:local` builds once, probes production HTTP, then runs every
   configured API/desktop/mobile/CSP project through local HTTPS. It runs at every
   push. `test:e2e:prod` remains a local compatibility alias.
+- `pnpm test:component:browser` builds and serves the isolated Next.js gallery on
+  `127.0.0.1:3100`. Run it on its own for local diagnosis. The pre-push hook runs
+  the full suite after production E2E succeeds.
 - `pnpm test:api` uses that local production runner with only the API project for
   explicitly authorized diagnosis; pre-push does not use that subset.
 - `pnpm test:e2e` remains the local public development test entry point. It does
@@ -91,13 +94,26 @@ matching its own installed dependencies.
   ordinary tests never use remote provider credentials.
 
 CircleCI has no restore caches and no browser execution/downloads. The complete
-local browser suite retains Chromium, Firefox, WebKit, mobile Chromium and the
+production E2E suite retains Chromium, Firefox, WebKit, mobile Chromium and the
 API project, eight shared workers, one diagnostic retry and `failOnFlakyTests`. Missing
 required auth/CSP prerequisites fail; do not add skips or retries to hide failures.
 Global/project `fullyParallel` remains false; audited specs/describes explicitly opt
 into parallel execution. The source inventory contains 192 project executions:
 API 4, CMS 68, CSP 20, public accessibility/navigation 12 and responsive behavior 88.
 This is the expected discovery count, not a new recorded execution result.
+
+### Browser component gallery
+
+The component runner prepares the icon manifest, builds a disposable copy of the
+Next.js gallery under `.ci/`, and removes the copy after execution. It mounts real
+components under the project's CSS, theme and query-state providers. The gallery
+uses local images, system fonts, synthetic props and deterministic map styles.
+The suite uses Chromium, Firefox and WebKit with eight shared workers and parallel
+mode enabled per spec. The real map canvas and worker run in Chromium with
+software WebGL. Reports are written to `.ci/component-report/` and traces and
+failure screenshots to `.ci/component-results/`.
+
+### Production E2E harness
 
 The shared harness uses `.ci/next-production` instead of deleting `.next`, restores
 `next-env.d.ts`, and removes its owned database/build/lock on normal success,
@@ -232,7 +248,7 @@ env -u CI APP_ENV=test PORTFOLIO_TEST_BUILD=true \
 Expect API 4 and 47 cases per browser, with no unexpected skips or missing cases.
 Project and grep filters remain available; production runner arguments are forwarded
 unchanged. `--workers=1` remains available for an explicit diagnostic comparison,
-while an ordinary pre-push invocation uses eight workers in one Playwright run.
+while the production E2E phase of pre-push uses eight workers in one Playwright run.
 
 ```sh
 env -u CI pnpm test:e2e:local
@@ -240,9 +256,9 @@ env -u CI pnpm test:e2e:local --workers=1
 env -u CI pnpm test:e2e:local --workers=8 --repeat-each=3 --shuffle=5800
 ```
 
-Record shell wall-clock time for the complete command, for example
-`time env -u CI pnpm test:e2e:local`, as the total pre-push gate measurement. The
-internal harness total excludes package-manager/loader startup and report writing.
+Record shell wall-clock time for `time env -u CI pnpm test:e2e:local` as the total
+for the production E2E phase. The internal harness total excludes package-manager
+and loader startup plus report writing.
 
 Use three fresh complete runs per comparison configuration and one repeated/shuffled
 run (576 cases). Require zero unexpected failures, skips or flaky outcomes. Compare

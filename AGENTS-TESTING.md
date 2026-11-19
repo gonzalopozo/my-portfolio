@@ -15,14 +15,15 @@ Current configuration/source takes precedence over older skill version examples.
 - `vitest.contract.config.mts`: opt-in external-service contracts; never default tests.
 - `playwright.config.ts`: public development checks or full isolated production suite.
 - `playwright.csp.config.ts`: explicit protected Preview CSP/auth acceptance.
+- `playwright.component.config.ts`: isolated Next.js gallery for browser component tests.
 - [Coverage inventory](./docs/operations/testing.md): production files, existing/new
   coverage, infrastructure, expected failures, risk targets and limitations.
 - [Reference](./AGENTS-TESTING-REFERENCE.md): implementation patterns and entry points.
 
 Preserve colocated tests as well as `tests/`. `pnpm test` stays watch mode. CircleCI uses
 one-shot commands and a browser-free synthetic production build/smoke harness.
-The complete production Playwright suite runs locally in the pre-push hook,
-never just `next dev` and never cloud browser execution.
+Pre-push runs the complete isolated production suite, followed by the local
+component browser suite after production E2E passes.
 
 ## Required levels
 
@@ -30,6 +31,7 @@ never just `next dev` and never cloud browser execution.
 | ------------------------------------------------------------- | ---------------------------------- |
 | Utilities, normalization, schemas and security policy         | Unit                               |
 | Interactive React clients, forms, pending/error feedback      | RTL component                      |
+| Layout, pointer and keyboard behavior, browser APIs           | Playwright component               |
 | Real data facades, transactions, constraints and auth adapter | Migrated libSQL integration        |
 | Route Handler HTTP behavior, sessions, CSRF, health           | Production API + integration       |
 | Async RSC, actions, navigation, CMS, caching, streaming       | Production Playwright              |
@@ -95,6 +97,21 @@ Use semantic Playwright locators; use structural selectors only where the thing
 under test has no semantic role (e.g. rendered SVG). Avoid fixed sleeps. One retry
 collects diagnostics; `failOnFlakyTests` prevents retries from hiding failures.
 Required tests must fail if prerequisites are missing rather than skip silently.
+
+### Component browser tests
+
+`pnpm test:component:browser` builds a separate Next.js gallery from
+`playwright/gallery/` and mounts named stories with Playwright's `mount()` fixture.
+Use real components and production CSS with deterministic props. Render server-only
+icons on the server and define interactive callbacks in client stories.
+
+Use browser tests for behavior that needs layout, keyboard focus, pointer events,
+or a native browser API. Keep component state and validation assertions in Vitest,
+and keep persistence and full journeys in production E2E. The gallery shares eight
+workers across Chromium, Firefox and WebKit. Configure parallel mode in each
+independent spec or describe. Keep worker/WebGL coverage in `*.chromium.spec.ts`.
+Each test gets a fresh browser context, with local responses for map styles and
+all other outbound requests blocked.
 
 ## Coverage and diagnostics
 

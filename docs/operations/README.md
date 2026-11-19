@@ -104,6 +104,6 @@ the production build. Implementation commit `fc23790` passed all 180 local
 production Playwright tests without retries. See [testing evidence](./testing.md).
 No local checks are authorized by implementation approval alone.
 The dedicated nine-check pre-commit subagent policy remains in force; an explicit
-push request additionally authorizes the mandatory local Playwright gate.
+push request additionally authorizes both phases of the mandatory local Playwright gate.
 External settings and release drills stay open in the migration checklist until
 there is actual account/run/deployment evidence.
