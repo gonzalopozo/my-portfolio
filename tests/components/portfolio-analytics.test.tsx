@@ -33,7 +33,7 @@ describe('public portfolio analytics', () => {
 		expect(Analytics).not.toHaveBeenCalled();
 	});
 
-	it('sends only canonical page views and removes their query strings and fragments', () => {
+	it('limits collection to the live origin and strips query strings and fragments', () => {
 		vi.stubEnv('VERCEL', '1');
 		vi.stubEnv('VERCEL_ENV', 'production');
 
@@ -45,13 +45,13 @@ describe('public portfolio analytics', () => {
 		expect(
 			beforeSend({
 				type: 'pageview',
-				url: 'https://gonzalopozo.dev/?section=Projects#portfolio-section-heading',
+				url: 'https://www.gonzalopozo.dev/?section=Projects#portfolio-section-heading',
 			}),
-		).toEqual({ type: 'pageview', url: 'https://gonzalopozo.dev/' });
+		).toEqual({ type: 'pageview', url: 'https://www.gonzalopozo.dev/' });
 		expect(
 			beforeSend({ type: 'pageview', url: 'https://release-candidate.vercel.app/' }),
 		).toBeNull();
-		expect(beforeSend({ type: 'pageview', url: 'https://www.gonzalopozo.dev/' })).toBeNull();
+		expect(beforeSend({ type: 'pageview', url: 'https://gonzalopozo.dev/' })).toBeNull();
 		expect(beforeSend({ type: 'pageview', url: 'invalid' })).toBeNull();
 	});
 });
