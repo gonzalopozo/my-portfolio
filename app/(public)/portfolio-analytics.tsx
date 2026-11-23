@@ -10,8 +10,8 @@ function filterPageView(event: BeforeSendEvent): BeforeSendEvent | null {
 		return null;
 	}
 
-	// Staged candidates use the production environment before they receive the canonical domain.
-	if (url.origin !== 'https://gonzalopozo.dev') return null;
+	// Staged candidates also use the production environment. The bare domain redirects to www.
+	if (url.origin !== 'https://www.gonzalopozo.dev') return null;
 
 	return { ...event, url: `${url.origin}${url.pathname}` };
 }
