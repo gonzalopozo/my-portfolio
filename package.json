@@ -77,6 +77,7 @@
 		"@radix-ui/react-switch": "^1.2.6",
 		"@radix-ui/react-tooltip": "^1.4.1",
 		"@teritorio/openmaptiles-gl-language": "^1.5.4",
+		"@vercel/analytics": "^2.0.1",
 		"@vercel/blob": "^2.3.2",
 		"better-auth": "^1.7.21",
 		"cheerio": "^1.2.0",

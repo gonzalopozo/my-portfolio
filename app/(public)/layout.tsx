@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { AppDocument } from '@/components/app-document';
+import { PortfolioAnalytics } from './portfolio-analytics';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -9,6 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
+	const isVercelProduction =
+		process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production';
+
 	return (
 		<AppDocument>
 			<div className="bg-background">
@@ -23,6 +27,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 					{children}
 				</main>
 			</div>
+			{isVercelProduction ? <PortfolioAnalytics /> : null}
 		</AppDocument>
 	);
 }
